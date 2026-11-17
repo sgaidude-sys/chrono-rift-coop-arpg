@@ -124,9 +124,10 @@
       gap: 8px;
       min-width: 280px;
       padding: 12px 14px;
-      background-image: linear-gradient(160deg, rgba(16, 21, 36, 0.90), rgba(10, 13, 24, 0.94)), url('public/assets/vfx/bg_village.jpg');
-      background-size: cover;
-      background-position: center;
+      background:
+        radial-gradient(circle at 12% 10%, rgba(243, 200, 107, 0.12), transparent 55%),
+        radial-gradient(circle at 88% 92%, rgba(56, 232, 255, 0.08), transparent 55%),
+        linear-gradient(160deg, rgba(16, 21, 36, 0.94), rgba(9, 12, 22, 0.96));
     }
     .hero-header {
       display: flex;
@@ -290,9 +291,10 @@
       font-size: 14px;
       letter-spacing: 0.8px;
       color: var(--gold-bright);
-      background-image: linear-gradient(90deg, rgba(14, 18, 34, 0.9), rgba(26, 20, 40, 0.88)), url('public/assets/vfx/bg_fantasy.jpg');
-      background-size: cover;
-      background-position: center;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(243, 200, 107, 0.14), transparent 60%),
+        linear-gradient(90deg, rgba(13, 17, 32, 0.94), rgba(22, 18, 38, 0.94));
+      border-color: rgba(243, 200, 107, 0.55);
     }
     .zone-warp-btns {
       display: flex;
@@ -329,9 +331,10 @@
       flex-direction: column;
       gap: 5px;
       border-color: rgba(255, 59, 92, 0.65);
-      box-shadow: 0 0 28px rgba(255, 59, 92, 0.35);
-      background-image: linear-gradient(90deg, rgba(32, 8, 18, 0.92), rgba(16, 10, 28, 0.92)), url('public/assets/vfx/bg_bestiary.jpg');
-      background-size: cover;
+      box-shadow: 0 0 28px rgba(255, 59, 92, 0.35), inset 0 1px 0 rgba(255, 160, 175, 0.16);
+      background:
+        radial-gradient(circle at 50% 0%, rgba(255, 59, 92, 0.18), transparent 68%),
+        linear-gradient(90deg, rgba(28, 9, 18, 0.95), rgba(16, 10, 28, 0.95));
     }
     #boss-hud.visible {
       display: flex;
@@ -449,27 +452,72 @@
       transform: translateX(-50%);
       z-index: 10;
       display: flex;
-      align-items: flex-end;
-      gap: 12px;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    #skill-tooltip {
+      display: none;
+      min-width: 240px;
+      max-width: 340px;
+      padding: 10px 13px;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(243, 200, 107, 0.16), transparent 60%),
+        linear-gradient(160deg, rgba(13, 17, 30, 0.97), rgba(8, 11, 20, 0.98));
+      border: 1px solid rgba(243, 200, 107, 0.65);
+      border-radius: 10px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.78), 0 0 18px rgba(243, 200, 107, 0.18);
+      pointer-events: none;
+    }
+    #skill-tooltip.visible {
+      display: block;
+    }
+    .tip-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    .tip-title {
+      font-family: 'Cinzel', serif;
+      font-weight: 800;
+      font-size: 13px;
+      color: var(--gold-bright);
+    }
+    .tip-meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--cyan);
+      margin-bottom: 4px;
+    }
+    .tip-desc {
+      font-size: 11.5px;
+      line-height: 1.4;
+      color: var(--text-main);
     }
     #skill-bar {
       display: flex;
-      align-items: center;
+      align-items: flex-end;
       gap: 8px;
       padding: 10px 14px;
     }
     .skill-slot {
-      width: 58px;
-      height: 58px;
+      width: 68px;
+      height: 70px;
+      padding-top: 18px;
       border-radius: 10px;
-      background: linear-gradient(160deg, rgba(28, 34, 54, 0.95), rgba(11, 14, 24, 0.95));
-      border: 1.5px solid rgba(212, 175, 95, 0.5);
+      background:
+        radial-gradient(circle at 50% 18%, rgba(243, 200, 107, 0.10), transparent 62%),
+        linear-gradient(160deg, rgba(24, 30, 50, 0.96), rgba(9, 12, 22, 0.97));
+      border: 1.5px solid rgba(212, 175, 95, 0.52);
       position: relative;
       cursor: pointer;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
+      gap: 2px;
       transition: transform 0.1s ease, border-color 0.15s ease, box-shadow 0.15s ease;
       overflow: hidden;
     }
@@ -483,8 +531,9 @@
       border-color: var(--cyan);
     }
     .skill-slot.ult-slot {
-      width: 66px;
-      height: 66px;
+      width: 76px;
+      height: 76px;
+      padding-top: 19px;
       border-color: var(--cyan);
       box-shadow: 0 0 18px rgba(56, 232, 255, 0.28);
     }
@@ -498,25 +547,32 @@
       to { transform: scale(1.06); }
     }
     .skill-icon {
-      font-size: 22px;
-      line-height: 1;
-      margin-bottom: 3px;
+      font-size: 21px;
+      line-height: 1.05;
+      margin-bottom: 1px;
     }
     .skill-name {
-      font-size: 9px;
+      font-size: 8.8px;
       font-weight: 700;
       text-align: center;
       color: var(--text-main);
-      padding: 0 2px;
+      padding: 0 3px;
+      line-height: 1.15;
     }
     .skill-key {
       position: absolute;
       top: 3px;
-      left: 5px;
+      left: 4px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: linear-gradient(135deg, rgba(42, 32, 16, 0.95), rgba(18, 14, 8, 0.95));
+      border: 1px solid rgba(243, 200, 107, 0.55);
       font-family: 'JetBrains Mono', monospace;
-      font-size: 9px;
+      font-size: 8.5px;
+      line-height: 1.15;
       font-weight: 700;
       color: var(--gold-bright);
+      letter-spacing: 0.2px;
     }
     .skill-cd-overlay {
       position: absolute;
@@ -634,19 +690,18 @@
       display: flex;
     }
     .modal-box {
-      background-image:
-        linear-gradient(165deg, rgba(16, 22, 40, 0.88) 0%, rgba(10, 14, 26, 0.93) 65%, rgba(22, 18, 34, 0.90) 100%),
-        url('public/assets/vfx/bg_village.jpg');
-      background-size: cover;
-      background-position: center;
-      border: 1.5px solid var(--gold);
+      background:
+        radial-gradient(circle at 18% 0%, rgba(243, 200, 107, 0.12), transparent 55%),
+        radial-gradient(circle at 85% 95%, rgba(56, 232, 255, 0.08), transparent 50%),
+        linear-gradient(165deg, rgba(14, 19, 34, 0.96) 0%, rgba(9, 12, 22, 0.98) 65%, rgba(18, 15, 28, 0.97) 100%);
+      border: 1.5px solid rgba(243, 200, 107, 0.72);
       border-radius: 16px;
       max-width: 900px;
       width: 100%;
       max-height: 90vh;
       overflow-y: auto;
       padding: 24px 28px;
-      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.85), 0 0 45px rgba(243, 200, 107, 0.24);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.85), 0 0 45px rgba(243, 200, 107, 0.22), inset 0 1px 0 rgba(255, 240, 200, 0.14);
     }
     .modal-hero-banner {
       position: relative;
@@ -654,13 +709,13 @@
       overflow: hidden;
       padding: 20px 22px;
       margin-bottom: 16px;
-      border: 1px solid rgba(243, 200, 107, 0.45);
-      background-image:
-        linear-gradient(90deg, rgba(10, 14, 28, 0.92) 0%, rgba(10, 14, 28, 0.65) 55%, rgba(10, 14, 28, 0.25) 100%),
-        url('public/assets/vfx/bg_village.jpg');
-      background-size: cover;
-      background-position: center 35%;
-      box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(243, 200, 107, 0.5);
+      background:
+        radial-gradient(circle at 85% 25%, rgba(56, 232, 255, 0.14), transparent 55%),
+        radial-gradient(circle at 15% 85%, rgba(243, 200, 107, 0.16), transparent 55%),
+        repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.015) 0px, rgba(255, 255, 255, 0.015) 1px, transparent 1px, transparent 14px),
+        linear-gradient(100deg, rgba(12, 16, 30, 0.96) 0%, rgba(18, 22, 42, 0.92) 60%, rgba(26, 20, 44, 0.92) 100%);
+      box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 230, 170, 0.18);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -681,11 +736,9 @@
       margin: 12px 0 18px;
     }
     .class-card {
-      background-image:
-        linear-gradient(180deg, rgba(16, 20, 36, 0.78) 0%, rgba(10, 13, 24, 0.94) 100%),
-        url('public/assets/vfx/bg_fantasy.jpg');
-      background-size: cover;
-      background-position: center;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(243, 200, 107, 0.08), transparent 65%),
+        linear-gradient(180deg, rgba(20, 26, 46, 0.92) 0%, rgba(10, 13, 24, 0.96) 100%);
       border: 1.5px solid rgba(255, 255, 255, 0.16);
       border-radius: 10px;
       padding: 14px;
@@ -702,10 +755,10 @@
     }
     .class-card.selected {
       border-color: var(--gold-bright);
-      background-image:
-        linear-gradient(160deg, rgba(243, 200, 107, 0.26), rgba(56, 232, 255, 0.14)),
-        url('public/assets/vfx/bg_fantasy.jpg');
-      box-shadow: 0 0 22px rgba(243, 200, 107, 0.35);
+      background:
+        radial-gradient(circle at 50% 0%, rgba(243, 200, 107, 0.22), transparent 68%),
+        linear-gradient(160deg, rgba(44, 34, 18, 0.86), rgba(14, 24, 42, 0.95));
+      box-shadow: 0 0 22px rgba(243, 200, 107, 0.35), inset 0 1px 0 rgba(255, 235, 180, 0.24);
     }
     .class-card h3 {
       font-family: 'Cinzel', serif;
@@ -753,11 +806,10 @@
       margin-top: 12px;
     }
     .weapon-card {
-      background-image:
-        linear-gradient(160deg, rgba(18, 22, 38, 0.88), rgba(10, 13, 24, 0.94)),
-        url('public/assets/vfx/bg_fantasy.jpg');
-      background-size: cover;
-      border: 1px solid rgba(255,255,255,0.18);
+      background:
+        radial-gradient(circle at 15% 0%, rgba(243, 200, 107, 0.08), transparent 60%),
+        linear-gradient(160deg, rgba(18, 22, 38, 0.94), rgba(10, 13, 24, 0.97));
+      border: 1px solid rgba(212, 175, 95, 0.28);
       border-radius: 8px;
       padding: 11px;
       display: flex;
@@ -960,9 +1012,9 @@
             <span id="hud-mp-text">100 / 100</span>
           </div>
         </div>
-        <div class="stat-bar" style="height: 9px;">
+        <div class="stat-bar" style="height: 14px;">
           <div id="hud-xp-fill" class="stat-bar-fill xp-fill" style="width: 15%;"></div>
-          <div class="stat-bar-label" style="font-size: 8.5px;">
+          <div class="stat-bar-label" style="font-size: 9.5px;">
             <span>CO-OP SYNERGY & XP</span>
             <span id="hud-synergy-text">SYNERGY 0%</span>
           </div>
@@ -1037,39 +1089,47 @@
 
   <!-- BOTTOM SKILL BAR -->
   <div id="hud-bottom">
+    <div id="skill-tooltip" class="hud-card">
+      <div class="tip-head">
+        <span class="tip-title" id="tip-title">Sunsteel Combo</span>
+        <span class="room-badge" id="tip-key">LMB / 1</span>
+      </div>
+      <div class="tip-meta" id="tip-meta">CD: 0.4s • 100% DMG</div>
+      <div class="tip-desc" id="tip-desc">Wide golden crescent slashes. Every 3rd strike unleashes a Golden Sunburst Wave.</div>
+    </div>
     <div id="skill-bar" class="hud-card">
-      <div class="skill-slot" id="slot-1" onclick="window.game.useSkill(1)">
-        <span class="skill-key">LMB/1</span>
+      <div class="skill-slot" id="slot-1" data-slot="1" onclick="window.game.useSkill(1)">
+        <span class="skill-key">LMB</span>
         <span class="skill-icon" id="icon-1">⚔️</span>
-        <span class="skill-name" id="name-1">Combo Strike</span>
+        <span class="skill-name" id="name-1">Sunsteel Combo</span>
         <div class="skill-cd-overlay" id="cd-1"></div>
       </div>
-      <div class="skill-slot" id="slot-2" onclick="window.game.useSkill(2)">
-        <span class="skill-key">RMB/2</span>
+      <div class="skill-slot" id="slot-2" data-slot="2" onclick="window.game.useSkill(2)">
+        <span class="skill-key">RMB</span>
         <span class="skill-icon" id="icon-2">🛡️</span>
         <span class="skill-name" id="name-2">Seismic Slam</span>
         <div class="skill-cd-overlay" id="cd-2"></div>
       </div>
-      <div class="skill-slot" id="slot-3" onclick="window.game.useSkill(3)">
+      <div class="skill-slot" id="slot-3" data-slot="3" onclick="window.game.useSkill(3)">
         <span class="skill-key">SHIFT</span>
         <span class="skill-icon" id="icon-3">💨</span>
-        <span class="skill-name" id="name-3">Aegis Dash</span>
+        <span class="skill-name" id="name-3">Aegis Rush</span>
         <div class="skill-cd-overlay" id="cd-3"></div>
       </div>
-      <div class="skill-slot" id="slot-4" onclick="window.game.useSkill(4)">
+      <div class="skill-slot" id="slot-4" data-slot="4" onclick="window.game.useSkill(4)">
         <span class="skill-key">4 / V</span>
         <span class="skill-icon" id="icon-4">✨</span>
-        <span class="skill-name" id="name-4">Phalanx Aura</span>
+        <span class="skill-name" id="name-4">Phalanx Banner</span>
         <div class="skill-cd-overlay" id="cd-4"></div>
       </div>
-      <div class="skill-slot" id="slot-potion" onclick="window.game.usePotion()">
-        <span class="skill-key">H / C</span>
+      <div class="skill-slot" id="slot-potion" data-slot="potion" onclick="window.game.usePotion()">
+        <span class="skill-key">H</span>
         <span class="skill-icon">🧪</span>
         <span class="skill-name">Elixir (<span id="potion-count">3</span>)</span>
         <div class="skill-cd-overlay" id="cd-potion"></div>
       </div>
-      <div class="skill-slot ult-slot" id="slot-5" onclick="window.game.useSkill(5)">
-        <span class="skill-key">R / 5</span>
+      <div class="skill-slot ult-slot" id="slot-5" data-slot="5" onclick="window.game.useSkill(5)">
+        <span class="skill-key">R</span>
         <span class="skill-icon">🌌</span>
         <span class="skill-name">Convergence</span>
         <div class="skill-cd-overlay" id="cd-5"></div>
@@ -1152,7 +1212,7 @@
   <!-- MODAL 2: BLACKSMITH RELIC FORGE & ARMORY -->
   <div id="forge-modal" class="modal-backdrop">
     <div class="modal-box">
-      <div class="modal-hero-banner" style="background-image: linear-gradient(90deg, rgba(16, 12, 24, 0.92), rgba(16, 12, 24, 0.45)), url('public/assets/vfx/bg_fantasy.jpg');">
+      <div class="modal-hero-banner" style="background: radial-gradient(circle at 80% 30%, rgba(255, 130, 60, 0.16), transparent 55%), linear-gradient(90deg, rgba(16, 12, 24, 0.96), rgba(26, 18, 32, 0.92));">
         <div>
           <div class="modal-title">⚒️ GRAND BLACKSMITH KAELEN'S RELIC FORGE</div>
           <div style="font-size: 12px; color: var(--text-main);">Equip 3D Weapons onto your Hero's Right/Left Hand Bones or Upgrade with Gold & Chrono-Shards</div>
@@ -1194,7 +1254,7 @@
   <!-- MODAL 4: HALL OF LEGENDS LEADERBOARD -->
   <div id="leaderboard-modal" class="modal-backdrop">
     <div class="modal-box">
-      <div class="modal-hero-banner" style="background-image: linear-gradient(90deg, rgba(24, 10, 20, 0.92), rgba(14, 12, 28, 0.5)), url('public/assets/vfx/bg_bestiary.jpg');">
+      <div class="modal-hero-banner" style="background: radial-gradient(circle at 80% 30%, rgba(255, 59, 92, 0.16), transparent 55%), linear-gradient(90deg, rgba(24, 10, 20, 0.96), rgba(14, 12, 28, 0.94));">
         <div>
           <div class="modal-title">🏆 HALL OF LEGENDS — SUPABASE CO-OP LEADERBOARD</div>
           <div style="font-size: 12px; color: var(--text-main);">Top Co-Op Parties & Solo Champions recorded in Supabase Postgres</div>
@@ -1208,7 +1268,7 @@
   <!-- MODAL 5: HERO INVENTORY & LOOT BAG -->
   <div id="inventory-modal" class="modal-backdrop">
     <div class="modal-box" style="max-width: 960px;">
-      <div class="modal-hero-banner" style="background-image: linear-gradient(90deg, rgba(14, 18, 34, 0.94), rgba(20, 14, 34, 0.55)), url('public/assets/vfx/bg_fantasy.jpg');">
+      <div class="modal-hero-banner" style="background: radial-gradient(circle at 80% 30%, rgba(56, 232, 255, 0.14), transparent 55%), linear-gradient(90deg, rgba(14, 18, 34, 0.96), rgba(20, 14, 34, 0.94));">
         <div>
           <div class="modal-title">🎒 HERO INVENTORY &amp; LOOT BAG</div>
           <div style="font-size: 12px; color: var(--text-main);">Inspect Hero Stats, Equip Looted 3D Weapons &amp; Offhands, Drink Elixirs, or Salvage Gear for Gold &amp; Chrono-Shards</div>
@@ -1236,7 +1296,7 @@
   <!-- MODAL 6: INTERACTIVE TOWN NPC DIALOGUE & SERVICES -->
   <div id="npc-modal" class="modal-backdrop">
     <div class="modal-box" style="max-width: 780px;">
-      <div class="modal-hero-banner" style="background-image: linear-gradient(90deg, rgba(16, 18, 34, 0.94), rgba(16, 20, 34, 0.52)), url('public/assets/vfx/bg_village.jpg');">
+      <div class="modal-hero-banner" style="background: radial-gradient(circle at 80% 30%, rgba(243, 200, 107, 0.15), transparent 55%), linear-gradient(90deg, rgba(16, 18, 34, 0.96), rgba(16, 20, 34, 0.94));">
         <div>
           <div class="modal-title" id="npc-modal-title">⚒️ GRAND BLACKSMITH KAELEN</div>
           <div id="npc-modal-subtitle" style="font-size: 12px; color: var(--cyan);">Ashenvale Bastion Master Artisan</div>
@@ -1308,10 +1368,10 @@
         speed: 8.4,
         color: 0xf3c86b,
         skills: [
-          { icon: '⚔️', name: 'Sunsteel Combo', cd: 0.38 },
-          { icon: '🛡️', name: 'Seismic Slam', cd: 4.5 },
-          { icon: '💨', name: 'Aegis Rush', cd: 3.2 },
-          { icon: '✨', name: 'Phalanx Banner', cd: 10.0 }
+          { icon: '⚔️', name: 'Sunsteel Combo', cd: 0.38, mult: '100% / 135%', desc: 'Wide golden-white crescent arcs. Every 3rd strike unleashes a Golden Sunburst Wave with bonus stagger.' },
+          { icon: '🛡️', name: 'Seismic Slam', cd: 4.5, mult: '190% AoE + Stun', desc: 'Shatters the earth, erupting 6 golden-stone shock pillars around impact and stunning enemies for 1.5s.' },
+          { icon: '💨', name: 'Aegis Rush', cd: 3.2, mult: '120% Path + Slam', desc: 'Surges forward leaving 3 fading golden afterimages, slamming enemies along your charge and granting guard.' },
+          { icon: '✨', name: 'Phalanx Banner', cd: 10.0, mult: '135% + 8s Aura', desc: 'Deploys a 3D Sanctuary War-Banner for 8s that pulses periodic party heals and +25% damage within 6m.' }
         ]
       },
       ranger: {
@@ -1327,10 +1387,10 @@
         speed: 9.8,
         color: 0x2ee68a,
         skills: [
-          { icon: '🏹', name: 'Astral Volley', cd: 0.34 },
-          { icon: '🗡️', name: 'Fan of Blades', cd: 4.0 },
-          { icon: '🍃', name: 'Shadow Vault', cd: 2.8 },
-          { icon: '🌠', name: 'Starfall Rain', cd: 9.0 }
+          { icon: '🏹', name: 'Astral Volley', cd: 0.34, mult: '105% (3x Spread)', desc: 'Fires fast piercing emerald arrows with additive trails. Every 3rd shot unleashes a Triple Spread Volley.' },
+          { icon: '🗡️', name: 'Fan of Blades', cd: 4.0, mult: '90% x7 + Mark', desc: 'Hurls 7 spinning cyan daggers that apply Hunter\'s Mark; the next hit detonates for +45% bonus crit damage.' },
+          { icon: '🍃', name: 'Shadow Vault', cd: 2.8, mult: '145% Decoy AoE', desc: 'Tumbles away leaving an exploding Shadow Decoy that detonates after 0.45s for AoE damage and 3s slow.' },
+          { icon: '🌠', name: 'Starfall Rain', cd: 9.0, mult: '315% Celestial AoE', desc: 'Calls a celestial rune telegraph and rains 18 glowing emerald arrows with individual splash shockwaves.' }
         ]
       },
       arcanist: {
@@ -1346,10 +1406,10 @@
         speed: 9.0,
         color: 0xb266ff,
         skills: [
-          { icon: '🔮', name: 'Reaper Sweep', cd: 0.40 },
-          { icon: '🌀', name: 'Anima Vortex', cd: 5.0 },
-          { icon: '⚡', name: 'Chrono Blink', cd: 3.0 },
-          { icon: '⏳', name: 'Time Freeze', cd: 11.0 }
+          { icon: '🔮', name: 'Reaper Sweep', cd: 0.40, mult: '100% + Homing Wave', desc: 'Violet scythe sweep launching a homing-assisted Astral Crescent Wave that pierces foes.' },
+          { icon: '🌀', name: 'Anima Vortex', cd: 5.0, mult: '205% Singularity', desc: 'Conjures a 3D spinning Singularity Orb with rune rings that pulls enemies inward over 0.5s before imploding.' },
+          { icon: '⚡', name: 'Chrono Blink', cd: 3.0, mult: '85% Blink Blast', desc: 'Teleports through time, leaving a shattering temporal mirror ring at origin and blasting an arcane shockwave.' },
+          { icon: '⏳', name: 'Time Freeze', cd: 11.0, mult: '150% + 4s Stasis', desc: 'Expands a cyan-blue Chrono Stasis Dome that encases nearby foes in 3D ice-crystal cages for 4s.' }
         ]
       },
       berserker: {
@@ -1365,10 +1425,10 @@
         speed: 8.9,
         color: 0xff3b5c,
         skills: [
-          { icon: '🪓', name: 'Twin-Axe Cleave', cd: 0.35 },
-          { icon: '🌪️', name: 'Blood Whirlwind', cd: 4.8 },
-          { icon: '☄️', name: 'Crusher Leap', cd: 3.5 },
-          { icon: '🔥', name: 'Warlord Frenzy', cd: 10.5 }
+          { icon: '🪓', name: 'Twin-Axe Cleave', cd: 0.35, mult: '120% Cross-Cleave', desc: 'Heavy crimson-amber X-cross cleaves scattering molten sparks across enemies in front.' },
+          { icon: '🌪️', name: 'Blood Whirlwind', cd: 4.8, mult: '3x 105% Tornado', desc: 'Spins 720° inside a blazing fire-crimson tornado of orbiting flame ribbons, dealing 3 rapid AoE ticks.' },
+          { icon: '☄️', name: 'Crusher Leap', cd: 3.5, mult: '185% Crater Slam', desc: 'High parabolic leap trailing comet fire, erupting crimson crater spikes on impact and stunning foes.' },
+          { icon: '🔥', name: 'Warlord Frenzy', cd: 10.5, mult: '+35% SPD / +15% Leach', desc: 'Ignites a blazing flame aura for 8s: +35% attack speed, +15% lifesteal, and fiery shockwaves on basic attacks.' }
         ]
       }
     };
@@ -1784,7 +1844,7 @@
         this.hitStopTimer = 0;
         this.screenShake = 0;
         this.cameraYaw = 0;
-        this.cameraZoom = 18.0;
+        this.cameraZoom = 16.8;
 
         // Deterministic slight spawn offset around (0, 0, 12) from playerToken hash so Co-Op heroes don't overlap on spawn
         let tokenHash = 0;
@@ -1822,6 +1882,7 @@
           attackTimer: 0,
           dodgeTimer: 0,
           buffTimer: 0,
+          bannerBuffTimer: 0,
           solarBlessingTimer: 0,
           frenzyTimer: 0,
           spinTimer: 0,
@@ -1864,8 +1925,14 @@
         this.vfxSprites = [];
         this.destructibles = [];
         this.interactables = [];
-        this.worldObstacles = [];
+        if (!this.worldObstacles) this.worldObstacles = [];
         this.worldProps = [];
+        this.propCache = {};
+        this.deployedZones = [];
+        this.flameGlowSprites = [];
+        this.portalVortexGroup = null;
+        this.portalVortexUniforms = null;
+        this.frenzyAuraGroup = null;
         this.tetherLines = [];
         this.floatingMonoliths = [];
         this.aiCompanionTargetCount = 0;
@@ -1971,7 +2038,7 @@
 
         this.renderer = new THREE.WebGLRenderer({
           canvas: this.canvas,
-          antialias: false,
+          antialias: true,
           powerPreference: 'high-performance'
         });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -1980,13 +2047,13 @@
         this.renderer.shadowMap.autoUpdate = true;
         this.renderer.shadowMap.type = THREE.PCFShadowMap;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.25;
+        this.renderer.toneMappingExposure = 1.15;
 
-        // Warm Golden-Hour + Astral Hemispheric & Directional Lighting
-        this.hemiLight = new THREE.HemisphereLight(0xa8c8ff, 0x4d3726, 1.05);
+        // High-Contrast Warm-Gold Sunlight + Cool-Indigo Sky Bounce
+        this.hemiLight = new THREE.HemisphereLight(0x88b2ff, 0x2b203a, 0.90);
         this.scene.add(this.hemiLight);
 
-        this.sunLight = new THREE.DirectionalLight(0xffe4bc, 1.75);
+        this.sunLight = new THREE.DirectionalLight(0xffe1b5, 1.92);
         this.sunLight.position.set(24, 42, 22);
         this.sunLight.castShadow = true;
         this.sunLight.shadow.mapSize.width = 1024;
@@ -2002,7 +2069,7 @@
         this.scene.add(this.sunLight);
         this.scene.add(this.sunLight.target);
 
-        // Load Real Kit Textures with Max Anisotropy + Trilinear Mipmapping
+        // Load Seamless Procedural Biome Floor Textures with Max Anisotropy + Trilinear Mipmapping
         const texLoader = new THREE.TextureLoader();
         const maxAniso = Math.min(8, this.renderer.capabilities.getMaxAnisotropy() || 1);
         const loadTiledTex = (url) => {
@@ -2015,10 +2082,11 @@
           t.generateMipmaps = true;
           return t;
         };
-        const texCobble = loadTiledTex('public/assets/vfx/tex_cobble.png');
-        const texRedBrick = loadTiledTex('public/assets/vfx/tex_redbrick.png');
-        const texDungeon = loadTiledTex('public/assets/vfx/tex_dungeon.png');
-        const texScifi = loadTiledTex('public/assets/vfx/tex_scifi.png');
+        const texPlaza = loadTiledTex('public/assets/vfx/floor_plaza.png');
+        const texCobble = loadTiledTex('public/assets/vfx/floor_cobble.png');
+        const texGrass = loadTiledTex('public/assets/vfx/floor_grass.png');
+        const texCatacomb = loadTiledTex('public/assets/vfx/floor_catacomb.png');
+        const texScifi = loadTiledTex('public/assets/vfx/floor_scifi.png');
 
         // Shared soft radial contact shadow decal texture for grounded entities & props
         const aoCanvas = document.createElement('canvas');
@@ -2048,15 +2116,16 @@
         this.groundUniforms = {
           uTime: { value: 0 },
           uPlayerPos: { value: new THREE.Vector3() },
+          uTexPlaza: { value: texPlaza },
           uTexCobble: { value: texCobble },
-          uTexBrick: { value: texRedBrick },
-          uTexDungeon: { value: texDungeon },
+          uTexGrass: { value: texGrass },
+          uTexCatacomb: { value: texCatacomb },
           uTexScifi: { value: texScifi }
         };
         const groundMat = new THREE.MeshStandardMaterial({
           color: 0xffffff,
           roughness: 0.85,
-          metalness: 0.06
+          metalness: 0.08
         });
         groundMat.onBeforeCompile = (shader) => {
           Object.assign(shader.uniforms, this.groundUniforms);
@@ -2075,9 +2144,10 @@
               `#include <common>
               uniform float uTime;
               uniform vec3 uPlayerPos;
+              uniform sampler2D uTexPlaza;
               uniform sampler2D uTexCobble;
-              uniform sampler2D uTexBrick;
-              uniform sampler2D uTexDungeon;
+              uniform sampler2D uTexGrass;
+              uniform sampler2D uTexCatacomb;
               uniform sampler2D uTexScifi;
               varying vec3 vGroundWorldPos;
               float groundSoftNoise(vec2 p) {
@@ -2088,50 +2158,59 @@
               '#include <map_fragment>',
               `#include <map_fragment>
               vec2 gUv = vGroundWorldPos.xz;
-              // Crisp human-scale UV tiling (~2.2m per tile) with subtle macro variation
-              vec3 smpCobble = texture2D(uTexCobble, gUv * 0.45).rgb;
-              vec3 smpBrick  = texture2D(uTexBrick,  gUv * 0.48).rgb;
-              vec3 smpDung   = texture2D(uTexDungeon, gUv * 0.42).rgb;
-              vec3 smpScifi  = texture2D(uTexScifi,   gUv * 0.46).rgb;
+              // Crisp human-scale seamless UV tiling with macro organic variation
+              vec3 smpPlaza    = texture2D(uTexPlaza,    gUv * 0.36).rgb;
+              vec3 smpCobble   = texture2D(uTexCobble,   gUv * 0.38).rgb;
+              vec3 smpGrass    = texture2D(uTexGrass,    gUv * 0.32).rgb;
+              vec3 smpCatacomb = texture2D(uTexCatacomb, gUv * 0.35).rgb;
+              vec3 smpScifi    = texture2D(uTexScifi,    gUv * 0.36).rgb;
 
-              // Macro organic patch variation (breaks up tiling repetition without any brick pattern on grass)
-              float macroN = groundSoftNoise(gUv * 0.32) * 0.5 + 0.5;
-              float microN = groundSoftNoise(gUv * 2.15) * 0.5 + 0.5;
-              float fineDetail = dot(texture2D(uTexCobble, gUv * 1.4).rgb, vec3(0.333));
+              float macroN = groundSoftNoise(gUv * 0.26) * 0.5 + 0.5;
+              float microN = groundSoftNoise(gUv * 1.85) * 0.5 + 0.5;
 
-              // Softened Sanctuary Brick Plaza & Village Roads
-              float dPlaza = length(gUv - vec2(0.0, 10.0));
-              float roadNS = smoothstep(4.0, 2.1, abs(gUv.x)) * smoothstep(-54.0, -44.0, gUv.y) * smoothstep(42.0, 34.0, gUv.y);
-              float roadEW = smoothstep(3.6, 1.9, abs(gUv.y - 10.0)) * smoothstep(-28.0, -21.0, gUv.x) * smoothstep(28.0, 21.0, gUv.x);
-              float plazaCore = smoothstep(14.5, 9.5, dPlaza);
+              // Sanctuary Plaza & Stone Roads
+              float dPlaza = length(gUv - vec2(0.0, 9.5));
+              float roadNS = smoothstep(3.8, 2.2, abs(gUv.x)) * smoothstep(-54.0, -44.0, gUv.y) * smoothstep(42.0, 34.0, gUv.y);
+              float roadEW = smoothstep(3.5, 2.0, abs(gUv.y - 9.5)) * smoothstep(-28.0, -21.0, gUv.x) * smoothstep(28.0, 21.0, gUv.x);
+              float plazaCore = smoothstep(13.2, 10.6, dPlaza);
               float roadMask = clamp(plazaCore + roadNS + roadEW, 0.0, 1.0);
 
-              // Natural mossy meadow grass (no giant cobble bricks)
-              vec3 grassDark = vec3(0.09, 0.16, 0.08);
-              vec3 grassMid  = vec3(0.16, 0.25, 0.12);
-              vec3 grassWarm = vec3(0.21, 0.26, 0.13);
-              vec3 grassCol  = mix(grassDark, grassMid, clamp(macroN * 0.75 + microN * 0.25, 0.0, 1.0));
-              grassCol = mix(grassCol, grassWarm, smoothstep(0.62, 0.92, macroN) * 0.45);
-              grassCol *= (0.86 + fineDetail * 0.28);
+              // Seamless Meadow Grass with subtle macro tone shifts
+              vec3 grassCol = smpGrass * mix(vec3(0.84, 0.90, 0.80), vec3(1.06, 1.04, 0.92), macroN);
+              grassCol *= (0.92 + microN * 0.16);
 
-              // Stone/Cobble road border & brick center plaza with crisp crevice contrast
-              vec3 stoneRoad = pow(smpCobble, vec3(1.12)) * vec3(0.68, 0.66, 0.63);
-              vec3 warmBrick = pow(smpBrick,  vec3(1.08)) * vec3(0.76, 0.66, 0.58);
-              vec3 pavedCol  = mix(stoneRoad, warmBrick, smoothstep(11.5, 5.5, dPlaza));
-              // Soft dirt shoulder along road edges
-              float shoulderMask = smoothstep(0.05, 0.45, roadMask) * (1.0 - smoothstep(0.45, 0.85, roadMask));
-              vec3 villageCol = mix(grassCol, vec3(0.22, 0.18, 0.13), shoulderMask * 0.6);
-              villageCol = mix(villageCol, pavedCol, smoothstep(0.25, 0.78, roadMask));
+              // Cobble Roads & Ornate Flagstone Plaza
+              vec3 cobbleCol = pow(smpCobble, vec3(1.04)) * vec3(0.92, 0.89, 0.85);
+              vec3 plazaCol  = pow(smpPlaza,  vec3(1.03)) * vec3(0.98, 0.93, 0.86);
+              vec3 pavedCol  = mix(cobbleCol, plazaCol, smoothstep(12.2, 8.8, dPlaza));
 
-              // Smooth organic Biome Weights (no harsh lines)
-              float biomeWarp = (macroN - 0.5) * 4.5;
+              // Crisp sculpted stone plaza curb rings (outer plaza & inner sanctuary dais)
+              float outerCurb = smoothstep(0.55, 0.08, abs(dPlaza - 11.4));
+              float innerCurb = smoothstep(0.36, 0.05, abs(dPlaza - 7.4));
+              float curbGroove = smoothstep(0.14, 0.0, abs(dPlaza - 11.75)) + smoothstep(0.12, 0.0, abs(dPlaza - 7.65));
+              pavedCol = mix(pavedCol, vec3(0.76, 0.72, 0.64), clamp(outerCurb * 0.65 + innerCurb * 0.55, 0.0, 0.75));
+              pavedCol *= (1.0 - clamp(curbGroove, 0.0, 1.0) * 0.35);
+
+              // Soft earth/moss shoulder where grass meets stone
+              float shoulderMask = smoothstep(0.06, 0.42, roadMask) * (1.0 - smoothstep(0.42, 0.84, roadMask));
+              vec3 villageCol = mix(grassCol, vec3(0.24, 0.20, 0.14), shoulderMask * 0.55);
+              villageCol = mix(villageCol, pavedCol, smoothstep(0.26, 0.76, roadMask));
+
+              // Smooth organic Biome Weights
+              float biomeWarp = (macroN - 0.5) * 4.2;
               float wBastion  = smoothstep(-14.0, 6.0, vGroundWorldPos.z + biomeWarp);
               float wCatacomb = (1.0 - wBastion) * smoothstep(6.0, -12.0, vGroundWorldPos.x + biomeWarp);
               float wAstral   = (1.0 - wBastion) * (1.0 - wCatacomb);
 
-              // Catacomb damp stone & Astral metallic sci-fi deck (using real kit textures, NO misaligned wireframe grid)
-              vec3 catacombCol = pow(smpDung, vec3(1.15)) * vec3(0.42, 0.52, 0.48) * (0.85 + macroN * 0.3);
-              vec3 astralCol   = pow(smpScifi, vec3(1.10)) * vec3(0.46, 0.54, 0.70) * (0.88 + microN * 0.24);
+              // Damp Catacomb Flagstones & Brushed Astral Sci-Fi Decks
+              float catPuddle = smoothstep(0.58, 0.82, macroN);
+              vec3 catacombCol = pow(smpCatacomb, vec3(1.06)) * mix(vec3(0.76, 0.85, 0.82), vec3(0.52, 0.64, 0.62), catPuddle * 0.55);
+              vec3 astralCol   = pow(smpScifi,    vec3(1.04)) * vec3(0.84, 0.90, 1.05) * (0.90 + microN * 0.18);
+
+              // Boss Arena Circular Platform Ring around (0, -50)
+              float dBoss = length(gUv - vec2(0.0, -50.0));
+              float bossArenaRing = smoothstep(0.55, 0.08, abs(dBoss - 13.5)) + smoothstep(0.38, 0.05, abs(dBoss - 7.2));
+              astralCol = mix(astralCol, vec3(0.42, 0.48, 0.68), clamp(bossArenaRing * 0.55, 0.0, 0.6));
 
               vec3 baseCol = villageCol * wBastion + catacombCol * wCatacomb + astralCol * wAstral;
               diffuseColor.rgb *= baseCol;`
@@ -2139,16 +2218,29 @@
             .replace(
               '#include <roughnessmap_fragment>',
               `#include <roughnessmap_fragment>
-              float biomeRough = 0.88 * wBastion - 0.08 * roadMask * wBastion + 0.76 * wCatacomb + 0.48 * wAstral;
-              roughnessFactor = clamp(biomeRough, 0.35, 0.96);`
+              // Wet catacomb stone sheen & sleek metallic sci-fi deck reflections
+              float wetCatacomb = mix(0.68, 0.28, catPuddle);
+              float scifiSheen  = mix(0.46, 0.26, smoothstep(0.35, 0.75, smpScifi.b));
+              float biomeRough  = (0.90 - 0.14 * roadMask) * wBastion + wetCatacomb * wCatacomb + scifiSheen * wAstral;
+              roughnessFactor = clamp(biomeRough, 0.24, 0.95);`
+            )
+            .replace(
+              '#include <metalnessmap_fragment>',
+              `#include <metalnessmap_fragment>
+              metalnessFactor = clamp(0.05 * wBastion + 0.16 * wCatacomb + 0.52 * wAstral, 0.0, 0.65);`
             )
             .replace(
               '#include <emissivemap_fragment>',
               `#include <emissivemap_fragment>
-              // Subtle Golden Sanctuary Rune Circle at (0, 8) + Warm Player Torchlight
+              // Golden Sanctuary Rune Circles at (0, 8) + Boss Citadel Arena Rings at (0, -50) + Warm Torchlight
               float dSanctuary = length(gUv - vec2(0.0, 8.0));
-              float runeRing = smoothstep(0.20, 0.0, abs(dSanctuary - 7.5)) + smoothstep(0.13, 0.0, abs(dSanctuary - 4.2));
-              totalEmissiveRadiance += vec3(0.85, 0.62, 0.18) * runeRing * 0.45;
+              float runeRing = smoothstep(0.20, 0.0, abs(dSanctuary - 7.4)) + smoothstep(0.13, 0.0, abs(dSanctuary - 4.2));
+              totalEmissiveRadiance += vec3(0.92, 0.68, 0.22) * runeRing * 0.48;
+
+              float bossGlowRing = smoothstep(0.26, 0.0, abs(dBoss - 13.5)) + smoothstep(0.18, 0.0, abs(dBoss - 7.2));
+              float bossPulse = 0.78 + 0.22 * sin(uTime * 2.2);
+              totalEmissiveRadiance += mix(vec3(0.22, 0.78, 1.0), vec3(0.85, 0.24, 0.75), 0.45) * bossGlowRing * 0.52 * bossPulse;
+
               float dPlr = length(gUv - uPlayerPos.xz);
               float torchGlow = max(0.0, 1.0 - dPlr * 0.075);
               totalEmissiveRadiance += vec3(0.11, 0.075, 0.03) * (torchGlow * torchGlow);`
@@ -2159,17 +2251,39 @@
         this.groundMesh.receiveShadow = true;
         this.scene.add(this.groundMesh);
 
-        // Environmental Floating Particles (lightweight count)
-        const pCount = 120;
+        // Environmental Floating Particles + Drifting Golden/Cyan Sanctuary & Boss Embers
+        const pCount = 180;
         const pGeo = new THREE.BufferGeometry();
         const pPos = new Float32Array(pCount * 3);
         const pCol = new Float32Array(pCount * 3);
+        this._emberBase = new Float32Array(pCount * 3);
         for (let i = 0; i < pCount; i++) {
-          pPos[i * 3] = (Math.random() - 0.5) * 120;
-          pPos[i * 3 + 1] = 0.5 + Math.random() * 11;
-          pPos[i * 3 + 2] = (Math.random() - 0.5) * 120;
+          let ex, ey, ez;
+          if (i < 60) {
+            // Concentrated Sanctuary golden/cyan embers around Plaza & Portal
+            const ang = Math.random() * Math.PI * 2;
+            const rad = 2 + Math.random() * 18;
+            ex = Math.cos(ang) * rad;
+            ey = 0.4 + Math.random() * 5.5;
+            ez = 6 + Math.sin(ang) * rad;
+          } else if (i < 120) {
+            // Concentrated Boss Citadel arcane/crimson embers
+            const ang = Math.random() * Math.PI * 2;
+            const rad = 3 + Math.random() * 19;
+            ex = Math.cos(ang) * rad;
+            ey = 0.5 + Math.random() * 7.5;
+            ez = -49 + Math.sin(ang) * rad;
+          } else {
+            ex = (Math.random() - 0.5) * 110;
+            ey = 0.5 + Math.random() * 10;
+            ez = (Math.random() - 0.5) * 110;
+          }
+          pPos[i * 3] = ex; pPos[i * 3 + 1] = ey; pPos[i * 3 + 2] = ez;
+          this._emberBase[i * 3] = ex; this._emberBase[i * 3 + 1] = ey; this._emberBase[i * 3 + 2] = ez;
           const cChoice = Math.random();
-          const c = cChoice < 0.45 ? new THREE.Color(0xffc66b) : (cChoice < 0.75 ? new THREE.Color(0x38e8ff) : new THREE.Color(0xc580ff));
+          const c = (i < 60)
+            ? (cChoice < 0.65 ? new THREE.Color(0xffd06b) : new THREE.Color(0x38e8ff))
+            : (cChoice < 0.45 ? new THREE.Color(0xffc66b) : (cChoice < 0.78 ? new THREE.Color(0x38e8ff) : new THREE.Color(0xc580ff)));
           pCol[i * 3] = c.r;
           pCol[i * 3 + 1] = c.g;
           pCol[i * 3 + 2] = c.b;
@@ -2177,10 +2291,11 @@
         pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
         pGeo.setAttribute('color', new THREE.BufferAttribute(pCol, 3));
         this.envParticles = new THREE.Points(pGeo, new THREE.PointsMaterial({
-          size: 0.25,
+          size: 0.28,
           vertexColors: true,
           transparent: true,
-          opacity: 0.85,
+          opacity: 0.88,
+          depthWrite: false,
           blending: THREE.AdditiveBlending
         }));
         this.scene.add(this.envParticles);
@@ -2303,17 +2418,19 @@
         });
         this.scene.add(castleBase);
 
-        // 4. Batched 3D Pine & Autumn Forest Ring (3 THREE.InstancedMesh = 3 Draw Calls total!)
+        // 4. Batched 3D Pine & Autumn Forest Ring + Perimeter Boulders (radius 24–42 for rich framing!)
         const treePlacements = [];
-        for (let i = 0; i < 36; i++) {
-          const ang = (i / 36) * Math.PI * 2;
-          const radius = 32 + (i * 19 % 34);
+        for (let i = 0; i < 48; i++) {
+          const ang = (i / 48) * Math.PI * 2;
+          const radius = 24 + (i * 17 % 18);
           const tx = Math.cos(ang) * radius;
           const tz = Math.sin(ang) * radius;
-          if (Math.abs(tx) < 15 && Math.abs(tz) < 24) continue;
-          if (Math.abs(tx) < 7 && tz < 0) continue;
-          const s = 0.85 + (i % 5) * 0.22;
-          const isGold = (i % 4 === 0 || tz > 15);
+          // Keep central plaza, roads, catacomb arena, astral breach & boss citadel paths clear
+          if (Math.abs(tx) < 16 && tz > -16 && tz < 25) continue;
+          if (Math.abs(tx) < 8 && tz <= 0 && tz > -64) continue;
+          if (tz < -10 && tz > -38 && Math.abs(tx) > 10 && Math.abs(tx) < 28) continue;
+          const s = 0.88 + (i % 5) * 0.22;
+          const isGold = (i % 3 === 0 || tz > 12);
           treePlacements.push({ tx, tz, s, isGold });
         }
 
@@ -2357,6 +2474,36 @@
         this.scene.add(cone1Inst);
         this.scene.add(cone2Inst);
 
+        // 4b. Instanced Perimeter Rocks & Mossy Boulders (1 draw call)
+        const rockPlacements = [];
+        for (let i = 0; i < 32; i++) {
+          const ang = (i / 32) * Math.PI * 2 + 0.11;
+          const radius = 23 + (i * 13 % 17);
+          const rx = Math.cos(ang) * radius;
+          const rz = Math.sin(ang) * radius;
+          if (Math.abs(rx) < 15 && rz > -12 && rz < 24) continue;
+          if (Math.abs(rx) < 8 && rz <= 0 && rz > -62) continue;
+          rockPlacements.push({ rx, rz, sx: 1.1 + (i % 4) * 0.45, sy: 0.7 + (i % 3) * 0.38, sz: 1.0 + ((i + 1) % 4) * 0.42 });
+        }
+        if (rockPlacements.length > 0) {
+          const rockMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.88, metalness: 0.08, flatShading: true });
+          const rockInst = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1.0, 0), rockMat, rockPlacements.length);
+          rockInst.castShadow = false;
+          rockInst.receiveShadow = false;
+          rockPlacements.forEach((rp, idx) => {
+            dummy.position.set(rp.rx, rp.sy * 0.42, rp.rz);
+            dummy.rotation.set(idx * 0.3, idx * 1.1, idx * 0.2);
+            dummy.scale.set(rp.sx, rp.sy, rp.sz);
+            dummy.updateMatrix();
+            rockInst.setMatrixAt(idx, dummy.matrix);
+            col.setHex(rp.rz < -10 ? 0x3b4454 : (idx % 2 === 0 ? 0x555c66 : 0x4c5448));
+            rockInst.setColorAt(idx, col);
+          });
+          rockInst.instanceMatrix.needsUpdate = true;
+          if (rockInst.instanceColor) rockInst.instanceColor.needsUpdate = true;
+          this.scene.add(rockInst);
+        }
+
         // 5. Floating Astral Monoliths & Energy Spires in the Northern Sky
         const monoMat = new THREE.MeshStandardMaterial({
           color: 0x151c33,
@@ -2389,6 +2536,165 @@
           { id: 'npc_scholar', pos: new THREE.Vector3(-4.5, 0, 13.5), radius: 3.2, label: 'Talk to Lorekeeper Aldous (Lore & Boss Quest)', action: () => this.openNPCModal('scholar') },
           { id: 'portal', pos: new THREE.Vector3(-1.4, 0, -0.5), radius: 2.6, label: 'Channel Astral Rift Gate (Summon Next Rift Wave / Warp)', action: () => this.activateAstralPortal() }
         ];
+        this.initPortalVortexAndAtmosphere();
+      }
+
+      createGlowSpriteTex(innerHex, midHex) {
+        const c = document.createElement('canvas');
+        c.width = 64; c.height = 64;
+        const ctx = c.getContext('2d');
+        const g = ctx.createRadialGradient(32, 32, 2, 32, 32, 31);
+        g.addColorStop(0, '#ffffff');
+        g.addColorStop(0.28, innerHex);
+        g.addColorStop(0.62, midHex);
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, 64, 64);
+        return new THREE.CanvasTexture(c);
+      }
+
+      addFlameGlowSprite(x, y, z, scale = 1.6, tex = null, phase = 0) {
+        if (!tex) return;
+        const mat = new THREE.SpriteMaterial({
+          map: tex,
+          transparent: true,
+          opacity: 0.85,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending
+        });
+        const sp = new THREE.Sprite(mat);
+        sp.position.set(x, y, z);
+        sp.scale.set(scale, scale, 1);
+        sp.renderOrder = 8;
+        this.scene.add(sp);
+        this.flameGlowSprites.push({ sprite: sp, baseScale: scale, baseY: y, phase });
+      }
+
+      initPortalVortexAndAtmosphere() {
+        // 1. Animated GLSL Swirling Cosmic Vortex Disc + Floating Rune Ring inside prop_astral_portal.glb at (0, 2.2, 0)
+        this.portalVortexGroup = new THREE.Group();
+        this.portalVortexGroup.position.set(0, 2.2, 0);
+
+        this.portalVortexUniforms = { uTime: { value: 0 } };
+        const vortexMat = new THREE.ShaderMaterial({
+          uniforms: this.portalVortexUniforms,
+          transparent: true,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+          blending: THREE.AdditiveBlending,
+          vertexShader: `
+            varying vec2 vUv;
+            void main() {
+              vUv = uv * 2.0 - 1.0;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+          `,
+          fragmentShader: `
+            uniform float uTime;
+            varying vec2 vUv;
+            void main() {
+              float r = length(vUv);
+              if (r > 1.0) discard;
+              float ang = atan(vUv.y, vUv.x);
+              float swirl = ang + (1.0 - r) * 6.5 - uTime * 2.6;
+              float arms = sin(swirl * 3.0) * 0.5 + 0.5;
+              float ripples = sin(r * 16.0 - uTime * 5.0 + ang * 2.0) * 0.5 + 0.5;
+              float core = smoothstep(0.45, 0.0, r);
+              float rim = smoothstep(1.0, 0.72, r);
+              float ring = smoothstep(0.12, 0.0, abs(r - 0.82));
+
+              vec3 deepVoid = vec3(0.24, 0.08, 0.65);
+              vec3 cyanArc  = vec3(0.22, 0.92, 1.0);
+              vec3 goldArc  = vec3(1.0, 0.82, 0.42);
+              vec3 col = mix(deepVoid, cyanArc, arms * 0.75 + ripples * 0.25);
+              col = mix(col, goldArc, core * 0.75 + ring * 0.55);
+              float alpha = clamp((0.35 + 0.65 * arms) * rim * (0.65 + 0.35 * ripples) + core * 0.6, 0.0, 0.95);
+              gl_FragColor = vec4(col * 1.45, alpha);
+            }
+          `
+        });
+        const vortexDisc = new THREE.Mesh(new THREE.CircleGeometry(1.38, 40), vortexMat);
+        this.portalVortexGroup.add(vortexDisc);
+
+        const runeRingMat = new THREE.MeshBasicMaterial({
+          color: 0x38e8ff,
+          transparent: true,
+          opacity: 0.78,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        });
+        const outerRuneRing = new THREE.Mesh(new THREE.TorusGeometry(1.48, 0.045, 8, 44), runeRingMat);
+        const innerRuneRing = new THREE.Mesh(
+          new THREE.TorusGeometry(1.18, 0.03, 8, 36),
+          new THREE.MeshBasicMaterial({ color: 0xf3c86b, transparent: true, opacity: 0.68, blending: THREE.AdditiveBlending, depthWrite: false })
+        );
+        this.portalOuterRing = outerRuneRing;
+        this.portalInnerRing = innerRuneRing;
+        this.portalVortexGroup.add(outerRuneRing);
+        this.portalVortexGroup.add(innerRuneRing);
+        this.scene.add(this.portalVortexGroup);
+
+        // 2. Soft Additive Flickering Flame/Torch Glow Sprites
+        const warmFlameTex = this.createGlowSpriteTex('rgba(255, 225, 130, 0.95)', 'rgba(255, 105, 25, 0.42)');
+        const arcaneGlowTex = this.createGlowSpriteTex('rgba(165, 250, 255, 0.95)', 'rgba(46, 210, 255, 0.42)');
+        const violetGlowTex = this.createGlowSpriteTex('rgba(240, 175, 255, 0.95)', 'rgba(178, 80, 255, 0.42)');
+        this._warmFlameTex = warmFlameTex;
+        this._arcaneGlowTex = arcaneGlowTex;
+        this._violetGlowTex = violetGlowTex;
+
+        // Torches, Blacksmith Anvil Forge, Cauldron & Revive Shrine
+        this.addFlameGlowSprite(-5.5, 2.35, 4.0, 1.85, warmFlameTex, 0.4);
+        this.addFlameGlowSprite(5.5, 2.35, 4.0, 1.85, warmFlameTex, 1.9);
+        this.addFlameGlowSprite(-8.8, 1.25, 7.4, 1.75, warmFlameTex, 2.7);
+        this.addFlameGlowSprite(10.2, 1.35, 6.2, 1.95, arcaneGlowTex, 1.1);
+        this.addFlameGlowSprite(8.8, 2.55, 7.4, 2.25, arcaneGlowTex, 3.4);
+
+        // 3. Glowing Astral Crystal Pillars / Runic Obelisks around the Archon Boss Citadel (z = -40..-58)
+        const obeliskCoords = [
+          { x: -13.5, z: -42, col: 0x38e8ff },
+          { x: 13.5, z: -42, col: 0x38e8ff },
+          { x: -15.5, z: -50, col: 0xc84bff },
+          { x: 15.5, z: -50, col: 0xc84bff },
+          { x: -13.0, z: -58, col: 0xff3b5c },
+          { x: 13.0, z: -58, col: 0xff3b5c }
+        ];
+        const plinthMat = new THREE.MeshStandardMaterial({ color: 0x1b2236, roughness: 0.55, metalness: 0.45 });
+        const plinthGeo = new THREE.CylinderGeometry(0.85, 1.15, 1.4, 6);
+        const crystalGeo = new THREE.OctahedronGeometry(0.75, 0);
+        this.bossCrystalPylons = [];
+        obeliskCoords.forEach((ob, idx) => {
+          const g = new THREE.Group();
+          g.position.set(ob.x, 0, ob.z);
+
+          const plinth = new THREE.Mesh(plinthGeo, plinthMat);
+          plinth.position.y = 0.7;
+          g.add(plinth);
+
+          const cMat = new THREE.MeshStandardMaterial({
+            color: ob.col,
+            emissive: ob.col,
+            emissiveIntensity: 1.35,
+            roughness: 0.2,
+            metalness: 0.3
+          });
+          const crystal = new THREE.Mesh(crystalGeo, cMat);
+          crystal.scale.set(0.78, 2.35, 0.78);
+          crystal.position.y = 3.2;
+          g.add(crystal);
+
+          const halo = new THREE.Mesh(
+            new THREE.TorusGeometry(1.05, 0.045, 8, 24),
+            new THREE.MeshBasicMaterial({ color: ob.col, transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending })
+          );
+          halo.position.y = 3.2;
+          halo.rotation.x = Math.PI / 2.4;
+          g.add(halo);
+
+          this.scene.add(g);
+          this.worldObstacles.push({ x: ob.x, z: ob.z, r: 1.15 });
+          this.bossCrystalPylons.push({ crystal, halo, baseY: 3.2, phase: idx * 1.1 });
+          this.addFlameGlowSprite(ob.x, 3.2, ob.z, 2.8, ob.col === 0x38e8ff ? arcaneGlowTex : violetGlowTex, idx * 0.8);
+        });
       }
 
       createNPCNameplateSprite(nameText, badgeText = '!') {
@@ -2539,7 +2845,7 @@
         );
 
         WEAPON_CATALOG.forEach((w) => {
-          const wUrl = `public/assets/models/weapons/${w.id}.glb`;
+          const wUrl = `assets/models/weapons/${w.id}.glb`;
           this.loader.load(
             wUrl,
             (gltf) => {
@@ -2610,7 +2916,7 @@
         });
 
         ['npc_blacksmith', 'npc_cleric', 'npc_scholar'].forEach((nKey) => {
-          const nUrl = `public/assets/models/npcs/${nKey}.glb`;
+          const nUrl = `assets/models/npcs/${nKey}.glb`;
           this.loader.load(
             nUrl,
             (gltf) => {
@@ -2636,7 +2942,7 @@
           'monster_alien_scolitex', 'monster_alien_oculichrysalis', 'monster_alien_cyclop', 'boss_chrono_archon'
         ];
         monsterModels.forEach((mKey) => {
-          const mUrl = `public/assets/models/monsters/${mKey}.glb`;
+          const mUrl = `assets/models/monsters/${mKey}.glb`;
           this.loader.load(
             mUrl,
             (gltf) => {
@@ -2691,13 +2997,15 @@
           { file: 'bg_medieval_tower.glb', x: -18, z: 28, scale: 1.35, yaw: 0 },
           { file: 'bg_medieval_tower.glb', x: 18, z: 28, scale: 1.35, yaw: 0 },
 
-          // Village Market Bazaar Stalls & Fences
+          // Village Market Bazaar Stalls & Anchored Perimeter Fences (no lone floating fences in north plaza)
           { file: 'bg_market_stall.glb', x: -12, z: 16, scale: 1.3, yaw: 0.6 },
           { file: 'bg_market_stall.glb', x: 12, z: 16, scale: 1.3, yaw: -0.6 },
-          { file: 'bg_fence_iron.glb', x: -8, z: -2, scale: 1.3, yaw: 0 },
-          { file: 'bg_fence_iron.glb', x: 8, z: -2, scale: 1.3, yaw: 0 },
+          { file: 'bg_fence_iron.glb', x: -16.5, z: 3.5, scale: 1.25, yaw: Math.PI / 2 },
+          { file: 'bg_fence_iron.glb', x: 16.5, z: 3.5, scale: 1.25, yaw: Math.PI / 2 },
           { file: 'bg_fence_wood.glb', x: -15, z: 14, scale: 1.3, yaw: Math.PI / 2 },
           { file: 'bg_fence_wood.glb', x: 15, z: 14, scale: 1.3, yaw: Math.PI / 2 },
+          { file: 'prop_wall_arch.glb', x: -9.5, z: -3.2, scale: 1.35, yaw: 0.12 },
+          { file: 'prop_wall_arch.glb', x: 9.5, z: -3.2, scale: 1.35, yaw: -0.12 },
 
           // Blacksmith Forge & Sanctuary Props (positioned beside NPC stations to prevent mesh clipping)
           { file: 'prop_anvil.glb', x: -8.8, z: 7.4, scale: 1.5, yaw: 0.5 },
@@ -2750,7 +3058,7 @@
           'prop_column_pipes.glb': 1.05,
           'prop_access_point.glb': 1.0
         };
-        this.worldObstacles = [];
+        if (!this.worldObstacles) this.worldObstacles = [];
         this.worldProps = [];
 
         placements.forEach((p) => {
@@ -2761,7 +3069,7 @@
         });
 
         // Deduplicated prop loader + staggered non-blocking instantiation queue (2 props per tick)
-        const loadedPropCache = {};
+        const loadedPropCache = this.propCache;
         const pendingPropCallbacks = {};
         const spawnQueue = [];
         let queueActive = false;
@@ -2798,7 +3106,7 @@
             return;
           }
           pendingPropCallbacks[file] = [cb];
-          const pUrl = `public/assets/models/props/${file}`;
+          const pUrl = `assets/models/props/${file}`;
           this.loader.load(
             pUrl,
             (gltf) => {
@@ -2961,6 +3269,9 @@
         entity.glbNode = cloned;
         if (entity.nameplateSprite) {
           entity.meshRoot.add(entity.nameplateSprite);
+        }
+        if (entity.chatBubbleSprite) {
+          entity.meshRoot.add(entity.chatBubbleSprite);
         }
 
         if (this.contactShadowMat) {
@@ -3532,6 +3843,351 @@
         }
       }
 
+      spawnShockPillars(center, count = 6, radius = 2.8, colorHex = 0xf3c86b, emissiveHex = 0xff9922) {
+        if (!this._pillarGeo) {
+          this._pillarGeo = new THREE.ConeGeometry(0.42, 2.4, 5);
+          this._pillarGeo.translate(0, 1.0, 0);
+        }
+        for (let i = 0; i < count; i++) {
+          const ang = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.25;
+          const dist = radius * (0.72 + Math.random() * 0.35);
+          const mat = new THREE.MeshStandardMaterial({
+            color: colorHex,
+            emissive: emissiveHex,
+            emissiveIntensity: 0.95,
+            roughness: 0.35,
+            metalness: 0.25,
+            transparent: true,
+            opacity: 0.96
+          });
+          const mesh = new THREE.Mesh(this._pillarGeo, mat);
+          mesh.position.set(center.x + Math.cos(ang) * dist, -1.2, center.z + Math.sin(ang) * dist);
+          mesh.rotation.set((Math.random() - 0.5) * 0.24, ang, (Math.random() - 0.5) * 0.24);
+          const s = 0.85 + Math.random() * 0.45;
+          mesh.scale.set(s, s * 1.15, s);
+          this.scene.add(mesh);
+          this.vfxSprites.push({
+            mesh,
+            isMesh: true,
+            isPillar: true,
+            targetY: 0,
+            elapsed: 0,
+            duration: 0.85
+          });
+        }
+      }
+
+      spawnHeroAfterimage(ent, pos, yaw, colorHex = 0xf3c86b, duration = 0.46) {
+        const g = new THREE.Group();
+        g.position.copy(pos);
+        g.rotation.y = yaw;
+        const ghostMat = new THREE.MeshBasicMaterial({
+          color: colorHex,
+          transparent: true,
+          opacity: 0.65,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        });
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.22, 0.95, 8), ghostMat);
+        body.position.y = 0.95;
+        const head = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 1), ghostMat);
+        head.position.y = 1.6;
+        const shield = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.72, 0.12), ghostMat);
+        shield.position.set(-0.35, 1.05, 0.32);
+        g.add(body); g.add(head); g.add(shield);
+        this.scene.add(g);
+        this.vfxSprites.push({
+          mesh: g,
+          isMesh: true,
+          isAfterimage: true,
+          mat: ghostMat,
+          elapsed: 0,
+          duration
+        });
+      }
+
+      spawnPhalanxBannerZone(pos, owner, duration = 8.0) {
+        const group = new THREE.Group();
+        group.position.copy(pos);
+        const bannerTemplate = this.propCache && this.propCache['prop_banner.glb'];
+        if (bannerTemplate) {
+          const banner = bannerTemplate.clone();
+          banner.scale.setScalar(1.45);
+          group.add(banner);
+        } else {
+          const pole = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.06, 0.08, 3.0, 8),
+            new THREE.MeshStandardMaterial({ color: 0xf3c86b, metalness: 0.8, roughness: 0.25 })
+          );
+          pole.position.y = 1.5;
+          group.add(pole);
+          const cloth = new THREE.Mesh(
+            new THREE.BoxGeometry(0.9, 1.2, 0.08),
+            new THREE.MeshStandardMaterial({ color: 0xffd56b, emissive: 0xd98a18, emissiveIntensity: 0.8 })
+          );
+          cloth.position.set(0.45, 2.2, 0);
+          group.add(cloth);
+        }
+
+        const ringGeo = new THREE.RingGeometry(5.55, 5.95, 48);
+        ringGeo.rotateX(-Math.PI / 2);
+        const ringMat = new THREE.MeshBasicMaterial({
+          color: 0xf3c86b,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.75,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.position.y = 0.08;
+        group.add(ring);
+
+        const domeGeo = new THREE.SphereGeometry(5.8, 24, 14, 0, Math.PI * 2, 0, Math.PI * 0.5);
+        const domeMat = new THREE.MeshBasicMaterial({
+          color: 0xffd56b,
+          transparent: true,
+          opacity: 0.12,
+          side: THREE.DoubleSide,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        });
+        const dome = new THREE.Mesh(domeGeo, domeMat);
+        group.add(dome);
+
+        this.scene.add(group);
+        this.deployedZones.push({
+          type: 'phalanx_banner',
+          group,
+          ring,
+          ringMat,
+          domeMat,
+          pos: group.position.clone(),
+          radius: 6.0,
+          owner,
+          tickAccum: 0.25,
+          elapsed: 0,
+          duration
+        });
+      }
+
+      spawnShadowDecoy(pos, yaw, dmg, owner, canDealLocalDamage) {
+        const g = new THREE.Group();
+        g.position.copy(pos);
+        g.rotation.y = yaw;
+        const decoyMat = new THREE.MeshBasicMaterial({
+          color: 0x2ee68a,
+          transparent: true,
+          opacity: 0.78,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        });
+        const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.18, 0.92, 8), decoyMat);
+        torso.position.y = 0.92;
+        const head = new THREE.Mesh(new THREE.OctahedronGeometry(0.20, 1), decoyMat);
+        head.position.y = 1.56;
+        const ringGeo = new THREE.RingGeometry(0.8, 3.6, 32);
+        ringGeo.rotateX(-Math.PI / 2);
+        const ringMat = new THREE.MeshBasicMaterial({
+          color: 0x2ee68a,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.32,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.position.y = 0.06;
+        g.add(torso); g.add(head); g.add(ring);
+        this.scene.add(g);
+        this.vfxSprites.push({
+          mesh: g,
+          isMesh: true,
+          isDecoy: true,
+          mat: decoyMat,
+          ring,
+          ringMat,
+          originPos: pos.clone(),
+          dmg,
+          owner,
+          canDealLocalDamage,
+          elapsed: 0,
+          duration: 0.45
+        });
+      }
+
+      applyHuntersMark(mob, duration = 6.0) {
+        if (!mob || mob.dead) return;
+        mob.huntersMarkTimer = duration;
+        if (mob.huntersMarkMesh) return;
+        const geo = new THREE.RingGeometry(0.85, 1.12, 24);
+        geo.rotateX(-Math.PI / 2);
+        const mat = new THREE.MeshBasicMaterial({
+          color: 0x38e8ff,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.88,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.y = 0.09;
+        if (mob.meshRoot) mob.meshRoot.add(mesh);
+        mob.huntersMarkMesh = mesh;
+      }
+
+      spawnAnimaVortexOrb(targetPos, dmg, owner, canDealLocalDamage) {
+        const g = new THREE.Group();
+        g.position.set(targetPos.x, 1.25, targetPos.z);
+
+        const coreMat = new THREE.MeshBasicMaterial({
+          color: 0x2a0845,
+          transparent: true,
+          opacity: 0.94
+        });
+        const core = new THREE.Mesh(new THREE.SphereGeometry(0.62, 16, 12), coreMat);
+        const auraMat = new THREE.MeshBasicMaterial({
+          color: 0xb266ff,
+          transparent: true,
+          opacity: 0.58,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        });
+        const aura = new THREE.Mesh(new THREE.SphereGeometry(0.95, 16, 12), auraMat);
+        const ring1 = new THREE.Mesh(
+          new THREE.TorusGeometry(1.45, 0.055, 8, 32),
+          new THREE.MeshBasicMaterial({ color: 0xb266ff, transparent: true, opacity: 0.88, blending: THREE.AdditiveBlending, depthWrite: false })
+        );
+        const ring2 = new THREE.Mesh(
+          new THREE.TorusGeometry(1.95, 0.045, 8, 32),
+          new THREE.MeshBasicMaterial({ color: 0x38e8ff, transparent: true, opacity: 0.80, blending: THREE.AdditiveBlending, depthWrite: false })
+        );
+        ring1.rotation.x = Math.PI / 2.6;
+        ring2.rotation.y = Math.PI / 3;
+        g.add(core); g.add(aura); g.add(ring1); g.add(ring2);
+        this.scene.add(g);
+
+        this.vfxSprites.push({
+          mesh: g,
+          isMesh: true,
+          isSingularity: true,
+          ring1,
+          ring2,
+          targetPos: targetPos.clone(),
+          dmg,
+          owner,
+          canDealLocalDamage,
+          elapsed: 0,
+          duration: 0.52
+        });
+      }
+
+      spawnChronoMirrorShatter(origin) {
+        const g = new THREE.Group();
+        g.position.set(origin.x, 1.15, origin.z);
+        const ring = new THREE.Mesh(
+          new THREE.TorusGeometry(1.15, 0.06, 8, 28),
+          new THREE.MeshBasicMaterial({ color: 0x38e8ff, transparent: true, opacity: 0.92, blending: THREE.AdditiveBlending, depthWrite: false })
+        );
+        ring.rotation.x = Math.PI / 2;
+        g.add(ring);
+        const shards = [];
+        const shardGeo = new THREE.OctahedronGeometry(0.24, 0);
+        for (let i = 0; i < 8; i++) {
+          const ang = (i / 8) * Math.PI * 2;
+          const sMat = new THREE.MeshBasicMaterial({ color: i % 2 === 0 ? 0x38e8ff : 0xc878ff, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
+          const s = new THREE.Mesh(shardGeo, sMat);
+          s.position.set(Math.cos(ang) * 0.7, (i % 3 - 1) * 0.35, Math.sin(ang) * 0.7);
+          s.userData.dir = new THREE.Vector3(Math.cos(ang), 0.35, Math.sin(ang));
+          g.add(s);
+          shards.push(s);
+        }
+        this.scene.add(g);
+        this.vfxSprites.push({
+          mesh: g,
+          isMesh: true,
+          isMirrorShatter: true,
+          ring,
+          shards,
+          shardGeo,
+          elapsed: 0,
+          duration: 0.45
+        });
+      }
+
+      spawnChronoStasisDome(origin, maxRadius = 7.0, duration = 1.65) {
+        const g = new THREE.Group();
+        g.position.set(origin.x, 0.02, origin.z);
+        const domeGeo = new THREE.SphereGeometry(1, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.5);
+        const shellMat = new THREE.MeshBasicMaterial({
+          color: 0x38e8ff,
+          transparent: true,
+          opacity: 0.24,
+          side: THREE.DoubleSide,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        });
+        const wireMat = new THREE.MeshBasicMaterial({
+          color: 0xa6f6ff,
+          wireframe: true,
+          transparent: true,
+          opacity: 0.38,
+          depthWrite: false
+        });
+        const shell = new THREE.Mesh(domeGeo, shellMat);
+        const wire = new THREE.Mesh(domeGeo, wireMat);
+        g.add(shell); g.add(wire);
+        g.scale.setScalar(0.5);
+        this.scene.add(g);
+        this.vfxSprites.push({
+          mesh: g,
+          isMesh: true,
+          isStasisDome: true,
+          domeGeo,
+          mats: [shellMat, wireMat],
+          maxRadius,
+          elapsed: 0,
+          duration
+        });
+      }
+
+      spawnWhirlwindTornado(ent, duration = 0.72) {
+        const g = new THREE.Group();
+        g.position.copy(ent.pos);
+        const ribbonMats = [];
+        const ribbonGeos = [];
+        for (let r = 0; r < 3; r++) {
+          const radius = 1.8 + r * 1.15;
+          const torusGeo = new THREE.TorusGeometry(radius, 0.14 - r * 0.02, 8, 32, Math.PI * 1.45);
+          torusGeo.rotateX(Math.PI / 2);
+          const mat = new THREE.MeshBasicMaterial({
+            color: r === 0 ? 0xffaa33 : (r === 1 ? 0xff3b5c : 0xff6622),
+            transparent: true,
+            opacity: 0.9,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+          });
+          const mesh = new THREE.Mesh(torusGeo, mat);
+          mesh.position.y = 0.65 + r * 0.55;
+          mesh.rotation.y = r * 2.1;
+          mesh.rotation.z = (r % 2 === 0 ? 0.16 : -0.16);
+          g.add(mesh);
+          ribbonMats.push(mat);
+          ribbonGeos.push(torusGeo);
+        }
+        this.scene.add(g);
+        this.vfxSprites.push({
+          mesh: g,
+          isMesh: true,
+          isTornado: true,
+          targetEntity: ent,
+          ribbonMats,
+          ribbonGeos,
+          elapsed: 0,
+          duration
+        });
+      }
+
       spawnFrostCrystalStasis(mob, duration = 4.0) {
         if (!mob || !mob.meshRoot) return;
         const group = new THREE.Group();
@@ -3764,7 +4420,7 @@
       getWeaponStats() {
         const w = WEAPON_CATALOG.find(x => x.id === this.player.weaponId) || WEAPON_CATALOG[0];
         const baseMult = 1 + (this.player.weaponLevel - 1) * 0.18 + (this.player.level - 1) * 0.08;
-        const blessingMult = (this.player.solarBlessingTimer > 0 ? 1.20 : 1.0) * (this.player.frenzyTimer > 0 ? 1.15 : 1.0);
+        const blessingMult = (this.player.solarBlessingTimer > 0 ? 1.20 : 1.0) * (this.player.frenzyTimer > 0 ? 1.15 : 1.0) * (this.player.bannerBuffTimer > 0 ? 1.25 : 1.0);
         return {
           dmg: Math.round(w.dmg * baseMult * blessingMult),
           crit: w.crit + (this.player.frenzyTimer > 0 ? 0.08 : 0),
@@ -3842,44 +4498,78 @@
           const anim = ent.classId === 'ranger' ? 'Spell_Simple_Shoot' : comboAnims[comboIdx];
           ent.attackCombo = (comboIdx + 1) % 3;
           this.playEntityAnim(ent, anim, true);
-          ent.attackTimer = ent.classId === 'ranger' ? 0.28 : 0.34;
+          ent.attackTimer = ent.classId === 'ranger' ? 0.28 : (ent.frenzyTimer > 0 ? 0.25 : 0.34);
           this.audio.playSwing(ent.classId === 'berserker');
 
           if (ent.classId === 'ranger') {
-            this.spawnProjectile(
-              ent.pos.clone().add(new THREE.Vector3(0, 1.15, 0)),
-              forward,
-              30,
-              Math.round(wStats.dmg * 1.05),
-              0x2ee68a,
-              true,
-              isRemotePeer,
-              { pierce: true, maxPierces: 3, modelKey: 'weapon_Arrow', actor: ent }
-            );
+            // Every 3rd shot fires a Triple Spread Volley with additive emerald trails
+            const spreadAngles = comboIdx === 2 ? [-0.14, 0, 0.14] : [0];
+            spreadAngles.forEach((ang) => {
+              const shotDir = ang === 0 ? forward : forward.clone().applyAxisAngle(upAxis, ang);
+              this.spawnProjectile(
+                ent.pos.clone().add(new THREE.Vector3(0, 1.15, 0)),
+                shotDir,
+                32,
+                Math.round(wStats.dmg * (comboIdx === 2 ? 0.88 : 1.05)),
+                0x2ee68a,
+                true,
+                isRemotePeer,
+                { pierce: true, maxPierces: 3, modelKey: 'weapon_Arrow', trailColor: 0x2ee68a, actor: ent }
+              );
+            });
+            if (comboIdx === 2) {
+              this.spawnShockwaveRing(ent.pos, 2.2, 0x2ee68a, 0.22);
+            }
           } else if (ent.classId === 'arcanist') {
-            this.spawnSlashArc(ent.pos, ent.yaw, 3.2, cls.color, comboIdx, false);
+            this.spawnSlashArc(ent.pos, ent.yaw, 3.3, cls.color, comboIdx, false);
             this.spawnProjectile(
               ent.pos.clone().add(new THREE.Vector3(0, 1.1, 0)).addScaledVector(forward, 0.7),
               forward,
               21,
-              Math.round(wStats.dmg * 0.95),
+              Math.round(wStats.dmg * 0.98),
               0xb266ff,
               true,
               isRemotePeer,
-              { pierce: true, maxPierces: 4, isCrescent: true, life: 0.95, actor: ent }
+              { pierce: true, maxPierces: 4, isCrescent: true, homingStrength: 4.6, trailColor: 0xb266ff, life: 1.05, actor: ent }
             );
             if (canDealLocalDamage) {
               this.damageEnemiesInCone(ent.pos, forward, 3.8, 0.40, wStats.dmg, false, ent);
             }
           } else if (ent.classId === 'berserker') {
-            this.spawnSlashArc(ent.pos, ent.yaw, 3.6, 0xff3b5c, comboIdx, true);
+            // Heavy crimson-amber X-cross cleaves + molten ground sparks
+            this.spawnSlashArc(ent.pos, ent.yaw + 0.18, 3.7, 0xff3b5c, 0, true);
+            this.spawnSlashArc(ent.pos, ent.yaw - 0.18, 3.5, 0xffaa22, 1, true);
+            const sparkSpot = ent.pos.clone().addScaledVector(forward, 1.9);
+            this.spawnHitSparks(sparkSpot, forward, 0xff7722, 10);
+            if (ent.frenzyTimer > 0) {
+              // Warlord Frenzy unleashes fiery shockwaves on basic attacks!
+              this.spawnShockwaveRing(sparkSpot, 4.2, 0xff5522, 0.30);
+              this.spawnVFXFlipbook('impact', sparkSpot, 3.4, 0.30, 0xff5522, false, { depthTest: false });
+              if (canDealLocalDamage) {
+                this.damageEnemiesInRadius(sparkSpot, 4.0, Math.round(wStats.dmg * 0.45), false, ent);
+              }
+            }
             if (canDealLocalDamage) {
-              this.damageEnemiesInCone(ent.pos, forward, 3.9, 0.32, Math.round(wStats.dmg * 1.18), false, ent);
+              this.damageEnemiesInCone(ent.pos, forward, 4.0, 0.30, Math.round(wStats.dmg * 1.20), false, ent);
             }
           } else {
-            this.spawnSlashArc(ent.pos, ent.yaw, 3.2, cls.color, comboIdx, false);
-            if (canDealLocalDamage) {
-              this.damageEnemiesInCone(ent.pos, forward, 3.7, 0.42, wStats.dmg, false, ent);
+            // Vanguard Sunsteel Combo: wide golden-white arcs + 3rd hit Golden Sunburst Wave + bonus stagger
+            const isFinisher = comboIdx === 2;
+            this.spawnSlashArc(ent.pos, ent.yaw, isFinisher ? 4.1 : 3.4, 0xffe699, comboIdx, isFinisher);
+            if (isFinisher) {
+              const burstSpot = ent.pos.clone().addScaledVector(forward, 1.8);
+              this.spawnShockwaveRing(burstSpot, 5.2, 0xffe066, 0.36);
+              this.spawnVFXFlipbook('bighit', burstSpot, 4.2, 0.40, 0xffd56b, false, { depthTest: false });
+              if (canDealLocalDamage) {
+                this.monsters.forEach((m) => {
+                  if (!m.dead && m.pos.distanceTo(burstSpot) <= 4.4 + (m.isBoss ? 1.2 : 0.4)) {
+                    m.stunTimer = Math.max(m.stunTimer || 0, 0.75);
+                    this.applyDamageToMonster(m, Math.round(wStats.dmg * 1.35), true, ent);
+                  }
+                });
+              }
+            } else if (canDealLocalDamage) {
+              this.damageEnemiesInCone(ent.pos, forward, 3.8, 0.38, wStats.dmg, false, ent);
             }
           }
         }
@@ -3894,59 +4584,51 @@
               this.spawnProjectile(
                 ent.pos.clone().add(new THREE.Vector3(0, 1.15, 0)),
                 dir,
-                26,
+                27,
                 Math.round(wStats.dmg * 0.9),
                 0x38e8ff,
                 true,
                 isRemotePeer,
-                { modelKey: this.modelCache['weapon_Dagger_2'] ? 'weapon_Dagger_2' : 'weapon_Arrow', spinDagger: true, actor: ent }
+                { modelKey: this.modelCache['weapon_Dagger_2'] ? 'weapon_Dagger_2' : 'weapon_Arrow', spinDagger: true, applyHuntersMark: true, trailColor: 0x38e8ff, actor: ent }
               );
             }
           } else if (ent.classId === 'arcanist') {
             this.playEntityAnim(ent, 'Spell_Simple_Shoot', true);
             const targetPos = this.getClampedAimPos(ent, 10.5, 5.5);
             this.audio.playSpell('arcane');
-            this.spawnVFXFlipbook('vortex', targetPos, 5.6, 0.85, 0xb266ff, true);
-            this.spawnTelegraphCircle(targetPos, 4.8, 0.42, 0xb266ff, () => {
-              this.spawnVFXFlipbook('explosion', targetPos, 5.2, 0.52, 0xb266ff, false, { depthTest: false });
-              this.spawnShockwaveRing(targetPos, 4.8, 0xb266ff, 0.36);
-              if (!canDealLocalDamage) return;
-              this.monsters.forEach((m) => {
-                if (!m.dead && m.pos.distanceTo(targetPos) <= 5.2) {
-                  if (!m.isBoss) {
-                    const pull = targetPos.clone().sub(m.pos).multiplyScalar(0.65);
-                    m.pos.add(pull);
-                  }
-                  this.applyDamageToMonster(m, Math.round(wStats.dmg * 1.95), true, ent, false, null, { noKnockback: true });
-                }
-              });
-            });
+            this.spawnVFXFlipbook('vortex', targetPos, 5.8, 0.75, 0xb266ff, true);
+            this.spawnAnimaVortexOrb(targetPos, Math.round(wStats.dmg * 2.05), ent, canDealLocalDamage);
           } else if (ent.classId === 'berserker') {
             this.playEntityAnim(ent, 'Sword_Attack', true);
-            ent.spinTimer = 0.65;
-            this.spawnWhirlwindRings(ent.pos, 4.5, 0xff3b5c);
-            this.spawnVFXFlipbook('bighit', ent.pos, 4.6, 0.48, 0xff3b5c, false, { depthTest: false });
+            ent.spinTimer = 0.72;
+            this.spawnWhirlwindTornado(ent, 0.72);
+            this.spawnWhirlwindRings(ent.pos, 4.6, 0xff3b5c);
+            this.spawnVFXFlipbook('bighit', ent.pos, 4.8, 0.48, 0xff5522, false, { depthTest: false });
             if (canDealLocalDamage) {
-              this.screenShake = Math.max(this.screenShake, 0.32);
-              this.damageEnemiesInRadius(ent.pos, 4.7, Math.round(wStats.dmg * 1.25), true, ent);
-              setTimeout(() => {
-                if (!ent.dead) {
-                  this.spawnWhirlwindRings(ent.pos, 4.5, 0xff5533);
-                  this.damageEnemiesInRadius(ent.pos, 4.7, Math.round(wStats.dmg * 1.25), true, ent);
-                }
-              }, 280);
+              this.screenShake = Math.max(this.screenShake, 0.34);
+              this.damageEnemiesInRadius(ent.pos, 4.8, Math.round(wStats.dmg * 1.05), false, ent);
+              [240, 480].forEach((delay, tickIdx) => {
+                setTimeout(() => {
+                  if (!ent.dead) {
+                    this.spawnWhirlwindRings(ent.pos, 4.6, tickIdx === 1 ? 0xffaa22 : 0xff3b5c);
+                    this.damageEnemiesInRadius(ent.pos, 4.8, Math.round(wStats.dmg * 1.05), tickIdx === 1, ent);
+                  }
+                }, delay);
+              });
             }
           } else {
             this.playEntityAnim(ent, 'Sword_Heavy_Combo', true);
             const impactPos = ent.pos.clone().add(forward.clone().multiplyScalar(2.1));
-            this.spawnVFXFlipbook('bighit', impactPos, 4.4, 0.5, 0xf3c86b, false, { depthTest: false });
-            this.spawnShockwaveRing(impactPos, 4.5, 0xf3c86b, 0.36);
+            this.spawnVFXFlipbook('eldenring', impactPos, 5.2, 0.55, 0xffaa33, true);
+            this.spawnVFXFlipbook('bighit', impactPos, 4.6, 0.5, 0xf3c86b, false, { depthTest: false });
+            this.spawnShockwaveRing(impactPos, 4.8, 0xf3c86b, 0.38);
             this.spawnSlashArc(ent.pos, ent.yaw, 4.2, 0xffaa33, 2, true);
+            this.spawnShockPillars(impactPos, 6, 2.8, 0xf3c86b, 0xff9922);
             if (canDealLocalDamage) {
-              this.screenShake = Math.max(this.screenShake, 0.38);
+              this.screenShake = Math.max(this.screenShake, 0.40);
               this.monsters.forEach((m) => {
-                if (!m.dead && m.pos.distanceTo(impactPos) <= 4.5 + (m.isBoss ? 1.2 : 0.4)) {
-                  m.stunTimer = Math.max(m.stunTimer || 0, 1.3);
+                if (!m.dead && m.pos.distanceTo(impactPos) <= 4.7 + (m.isBoss ? 1.2 : 0.4)) {
+                  m.stunTimer = Math.max(m.stunTimer || 0, 1.5);
                   this.applyDamageToMonster(m, Math.round(wStats.dmg * 1.9), true, ent);
                 }
               });
@@ -3957,49 +4639,51 @@
           this.audio.playSwing(false);
           if (ent.classId === 'arcanist') {
             this.playEntityAnim(ent, 'Spell_Simple_Enter', true);
-            ent.dodgeTimer = 0.36;
+            ent.dodgeTimer = 0.38;
             const originEcho = ent.pos.clone();
-            this.spawnVFXFlipbook('vortex', originEcho, 3.0, 0.35, 0xb266ff, true);
+            this.spawnChronoMirrorShatter(originEcho);
+            this.spawnVFXFlipbook('vortex', originEcho, 3.2, 0.35, 0xb266ff, true);
             if (!isRemotePeer) {
               const dest = this.getClampedAimPos(ent, 7.8, 6.2);
               ent.pos.copy(dest);
               this.resolveObstacleCollisions(ent.pos, 0.55);
             }
-            this.spawnVFXFlipbook('charged', ent.pos, 3.2, 0.38, 0x38e8ff, false, { depthTest: false });
-            this.spawnShockwaveRing(ent.pos, 2.8, 0xb266ff, 0.28);
+            this.spawnVFXFlipbook('charged', ent.pos, 3.6, 0.40, 0x38e8ff, false, { depthTest: false });
+            this.spawnShockwaveRing(ent.pos, 3.6, 0x38e8ff, 0.32);
+            if (canDealLocalDamage) {
+              this.damageEnemiesInRadius(ent.pos, 3.8, Math.round(wStats.dmg * 0.85), false, ent);
+            }
           } else if (ent.classId === 'berserker') {
             this.playEntityAnim(ent, 'Sword_Heavy_Combo', true);
-            ent.dodgeTimer = 0.42;
-            const dest = this.getClampedAimPos(ent, 7.0, 5.6);
+            ent.dodgeTimer = 0.45;
+            const dest = this.getClampedAimPos(ent, 7.5, 5.8);
             if (!isRemotePeer && ent.leapStart && ent.leapEnd) {
               ent.leapStart.copy(ent.pos);
               ent.leapEnd.copy(dest);
-              ent.leapDuration = 0.36;
-              ent.leapTimer = 0.36;
+              ent.leapDuration = 0.38;
+              ent.leapTimer = 0.38;
             }
-            this.spawnVFXFlipbook('charged', ent.pos, 2.6, 0.3, 0xff3b5c);
+            this.spawnVFXFlipbook('charged', ent.pos, 2.8, 0.32, 0xff3b5c);
             setTimeout(() => {
               this.audio.playHit(true, true);
-              this.spawnVFXFlipbook('bighit', ent.pos, 4.6, 0.5, 0xff3b5c, false, { depthTest: false });
-              this.spawnShockwaveRing(ent.pos, 4.4, 0xff3b5c, 0.38);
+              this.spawnVFXFlipbook('bighit', ent.pos, 4.8, 0.5, 0xff3b5c, false, { depthTest: false });
+              this.spawnShockwaveRing(ent.pos, 4.6, 0xff3b5c, 0.38);
+              this.spawnShockPillars(ent.pos, 7, 2.9, 0xff3b5c, 0xff5500);
               if (canDealLocalDamage) {
-                this.screenShake = Math.max(this.screenShake, 0.42);
+                this.screenShake = Math.max(this.screenShake, 0.44);
                 this.monsters.forEach((m) => {
-                  if (!m.dead && m.pos.distanceTo(ent.pos) <= 4.5 + (m.isBoss ? 1.2 : 0.4)) {
-                    m.stunTimer = Math.max(m.stunTimer || 0, 1.4);
-                    this.applyDamageToMonster(m, Math.round(wStats.dmg * 1.75), true, ent);
+                  if (!m.dead && m.pos.distanceTo(ent.pos) <= 4.7 + (m.isBoss ? 1.2 : 0.4)) {
+                    m.stunTimer = Math.max(m.stunTimer || 0, 1.5);
+                    this.applyDamageToMonster(m, Math.round(wStats.dmg * 1.85), true, ent);
                   }
                 });
               }
-            }, 340);
+            }, 360);
           } else if (ent.classId === 'ranger') {
             this.playEntityAnim(ent, 'Roll', true);
-            ent.dodgeTimer = 0.42;
+            ent.dodgeTimer = 0.44;
             const originPos = ent.pos.clone();
-            this.spawnVFXFlipbook('anima', originPos, 3.2, 0.42, 0x2ee68a, false, { depthTest: false });
-            if (canDealLocalDamage) {
-              this.damageEnemiesInRadius(originPos, 3.4, Math.round(wStats.dmg * 0.9), false, ent);
-            }
+            this.spawnShadowDecoy(originPos, ent.yaw, Math.round(wStats.dmg * 1.45), ent, canDealLocalDamage);
             if (!isRemotePeer) {
               const vaultDir = (ent === this.player && this.keys['s']) ? forward.clone().negate() : forward.clone();
               ent.pos.add(vaultDir.multiplyScalar(4.8));
@@ -4007,24 +4691,32 @@
               ent.pos.z = Math.max(-75, Math.min(45, ent.pos.z));
               this.resolveObstacleCollisions(ent.pos, 0.55);
             }
-            this.spawnVFXFlipbook('charged', ent.pos, 2.4, 0.3, 0x2ee68a);
+            this.spawnVFXFlipbook('charged', ent.pos, 2.6, 0.32, 0x2ee68a);
           } else {
             this.playEntityAnim(ent, 'Shield_Dash', true);
-            ent.dodgeTimer = 0.40;
-            ent.buffTimer = Math.max(ent.buffTimer || 0, 2.2);
-            this.spawnVFXFlipbook('charged', ent.pos, 2.8, 0.35, 0xf3c86b);
+            ent.dodgeTimer = 0.42;
+            ent.buffTimer = Math.max(ent.buffTimer || 0, 2.4);
+            const startPos = ent.pos.clone();
+            const dashEnd = startPos.clone().add(forward.clone().multiplyScalar(5.0));
+            dashEnd.x = Math.max(-75, Math.min(75, dashEnd.x));
+            dashEnd.z = Math.max(-75, Math.min(45, dashEnd.z));
+            // 3 fading golden hero afterimage ghosts along dash path
+            [0.0, 0.35, 0.70].forEach((frac, idx) => {
+              const ghostPos = startPos.clone().lerp(dashEnd, frac);
+              this.spawnHeroAfterimage(ent, ghostPos, ent.yaw, 0xf3c86b, 0.38 + idx * 0.08);
+            });
+            this.spawnVFXFlipbook('charged', startPos, 2.8, 0.35, 0xf3c86b);
             if (!isRemotePeer) {
-              const midPos = ent.pos.clone().add(forward.clone().multiplyScalar(2.4));
-              ent.pos.add(forward.clone().multiplyScalar(4.8));
-              ent.pos.x = Math.max(-75, Math.min(75, ent.pos.x));
-              ent.pos.z = Math.max(-75, Math.min(45, ent.pos.z));
+              const midPos = startPos.clone().lerp(dashEnd, 0.5);
+              ent.pos.copy(dashEnd);
               this.resolveObstacleCollisions(ent.pos, 0.55);
               if (canDealLocalDamage) {
-                this.damageEnemiesInRadius(midPos, 2.8, Math.round(wStats.dmg * 1.15), true, ent);
-                this.damageEnemiesInRadius(ent.pos, 3.0, Math.round(wStats.dmg * 1.15), true, ent);
+                this.damageEnemiesInRadius(midPos, 2.9, Math.round(wStats.dmg * 1.2), true, ent);
+                this.damageEnemiesInRadius(ent.pos, 3.2, Math.round(wStats.dmg * 1.25), true, ent);
               }
             }
-            this.spawnShockwaveRing(ent.pos, 3.0, 0xf3c86b, 0.30);
+            this.spawnSlashArc(ent.pos, ent.yaw, 3.4, 0xf3c86b, 2, true);
+            this.spawnShockwaveRing(ent.pos, 3.2, 0xf3c86b, 0.32);
           }
         }
         else if (slot === 4) {
@@ -4032,41 +4724,51 @@
           if (ent.classId === 'ranger') {
             this.playEntityAnim(ent, 'Spell_Simple_Shoot', true);
             const targetPos = this.getClampedAimPos(ent, 11.5, 6.0);
-            this.spawnTelegraphCircle(targetPos, 4.8, 0.95, 0x2ee68a);
+            this.spawnVFXFlipbook('eldenring', targetPos, 6.2, 1.1, 0x2ee68a, true);
+            this.spawnTelegraphCircle(targetPos, 5.0, 1.05, 0x2ee68a);
             for (let wave = 0; wave < 3; wave++) {
               setTimeout(() => {
-                for (let k = 0; k < 5; k++) {
-                  const ang = Math.random() * Math.PI * 2;
-                  const rad = Math.random() * 4.2;
+                for (let k = 0; k < 6; k++) {
+                  const ang = (k / 6) * Math.PI * 2 + wave * 0.4 + Math.random() * 0.3;
+                  const rad = 0.6 + Math.random() * 3.8;
                   const dropOrigin = new THREE.Vector3(
                     targetPos.x + Math.cos(ang) * rad,
                     10.5 + Math.random() * 2.5,
                     targetPos.z + Math.sin(ang) * rad
                   );
-                  this.spawnProjectile(dropOrigin, new THREE.Vector3(0, -1, 0.08).normalize(), 24, 0, 0x2ee68a, true, true, { modelKey: 'weapon_Arrow', life: 0.48, actor: ent });
+                  this.spawnProjectile(
+                    dropOrigin,
+                    new THREE.Vector3(0, -1, 0.06).normalize(),
+                    26,
+                    0,
+                    0x2ee68a,
+                    true,
+                    true,
+                    { modelKey: 'weapon_Arrow', life: 0.44, trailColor: 0x2ee68a, splashRingColor: 0x2ee68a, actor: ent }
+                  );
                 }
                 this.spawnVFXFlipbook('bighit', targetPos, 4.8, 0.42, 0x2ee68a, false, { depthTest: false });
-                this.spawnShockwaveRing(targetPos, 4.8, 0x2ee68a, 0.34);
                 if (canDealLocalDamage) {
-                  this.damageEnemiesInRadius(targetPos, 5.0, Math.round(wStats.dmg * 1.05), wave === 2, ent);
+                  this.damageEnemiesInRadius(targetPos, 5.2, Math.round(wStats.dmg * 1.05), wave === 2, ent);
                 }
-              }, 160 + wave * 300);
+              }, 140 + wave * 290);
             }
           } else if (ent.classId === 'arcanist') {
             this.playEntityAnim(ent, 'Spell_Simple_Enter', true);
-            this.spawnVFXFlipbook('eldenring', ent.pos, 6.8, 0.75, 0x38e8ff, true);
-            this.spawnShockwaveRing(ent.pos, 6.8, 0x38e8ff, 0.45);
+            this.spawnChronoStasisDome(ent.pos, 7.2, 1.8);
+            this.spawnVFXFlipbook('eldenring', ent.pos, 7.2, 0.85, 0x38e8ff, true);
+            this.spawnShockwaveRing(ent.pos, 7.2, 0x38e8ff, 0.48);
             if (ent === this.player) {
-              this.spawnFloatingText(this.player.pos, 'TIME FREEZE NOVA!', '#38e8ff', 18);
+              this.spawnFloatingText(this.player.pos, 'CHRONO TIME FREEZE!', '#38e8ff', 18);
               this.player.synergy = Math.min(100, this.player.synergy + 18);
             }
             if (canDealLocalDamage) {
               this.monsters.forEach((m) => {
-                if (!m.dead && m.pos.distanceTo(ent.pos) <= 7.0) {
+                if (!m.dead && m.pos.distanceTo(ent.pos) <= 7.2) {
                   m.stunTimer = Math.max(m.stunTimer || 0, 4.0);
                   m.freezeTimer = 4.0;
                   this.spawnFrostCrystalStasis(m, 4.0);
-                  this.applyDamageToMonster(m, Math.round(wStats.dmg * 1.45), true, ent, false, null, { noKnockback: true });
+                  this.applyDamageToMonster(m, Math.round(wStats.dmg * 1.5), true, ent, false, null, { noKnockback: true });
                 }
               });
             }
@@ -4074,27 +4776,29 @@
             this.playEntityAnim(ent, 'Shield_OneShot', true);
             ent.frenzyTimer = 8.0;
             ent.buffTimer = 8.0;
-            this.spawnVFXFlipbook('eldenring', ent.pos, 5.2, 0.7, 0xff3b5c, true);
-            this.spawnShockwaveRing(ent.pos, 5.2, 0xff3b5c, 0.4);
+            this.spawnVFXFlipbook('eldenring', ent.pos, 5.4, 0.7, 0xff3b5c, true);
+            this.spawnShockwaveRing(ent.pos, 5.4, 0xff5522, 0.42);
             if (ent === this.player) {
               this.player.cooldowns[1] = 0;
               this.player.cooldowns[2] = Math.min(this.player.cooldowns[2], 0.8);
-              this.spawnFloatingText(this.player.pos, 'WARLORD FRENZY! (+ATK SPD & LIFESTEAL)', '#ff7788', 17);
+              this.spawnFloatingText(this.player.pos, 'WARLORD FRENZY! (+35% SPD / +15% LEECH)', '#ff7788', 17);
               this.player.synergy = Math.min(100, this.player.synergy + 20);
             }
             if (canDealLocalDamage) {
               this.damageEnemiesInRadius(ent.pos, 4.8, Math.round(wStats.dmg * 1.25), true, ent);
             }
           } else {
+            // Vanguard: Phalanx Banner (3D War-Banner + golden sanctuary dome ring for 8s)
             this.playEntityAnim(ent, 'Shield_OneShot', true);
             ent.buffTimer = 8.0;
-            this.spawnVFXFlipbook('eldenring', ent.pos, 5.4, 0.7, 0xf3c86b, true);
-            this.spawnShockwaveRing(ent.pos, 5.4, 0x2ee68a, 0.42);
+            this.spawnPhalanxBannerZone(ent.pos, ent, 8.0);
+            this.spawnVFXFlipbook('eldenring', ent.pos, 5.8, 0.75, 0xf3c86b, true);
+            this.spawnShockwaveRing(ent.pos, 5.8, 0xf3c86b, 0.45);
             if (ent === this.player) {
-              const healAmt = Math.round(this.player.maxHp * 0.25);
+              const healAmt = Math.round(this.player.maxHp * 0.22);
               this.player.hp = Math.min(this.player.maxHp, this.player.hp + healAmt);
               this.aiAllies.forEach(a => { a.hp = Math.min(a.maxHp, a.hp + healAmt); });
-              this.spawnFloatingText(this.player.pos, `+${healAmt} PHALANX BANNER!`, '#2ee68a', 17);
+              this.spawnFloatingText(this.player.pos, `+${healAmt} PHALANX BANNER DEPLOYED!`, '#ffd56b', 17);
               this.player.synergy = Math.min(100, this.player.synergy + 20);
             }
             if (canDealLocalDamage) {
@@ -4196,6 +4900,11 @@
           maxPierces: opts.maxPierces || 1,
           hitMobIds: new Set(),
           spinDagger: !!opts.spinDagger,
+          applyHuntersMark: !!opts.applyHuntersMark,
+          homingStrength: opts.homingStrength || 0,
+          trailColor: opts.trailColor || 0,
+          trailAccum: 0,
+          splashRingColor: opts.splashRingColor || 0,
           actor: opts.actor || this.player,
           life: opts.life || 1.8
         });
@@ -4260,8 +4969,23 @@
           else hitDir.set(0, 0, -1);
         } else {
           const wStats = this.getWeaponStats();
-          isCrit = isHeavy || Math.random() < wStats.crit;
-          finalDmg = Math.round(baseDmg * (isCrit ? 1.65 : 1.0) * (0.92 + Math.random() * 0.16));
+          let markBonus = 1.0;
+          if (mob.huntersMarkTimer > 0 && !opts.skipMarkDetonate) {
+            markBonus = 1.45;
+            isCrit = true;
+            mob.huntersMarkTimer = 0;
+            if (mob.huntersMarkMesh) {
+              if (mob.huntersMarkMesh.parent) mob.huntersMarkMesh.parent.remove(mob.huntersMarkMesh);
+              mob.huntersMarkMesh.geometry.dispose();
+              mob.huntersMarkMesh.material.dispose();
+              mob.huntersMarkMesh = null;
+            }
+            this.spawnShockwaveRing(mob.pos, 2.8, 0x38e8ff, 0.30);
+            this.spawnFloatingText(mob.pos, 'MARK DETONATED!', '#38e8ff', 15);
+          } else {
+            isCrit = isHeavy || Math.random() < wStats.crit;
+          }
+          finalDmg = Math.round(baseDmg * markBonus * (isCrit ? 1.65 : 1.0) * (0.92 + Math.random() * 0.16));
           mob.hp = Math.max(0, mob.hp - finalDmg);
           hitDir = mob.pos.clone().sub(attacker ? attacker.pos : this.player.pos).setY(0);
           if (hitDir.lengthSq() > 0.0001) hitDir.normalize();
@@ -4888,6 +5612,111 @@
         sprite.userData.tex.needsUpdate = true;
       }
 
+      showPlayerChatBubble(entity, message, durationMs = 4500) {
+        if (!entity || !entity.meshRoot) return;
+        const cleanMsg = String(message || '').trim();
+        if (!cleanMsg) return;
+
+        if (!entity.chatBubbleSprite) {
+          const canvas = document.createElement('canvas');
+          canvas.width = 512;
+          canvas.height = 192;
+          const ctx = canvas.getContext('2d');
+          const tex = new THREE.CanvasTexture(canvas);
+          const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 1.0, depthTest: false });
+          const sprite = new THREE.Sprite(mat);
+          sprite.position.set(0, 3.05, 0);
+          sprite.scale.set(3.4, 1.28, 1);
+          sprite.renderOrder = 14;
+          sprite.userData = { canvas, ctx, tex };
+          entity.chatBubbleSprite = sprite;
+          entity.meshRoot.add(sprite);
+        }
+
+        const sprite = entity.chatBubbleSprite;
+        if (sprite.parent !== entity.meshRoot) {
+          entity.meshRoot.add(sprite);
+        }
+        const { canvas, ctx, tex } = sprite.userData;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Word-wrap into up to 3 lines
+        ctx.font = 'bold 26px Inter, sans-serif';
+        const maxWidth = 420;
+        const words = cleanMsg.slice(0, 110).split(/\s+/);
+        const lines = [];
+        let cur = '';
+        for (let i = 0; i < words.length; i++) {
+          const test = cur ? (cur + ' ' + words[i]) : words[i];
+          if (ctx.measureText(test).width > maxWidth && cur) {
+            lines.push(cur);
+            cur = words[i];
+            if (lines.length >= 2) break;
+          } else {
+            cur = test;
+          }
+        }
+        if (cur && lines.length < 3) lines.push(cur);
+
+        const lineH = 32;
+        const boxH = Math.max(66, lines.length * lineH + 34);
+        const longestLine = Math.max(...lines.map(l => ctx.measureText(l).width), 110);
+        const boxW = Math.min(480, Math.max(170, longestLine + 56));
+        const boxX = (canvas.width - boxW) / 2;
+        const tailH = 18;
+        const boxY = canvas.height - tailH - boxH - 8;
+        const r = 18;
+        const isLocal = entity === this.player;
+        const borderCol = isLocal ? '#f3c86b' : '#38e8ff';
+
+        // Speech bubble body + downward pointer tail
+        ctx.fillStyle = 'rgba(10, 15, 30, 0.92)';
+        ctx.strokeStyle = borderCol;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(boxX + r, boxY);
+        ctx.lineTo(boxX + boxW - r, boxY);
+        ctx.quadraticCurveTo(boxX + boxW, boxY, boxX + boxW, boxY + r);
+        ctx.lineTo(boxX + boxW, boxY + boxH - r);
+        ctx.quadraticCurveTo(boxX + boxW, boxY + boxH, boxX + boxW - r, boxY + boxH);
+        ctx.lineTo(canvas.width / 2 + 14, boxY + boxH);
+        ctx.lineTo(canvas.width / 2, boxY + boxH + tailH);
+        ctx.lineTo(canvas.width / 2 - 14, boxY + boxH);
+        ctx.lineTo(boxX + r, boxY + boxH);
+        ctx.quadraticCurveTo(boxX, boxY + boxH, boxX, boxY + boxH - r);
+        ctx.lineTo(boxX, boxY + r);
+        ctx.quadraticCurveTo(boxX, boxY, boxX + r, boxY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#f8f5ee';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const startY = boxY + boxH / 2 - ((lines.length - 1) * lineH) / 2;
+        for (let i = 0; i < lines.length; i++) {
+          ctx.fillText(lines[i], canvas.width / 2, startY + i * lineH);
+        }
+
+        tex.needsUpdate = true;
+        sprite.material.opacity = 1.0;
+        sprite.visible = true;
+        entity._chatBubbleExpireAt = performance.now() + durationMs;
+      }
+
+      updateEntityChatBubble(entity, nowMs) {
+        if (!entity || !entity.chatBubbleSprite || !entity.chatBubbleSprite.visible) return;
+        const rem = (entity._chatBubbleExpireAt || 0) - nowMs;
+        if (rem <= 0) {
+          entity.chatBubbleSprite.visible = false;
+          entity.chatBubbleSprite.material.opacity = 0;
+        } else if (rem < 600) {
+          entity.chatBubbleSprite.material.opacity = rem / 600;
+        } else {
+          entity.chatBubbleSprite.material.opacity = 1.0;
+        }
+      }
+
       async joinRealtimeRoom(newCode, isReconnect = false) {
         if (!this.supabase) return;
         if (this.reconnectTimer) {
@@ -5090,7 +5919,13 @@
           })
           .on('broadcast', { event: 'chat_msg' }, ({ payload }) => {
             if (!payload) return;
+            if (payload.senderId && payload.senderId === this.playerToken) return;
             this.addChatMessage(payload.sender, payload.message, payload.type || '');
+            const peer = (payload.senderId && this.remotePeers.get(payload.senderId))
+              || Array.from(this.remotePeers.values()).find(p => p.name === payload.sender);
+            if (peer && payload.message) {
+              this.showPlayerChatBubble(peer, payload.message);
+            }
           })
           .subscribe(async (status) => {
             if (this.channel !== ch) return;
@@ -5259,15 +6094,20 @@
         e.preventDefault();
         const input = document.getElementById('chat-input');
         const msg = input.value.trim();
-        if (!msg) return;
+        if (!msg) {
+          input.blur();
+          return;
+        }
         input.value = '';
+        input.blur();
         this.addChatMessage(this.player.name, msg);
+        this.showPlayerChatBubble(this.player, msg);
 
         if (this.channel) {
           this.channel.send({
             type: 'broadcast',
             event: 'chat_msg',
-            payload: { sender: this.player.name, message: msg }
+            payload: { senderId: this.playerToken, sender: this.player.name, message: msg }
           });
         }
         if (this.supabase) {
@@ -5435,6 +6275,7 @@
           document.getElementById(`icon-${idx + 1}`).textContent = sk.icon;
           document.getElementById(`name-${idx + 1}`).textContent = sk.name;
         });
+        this.refreshSkillTooltipIfVisible();
         if (this.ui && this.ui.weaponLabel) {
           this.setUI('weaponLabel', this.ui.weaponLabel, `${this.player.weaponId} +${this.player.weaponLevel} (${this.player.element})`);
         }
@@ -5924,8 +6765,21 @@
 
         window.addEventListener('keydown', (e) => {
           if (document.activeElement && document.activeElement.tagName === 'INPUT') {
-            if (e.key === 'Escape') document.activeElement.blur();
+            if (e.key === 'Escape') {
+              document.activeElement.blur();
+            } else if (e.key === 'Enter' && document.activeElement.id === 'chat-input' && !document.activeElement.value.trim()) {
+              e.preventDefault();
+              document.activeElement.blur();
+            }
             return;
+          }
+          if (e.key === 'Enter' && !this.isAnyModalOpen) {
+            const chatInput = document.getElementById('chat-input');
+            if (chatInput) {
+              e.preventDefault();
+              chatInput.focus();
+              return;
+            }
           }
           const k = e.key.toLowerCase();
           this.keys[k] = true;
@@ -6039,6 +6893,53 @@
           knob.style.transform = 'translate(0px, 0px)';
           this.touchVec.set(0, 0);
         });
+
+        // Skill bar hover tooltips
+        this._hoveredSkillSlot = null;
+        document.querySelectorAll('#skill-bar .skill-slot').forEach((slotEl) => {
+          slotEl.addEventListener('mouseenter', () => {
+            this._hoveredSkillSlot = slotEl.getAttribute('data-slot');
+            this.showSkillTooltip(this._hoveredSkillSlot);
+          });
+          slotEl.addEventListener('mouseleave', () => {
+            this._hoveredSkillSlot = null;
+            const tip = document.getElementById('skill-tooltip');
+            if (tip) tip.classList.remove('visible');
+          });
+        });
+      }
+
+      refreshSkillTooltipIfVisible() {
+        if (this._hoveredSkillSlot) this.showSkillTooltip(this._hoveredSkillSlot);
+      }
+
+      showSkillTooltip(slotKey) {
+        const tip = document.getElementById('skill-tooltip');
+        if (!tip) return;
+        const cls = HERO_CLASSES[this.player.classId] || HERO_CLASSES.vanguard;
+        const keyMap = { '1': 'LMB / 1', '2': 'RMB / 2', '3': 'SHIFT / 3', '4': '4 / V', 'potion': 'H / C', '5': 'R / 5' };
+        let title = '', meta = '', desc = '';
+        if (slotKey === 'potion') {
+          title = 'Ashenvale Elixir';
+          meta = 'CD: 4.0s • Restores 48% HP & 100% Aether';
+          desc = `Drink an enchanted sanctuary vial (${this.player.potions} remaining). Refills at High Cleric Seraphina.`;
+        } else if (slotKey === '5') {
+          title = 'Astral Convergence';
+          meta = 'Requires 100% Co-Op Synergy • 380% AoE + Full Heal';
+          desc = 'Channels party synergy into a massive temporal supernova, fully healing nearby allies and obliterating foes.';
+        } else {
+          const idx = parseInt(slotKey, 10) - 1;
+          const sk = cls.skills[idx];
+          if (!sk) return;
+          title = sk.name;
+          meta = `CD: ${sk.cd.toFixed(1)}s • ${sk.mult || 'Class Skill'}`;
+          desc = sk.desc || '';
+        }
+        document.getElementById('tip-title').textContent = title;
+        document.getElementById('tip-key').textContent = keyMap[slotKey] || slotKey;
+        document.getElementById('tip-meta').textContent = meta;
+        document.getElementById('tip-desc').textContent = desc;
+        tip.classList.add('visible');
       }
 
       // -----------------------------------------------------------------------
@@ -6073,6 +6974,39 @@
         this.groundUniforms.uPlayerPos.value.copy(this.player.pos);
         this.skyUniforms.uTime.value = elapsed;
         this.skyDome.position.copy(this.player.pos);
+
+        if (this.portalVortexUniforms) {
+          this.portalVortexUniforms.uTime.value = elapsed;
+          if (this.portalOuterRing) this.portalOuterRing.rotation.z = elapsed * 0.65;
+          if (this.portalInnerRing) this.portalInnerRing.rotation.z = -elapsed * 1.15;
+        }
+        if (this.flameGlowSprites) {
+          for (let i = 0; i < this.flameGlowSprites.length; i++) {
+            const fg = this.flameGlowSprites[i];
+            const flick = 0.88 + 0.14 * Math.sin(elapsed * 7.5 + fg.phase) + 0.06 * Math.cos(elapsed * 13.0 + fg.phase * 1.7);
+            fg.sprite.scale.set(fg.baseScale * flick, fg.baseScale * flick, 1);
+            fg.sprite.material.opacity = 0.68 + 0.22 * flick;
+          }
+        }
+        if (this.bossCrystalPylons) {
+          for (let i = 0; i < this.bossCrystalPylons.length; i++) {
+            const py = this.bossCrystalPylons[i];
+            py.crystal.position.y = py.baseY + Math.sin(elapsed * 1.8 + py.phase) * 0.22;
+            py.crystal.rotation.y += dt * 0.7;
+            py.halo.rotation.z += dt * 1.3;
+          }
+        }
+        if (this.envParticles && this._emberBase) {
+          const posAttr = this.envParticles.geometry.attributes.position;
+          const arr = posAttr.array;
+          for (let i = 0; i < arr.length; i += 3) {
+            const ph = i * 0.13;
+            arr[i] = this._emberBase[i] + Math.sin(elapsed * 0.8 + ph) * 0.75;
+            arr[i + 1] = this._emberBase[i + 1] + ((elapsed * 0.65 + ph) % 3.2);
+            arr[i + 2] = this._emberBase[i + 2] + Math.cos(elapsed * 0.7 + ph) * 0.75;
+          }
+          posAttr.needsUpdate = true;
+        }
 
         // Distance-cull off-zone world props every 15 frames (55m radius = 3025 sq meters)
         if ((++this.frameCount % 15) === 0) {
@@ -6120,7 +7054,9 @@
 
         // Remote Co-Op Peers: Velocity Dead-Reckoning + Smooth Interpolation + Auto Walk Animation
         const nowPerf = performance.now();
+        this.updateEntityChatBubble(this.player, nowPerf);
         this.remotePeers.forEach((peer) => {
+          this.updateEntityChatBubble(peer, nowPerf);
           const sinceSeen = (nowPerf - peer.lastSeen) * 0.001;
           if (sinceSeen < 0.25 && (peer.vx || peer.vz)) {
             peer.targetPos.x += (peer.vx || 0) * dt;
@@ -6155,7 +7091,7 @@
         // While Hero Selection Modal is open, gently orbit the camera so the 3D Village & Sky Dome shine behind the UI!
         const heroModalOpen = this.ui.heroModal ? this.ui.heroModal.classList.contains('active') : false;
         const activeYaw = heroModalOpen ? Math.sin(elapsed * 0.28) * 0.55 : this.cameraYaw;
-        const activePitch = heroModalOpen ? 0.52 : 0.78;
+        const activePitch = heroModalOpen ? 0.50 : 0.64;
         const activeZoom = heroModalOpen ? 14.5 : this.cameraZoom;
 
         this._camOffset.set(
@@ -6216,6 +7152,31 @@
         }
         if (p.frenzyTimer > 0) {
           p.frenzyTimer = Math.max(0, p.frenzyTimer - dt);
+          if (!this.frenzyAuraGroup) {
+            const fg = new THREE.Group();
+            const fRingGeo = new THREE.RingGeometry(0.85, 1.35, 28);
+            fRingGeo.rotateX(-Math.PI / 2);
+            const fRingMat = new THREE.MeshBasicMaterial({ color: 0xff4422, side: THREE.DoubleSide, transparent: true, opacity: 0.72, blending: THREE.AdditiveBlending, depthWrite: false });
+            fg.add(new THREE.Mesh(fRingGeo, fRingMat));
+            const fColGeo = new THREE.CylinderGeometry(0.95, 1.15, 1.6, 16, 1, true);
+            const fColMat = new THREE.MeshBasicMaterial({ color: 0xff7722, side: THREE.DoubleSide, transparent: true, opacity: 0.24, blending: THREE.AdditiveBlending, depthWrite: false });
+            const fCol = new THREE.Mesh(fColGeo, fColMat);
+            fCol.position.y = 0.8;
+            fg.add(fCol);
+            this.scene.add(fg);
+            this.frenzyAuraGroup = fg;
+          }
+          this.frenzyAuraGroup.visible = true;
+          this.frenzyAuraGroup.position.copy(p.pos);
+          this.frenzyAuraGroup.position.y = 0.08;
+          this.frenzyAuraGroup.rotation.y += dt * 4.5;
+          const pulse = 0.92 + Math.sin(elapsed * 12) * 0.12;
+          this.frenzyAuraGroup.scale.set(pulse, 1, pulse);
+        } else if (this.frenzyAuraGroup && this.frenzyAuraGroup.visible) {
+          this.frenzyAuraGroup.visible = false;
+        }
+        if (p.bannerBuffTimer > 0) {
+          p.bannerBuffTimer = Math.max(0, p.bannerBuffTimer - dt);
         }
         if (p.solarBlessingTimer > 0) {
           p.solarBlessingTimer = Math.max(0, p.solarBlessingTimer - dt);
@@ -6226,10 +7187,17 @@
         let leapY = 0;
         if (p.leapTimer > 0) {
           p.leapTimer = Math.max(0, p.leapTimer - dt);
-          const leapFrac = 1 - (p.leapTimer / (p.leapDuration || 0.36));
+          const leapFrac = 1 - (p.leapTimer / (p.leapDuration || 0.38));
           p.pos.lerpVectors(p.leapStart, p.leapEnd, leapFrac);
           this.resolveObstacleCollisions(p.pos, 0.55);
-          leapY = Math.sin(leapFrac * Math.PI) * 2.4;
+          leapY = Math.sin(leapFrac * Math.PI) * 3.1;
+          // Fiery comet trail during Crusher Leap
+          if (!this._cometGeo) this._cometGeo = new THREE.SphereGeometry(0.32, 8, 6);
+          const cMat = new THREE.MeshBasicMaterial({ color: leapFrac > 0.5 ? 0xff3b5c : 0xffaa22, transparent: true, opacity: 0.78, blending: THREE.AdditiveBlending, depthWrite: false });
+          const cMesh = new THREE.Mesh(this._cometGeo, cMat);
+          cMesh.position.set(p.pos.x, leapY + 0.9, p.pos.z);
+          this.scene.add(cMesh);
+          this.vfxSprites.push({ mesh: cMesh, isMesh: true, isCometTrail: true, elapsed: 0, duration: 0.28 });
         }
 
         if (this.mouseDownLeft && cds[1] <= 0 && !this.isAnyModalOpen) {
@@ -6286,7 +7254,7 @@
         if (p.meshRoot) {
           p.meshRoot.position.copy(p.pos);
           if (leapY > 0) p.meshRoot.position.y += leapY;
-          const spinOffset = p.spinTimer > 0 ? ((0.65 - p.spinTimer) / 0.65) * Math.PI * 4 : 0;
+          const spinOffset = p.spinTimer > 0 ? ((0.72 - p.spinTimer) / 0.72) * Math.PI * 4 : 0;
           p.meshRoot.rotation.set(0, p.yaw + spinOffset, 0);
           // Procedural locomotion/combat fallback when skeletal clip has not loaded yet
           if (!p.activeAction) {
@@ -6512,6 +7480,18 @@
 
           if (m.aggroTimer > 0) m.aggroTimer = Math.max(0, m.aggroTimer - dt);
           if (m.attackAnimTimer > 0) m.attackAnimTimer = Math.max(0, m.attackAnimTimer - dt);
+          if (m.slowTimer > 0) m.slowTimer = Math.max(0, m.slowTimer - dt);
+          if (m.huntersMarkTimer > 0) {
+            m.huntersMarkTimer = Math.max(0, m.huntersMarkTimer - dt);
+            if (m.huntersMarkMesh) m.huntersMarkMesh.rotation.z += dt * 3.5;
+            if (m.huntersMarkTimer <= 0 && m.huntersMarkMesh) {
+              if (m.huntersMarkMesh.parent) m.huntersMarkMesh.parent.remove(m.huntersMarkMesh);
+              m.huntersMarkMesh.geometry.dispose();
+              m.huntersMarkMesh.material.dispose();
+              m.huntersMarkMesh = null;
+            }
+          }
+          const mobSpeedMult = m.slowTimer > 0 ? 0.55 : 1.0;
 
           if (m.stunTimer > 0) {
             m.stunTimer -= dt;
@@ -6549,8 +7529,8 @@
             if (dist > stopRange && m.windupTimer <= 0 && m.attackAnimTimer <= 0.15) {
               isMoving = true;
               const invDist = 1 / (dist || 1);
-              m.pos.x += toPlayerX * invDist * m.speed * dt;
-              m.pos.z += toPlayerZ * invDist * m.speed * dt;
+              m.pos.x += toPlayerX * invDist * m.speed * mobSpeedMult * dt;
+              m.pos.z += toPlayerZ * invDist * m.speed * mobSpeedMult * dt;
               this.playEntityAnim(m, m.modelKey.includes('puglin') ? 'Zombie_Walk_Fwd_Loop' : 'Jog_Fwd_Loop');
             } else if (m.attackCd <= 0 && m.windupTimer <= 0) {
               m.windupTimer = m.isBoss ? 0.85 : 0.55;
@@ -6761,10 +7741,71 @@
       }
 
       updateProjectilesAndVFX(dt) {
+        // Deployed Zone Auras (Vanguard Phalanx Banner)
+        for (let i = this.deployedZones.length - 1; i >= 0; i--) {
+          const z = this.deployedZones[i];
+          z.elapsed += dt;
+          z.tickAccum -= dt;
+          const pulse = 1 + Math.sin(z.elapsed * 5.0) * 0.04;
+          if (z.ring) z.ring.scale.setScalar(pulse);
+          const fade = z.elapsed > z.duration - 0.8 ? Math.max(0, (z.duration - z.elapsed) / 0.8) : 1.0;
+          if (z.ringMat) z.ringMat.opacity = 0.72 * fade;
+          if (z.domeMat) z.domeMat.opacity = 0.12 * fade;
+
+          if (this.player.pos.distanceTo(z.pos) <= z.radius) {
+            this.player.bannerBuffTimer = Math.max(this.player.bannerBuffTimer || 0, 0.25);
+          }
+          if (z.tickAccum <= 0) {
+            z.tickAccum = 1.0;
+            this.spawnShockwaveRing(z.pos, z.radius, 0xf3c86b, 0.35);
+            if (this.player.pos.distanceTo(z.pos) <= z.radius && this.player.hp < this.player.maxHp) {
+              const hAmt = Math.max(8, Math.round(this.player.maxHp * 0.05));
+              this.player.hp = Math.min(this.player.maxHp, this.player.hp + hAmt);
+              this.spawnFloatingText(this.player.pos, `+${hAmt}`, '#2ee68a', 14);
+            }
+            this.aiAllies.forEach((a) => {
+              if (a.pos.distanceTo(z.pos) <= z.radius) {
+                a.hp = Math.min(a.maxHp, a.hp + Math.round(a.maxHp * 0.06));
+              }
+            });
+          }
+          if (z.elapsed >= z.duration) {
+            this.scene.remove(z.group);
+            this.deployedZones.splice(i, 1);
+          }
+        }
+
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
           const pr = this.projectiles[i];
           pr.life -= dt;
+          if (pr.homingStrength > 0 && pr.fromPlayer) {
+            let bestMob = null;
+            let bestDistSq = 144.0;
+            for (let mIdx = 0; mIdx < this.monsters.length; mIdx++) {
+              const m = this.monsters[mIdx];
+              if (m.dead || (pr.hitMobIds && pr.hitMobIds.has(m.id))) continue;
+              const dSq = (m.pos.x - pr.mesh.position.x) ** 2 + (m.pos.z - pr.mesh.position.z) ** 2;
+              if (dSq < bestDistSq) { bestDistSq = dSq; bestMob = m; }
+            }
+            if (bestMob) {
+              this._v1.set(bestMob.pos.x - pr.mesh.position.x, 0, bestMob.pos.z - pr.mesh.position.z).normalize();
+              pr.dir.lerp(this._v1, Math.min(1, dt * pr.homingStrength)).normalize();
+              pr.mesh.rotation.y = Math.atan2(pr.dir.x, pr.dir.z);
+            }
+          }
           pr.mesh.position.addScaledVector(pr.dir, pr.speed * dt);
+          if (pr.trailColor) {
+            pr.trailAccum = (pr.trailAccum || 0) + dt;
+            if (pr.trailAccum >= 0.025) {
+              pr.trailAccum = 0;
+              if (!this._trailGeo) this._trailGeo = new THREE.SphereGeometry(0.11, 5, 4);
+              const tMat = new THREE.MeshBasicMaterial({ color: pr.trailColor, transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false });
+              const tMesh = new THREE.Mesh(this._trailGeo, tMat);
+              tMesh.position.copy(pr.mesh.position);
+              this.scene.add(tMesh);
+              this.vfxSprites.push({ mesh: tMesh, isMesh: true, isCometTrail: true, elapsed: 0, duration: 0.18 });
+            }
+          }
           if (pr.spinDagger) {
             pr.mesh.rotation.y += dt * 18;
           }
@@ -6779,7 +7820,10 @@
                 if (xzDist < hitRadius && Math.abs(pr.mesh.position.y - m.pos.y) < 3.2) {
                   if (pr.hitMobIds) pr.hitMobIds.add(m.id);
                   if (!pr.visualOnly) {
-                    this.applyDamageToMonster(m, pr.dmg, false, pr.actor || this.player);
+                    this.applyDamageToMonster(m, pr.dmg, false, pr.actor || this.player, false, null, { skipMarkDetonate: pr.applyHuntersMark });
+                    if (pr.applyHuntersMark) {
+                      this.applyHuntersMark(m, 6.0);
+                    }
                   }
                   if (!pr.pierce || (pr.hitMobIds && pr.hitMobIds.size >= (pr.maxPierces || 1))) {
                     removeProj = true;
@@ -6787,6 +7831,9 @@
                   }
                 }
               }
+            } else if (pr.splashRingColor && pr.mesh.position.y <= 0.35) {
+              this.spawnShockwaveRing(new THREE.Vector3(pr.mesh.position.x, 0, pr.mesh.position.z), 1.65, pr.splashRingColor, 0.28);
+              removeProj = true;
             }
           } else {
             const xzDist = Math.hypot(this.player.pos.x - pr.mesh.position.x, this.player.pos.z - pr.mesh.position.z);
@@ -6797,6 +7844,9 @@
           }
 
           if (removeProj || pr.life <= 0) {
+            if (pr.splashRingColor && !removeProj) {
+              this.spawnShockwaveRing(new THREE.Vector3(pr.mesh.position.x, 0, pr.mesh.position.z), 1.65, pr.splashRingColor, 0.28);
+            }
             this.scene.remove(pr.mesh);
             this.projectiles.splice(i, 1);
           }
@@ -6892,6 +7942,131 @@
               this.scene.remove(v.mesh);
               if (v.geo) v.geo.dispose();
               if (v.mats) v.mats.forEach(m => m.dispose());
+              this.vfxSprites.splice(i, 1);
+            }
+          } else if (v.isPillar) {
+            if (t < 0.20) {
+              v.mesh.position.y = -1.2 + (t / 0.20) * 1.2;
+            } else if (t > 0.72) {
+              const sink = (t - 0.72) / 0.28;
+              v.mesh.position.y = -sink * 1.4;
+              v.mesh.material.opacity = 1 - sink;
+            } else {
+              v.mesh.position.y = 0;
+            }
+            if (t >= 1) {
+              this.scene.remove(v.mesh);
+              v.mesh.material.dispose();
+              this.vfxSprites.splice(i, 1);
+            }
+          } else if (v.isAfterimage) {
+            v.mat.opacity = (1 - t) * 0.65;
+            if (t >= 1) {
+              this.scene.remove(v.mesh);
+              v.mesh.children.forEach(c => c.geometry.dispose());
+              v.mat.dispose();
+              this.vfxSprites.splice(i, 1);
+            }
+          } else if (v.isDecoy) {
+            v.mesh.rotation.y += dt * 4.5;
+            v.ring.scale.setScalar(0.55 + t * 0.55);
+            v.ringMat.opacity = 0.28 + t * 0.55;
+            if (t >= 1) {
+              this.spawnVFXFlipbook('anima', v.originPos, 4.2, 0.45, 0x2ee68a, false, { depthTest: false });
+              this.spawnShockwaveRing(v.originPos, 4.0, 0x2ee68a, 0.34);
+              if (v.canDealLocalDamage) {
+                this.monsters.forEach((m) => {
+                  if (!m.dead && m.pos.distanceTo(v.originPos) <= 4.2) {
+                    m.slowTimer = Math.max(m.slowTimer || 0, 3.0);
+                    this.applyDamageToMonster(m, v.dmg, true, v.owner);
+                  }
+                });
+              }
+              this.scene.remove(v.mesh);
+              v.mesh.children.forEach(c => c.geometry.dispose());
+              v.mat.dispose();
+              v.ringMat.dispose();
+              this.vfxSprites.splice(i, 1);
+            }
+          } else if (v.isSingularity) {
+            v.ring1.rotation.z += dt * 9.0;
+            v.ring2.rotation.x -= dt * 7.5;
+            const orbScale = 0.8 + Math.sin(t * Math.PI) * 0.45;
+            v.mesh.scale.setScalar(orbScale);
+            // Visibly pull nearby non-boss monsters inward over 0.5s before imploding
+            if (v.canDealLocalDamage) {
+              this.monsters.forEach((m) => {
+                if (!m.dead && !m.isBoss && m.pos.distanceTo(v.targetPos) <= 6.2) {
+                  this._v1.copy(v.targetPos).sub(m.pos);
+                  this._v1.y = 0;
+                  const d = this._v1.length();
+                  if (d > 0.35) {
+                    m.pos.addScaledVector(this._v1.normalize(), Math.min(d - 0.3, dt * 8.5));
+                  }
+                }
+              });
+            }
+            if (t >= 1) {
+              this.spawnVFXFlipbook('explosion', v.targetPos, 5.4, 0.52, 0xb266ff, false, { depthTest: false });
+              this.spawnShockwaveRing(v.targetPos, 5.2, 0xb266ff, 0.38);
+              if (v.canDealLocalDamage) {
+                this.monsters.forEach((m) => {
+                  if (!m.dead && m.pos.distanceTo(v.targetPos) <= 5.4) {
+                    this.applyDamageToMonster(m, v.dmg, true, v.owner, false, null, { noKnockback: true });
+                  }
+                });
+              }
+              this.scene.remove(v.mesh);
+              v.mesh.children.forEach(c => { c.geometry.dispose(); c.material.dispose(); });
+              this.vfxSprites.splice(i, 1);
+            }
+          } else if (v.isMirrorShatter) {
+            v.ring.scale.setScalar(1 + t * 1.6);
+            v.ring.material.opacity = (1 - t) * 0.9;
+            v.shards.forEach((s) => {
+              s.position.addScaledVector(s.userData.dir, dt * 4.5);
+              s.rotation.x += dt * 8;
+              s.rotation.y += dt * 10;
+              s.material.opacity = 1 - t;
+            });
+            if (t >= 1) {
+              this.scene.remove(v.mesh);
+              v.ring.geometry.dispose();
+              v.ring.material.dispose();
+              v.shardGeo.dispose();
+              v.shards.forEach(s => s.material.dispose());
+              this.vfxSprites.splice(i, 1);
+            }
+          } else if (v.isStasisDome) {
+            const expand = Math.min(1, t * 2.8);
+            v.mesh.scale.setScalar(0.5 + expand * (v.maxRadius - 0.5));
+            v.mesh.rotation.y += dt * 0.8;
+            const fade = t > 0.65 ? (1 - (t - 0.65) / 0.35) : 1;
+            v.mats[0].opacity = 0.22 * fade;
+            v.mats[1].opacity = 0.36 * fade;
+            if (t >= 1) {
+              this.scene.remove(v.mesh);
+              v.domeGeo.dispose();
+              v.mats.forEach(m => m.dispose());
+              this.vfxSprites.splice(i, 1);
+            }
+          } else if (v.isTornado) {
+            if (v.targetEntity) v.mesh.position.copy(v.targetEntity.pos);
+            v.mesh.rotation.y += dt * 16.0;
+            const fade = t > 0.7 ? (1 - (t - 0.7) / 0.3) : 1;
+            v.ribbonMats.forEach(m => { m.opacity = 0.88 * fade; });
+            if (t >= 1) {
+              this.scene.remove(v.mesh);
+              v.ribbonGeos.forEach(g => g.dispose());
+              v.ribbonMats.forEach(m => m.dispose());
+              this.vfxSprites.splice(i, 1);
+            }
+          } else if (v.isCometTrail) {
+            v.mesh.material.opacity = (1 - t) * 0.78;
+            v.mesh.scale.setScalar(1 - t * 0.65);
+            if (t >= 1) {
+              this.scene.remove(v.mesh);
+              v.mesh.material.dispose();
               this.vfxSprites.splice(i, 1);
             }
           } else if (v.isMesh) {
