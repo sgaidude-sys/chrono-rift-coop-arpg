@@ -966,6 +966,181 @@
       #touch-joystick { display: block; }
       #chat-panel { display: none; }
       #minimap-wrap { bottom: 92px; }
+      #story-tracker { display: none; }
+    }
+
+    /* Story Quest Tracker Widget */
+    #hud-left-col {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 325px;
+      pointer-events: none;
+    }
+    #hud-left-col > * {
+      pointer-events: auto;
+    }
+    #story-tracker {
+      padding: 9px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(178, 102, 255, 0.14), transparent 60%),
+        linear-gradient(160deg, rgba(14, 18, 34, 0.94), rgba(9, 12, 22, 0.96));
+      border-color: rgba(178, 102, 255, 0.45);
+    }
+    .story-tracker-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+    .story-tracker-title {
+      font-family: 'Cinzel', serif;
+      font-size: 11.5px;
+      font-weight: 800;
+      color: var(--gold-bright);
+      letter-spacing: 0.5px;
+    }
+    .story-tracker-body {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      font-size: 11.5px;
+    }
+    #story-tracker.collapsed .story-tracker-body {
+      display: none;
+    }
+    .story-chapter-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--cyan);
+      font-weight: 700;
+    }
+    .story-obj-line {
+      color: var(--text-main);
+      line-height: 1.35;
+    }
+    .story-chapters-row {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+    .story-chap-btn {
+      padding: 2px 7px;
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      border-radius: 5px;
+      border: 1px solid rgba(243, 200, 107, 0.35);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .story-chap-btn.unlocked {
+      color: var(--gold-bright);
+      border-color: rgba(243, 200, 107, 0.6);
+      background: rgba(243, 200, 107, 0.14);
+    }
+    .story-chap-btn.active {
+      color: #fff;
+      border-color: var(--cyan);
+      background: rgba(56, 232, 255, 0.25);
+    }
+
+    /* Real-Time 3D Cutscene Director Overlay */
+    #cutscene-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 45;
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+    #cutscene-overlay.active {
+      display: flex;
+      pointer-events: auto;
+    }
+    .cutscene-bar {
+      width: 100%;
+      height: 11vh;
+      min-height: 54px;
+      max-height: 110px;
+      background: linear-gradient(180deg, #04060c 0%, rgba(4, 6, 12, 0.96) 100%);
+      border-bottom: 1px solid rgba(243, 200, 107, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.85);
+    }
+    .cutscene-bar.bottom {
+      border-bottom: none;
+      border-top: 1px solid rgba(243, 200, 107, 0.35);
+      box-shadow: 0 -12px 35px rgba(0, 0, 0, 0.85);
+      justify-content: center;
+      position: relative;
+    }
+    #cutscene-dialogue-card {
+      position: fixed;
+      left: 50%;
+      bottom: calc(11vh + 18px);
+      transform: translateX(-50%);
+      width: min(760px, 92vw);
+      background:
+        radial-gradient(circle at 12% 0%, rgba(243, 200, 107, 0.16), transparent 60%),
+        linear-gradient(165deg, rgba(10, 14, 28, 0.94), rgba(6, 8, 18, 0.97));
+      border: 1.5px solid rgba(243, 200, 107, 0.72);
+      border-radius: 12px;
+      padding: 14px 20px;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.88), 0 0 28px rgba(56, 232, 255, 0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .cutscene-speaker-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    #cutscene-speaker {
+      font-family: 'Cinzel', serif;
+      font-weight: 900;
+      font-size: 15px;
+      color: var(--gold-bright);
+      letter-spacing: 0.6px;
+    }
+    #cutscene-chapter-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--cyan);
+      background: rgba(56, 232, 255, 0.14);
+      border: 1px solid rgba(56, 232, 255, 0.42);
+      padding: 2px 9px;
+      border-radius: 6px;
+    }
+    #cutscene-subtitle {
+      font-size: 14.5px;
+      line-height: 1.5;
+      color: #f8f5ee;
+    }
+    .cutscene-progress-track {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 2px;
+    }
+    #cutscene-progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--gold), var(--cyan));
+      transition: width 0.08s linear;
     }
   </style>
 </head>
@@ -977,7 +1152,8 @@
 
   <!-- TOP HUD -->
   <div id="hud-top">
-    <!-- Left: Hero Vitals & Co-Op Squad -->
+    <!-- Left Column: Hero Vitals, Co-Op Squad & Story Quest Tracker -->
+    <div id="hud-left-col">
     <div id="party-panel" class="hud-card">
       <div class="hero-header">
         <div class="hero-title-wrap">
@@ -1023,6 +1199,29 @@
 
       <!-- Connected Co-Op Peers & AI Wingmen -->
       <div id="coop-roster"></div>
+    </div>
+
+    <!-- Collapsible Story Quest Tracker -->
+    <div id="story-tracker" class="hud-card">
+      <div class="story-tracker-head">
+        <span class="story-tracker-title">📖 CHRONICLES OF ASHENVALE</span>
+        <div style="display:flex; gap:4px; align-items:center;">
+          <button id="btn-story-replay" class="mini-btn" style="padding:2px 7px; font-size:10px;" onclick="window.game.playCutscene(window.game.storyState?.activeChapter || 'ch1', true)">🎬 Story</button>
+          <button id="btn-story-collapse" class="mini-btn" style="padding:2px 6px; font-size:10px;" onclick="window.game.toggleStoryTracker()">▾</button>
+        </div>
+      </div>
+      <div class="story-tracker-body" id="story-tracker-body">
+        <div class="story-chapter-pill" id="story-chapter-label">CH. I • THE SHATTERED DAWN</div>
+        <div class="story-obj-line" id="story-objective-text">Enter Ashenvale Realm to begin the Chronicle.</div>
+        <div class="story-chapters-row" id="story-chapters-row">
+          <button class="story-chap-btn unlocked active" data-ch="ch1" onclick="window.game.playCutscene('ch1', true)">Ch.1</button>
+          <button class="story-chap-btn" data-ch="ch2" onclick="window.game.playCutscene('ch2', true)">Ch.2</button>
+          <button class="story-chap-btn" data-ch="ch3" onclick="window.game.playCutscene('ch3', true)">Ch.3</button>
+          <button class="story-chap-btn" data-ch="ch4" onclick="window.game.playCutscene('ch4', true)">Ch.4</button>
+          <button class="story-chap-btn" data-ch="ch5" onclick="window.game.playCutscene('ch5', true)">Ch.5</button>
+        </div>
+      </div>
+    </div>
     </div>
 
     <!-- Center: Biome Switcher & Boss Raid Bar -->
@@ -1071,6 +1270,7 @@
         <button class="mini-btn" onclick="window.game.openModal('forge-modal')">⚒️ Relic Forge</button>
         <button class="mini-btn" onclick="window.game.openModal('leaderboard-modal')">🏆 Hall of Legends</button>
         <button class="mini-btn" onclick="window.game.openModal('hero-modal')">🛡️ Switch Class</button>
+        <button class="mini-btn" onclick="window.game.playCutscene(window.game.storyState?.activeChapter || 'ch1', true)">🎬 Story</button>
         <button id="btn-mute" class="mini-btn" onclick="window.game.toggleAudio()">🔊 Audio</button>
       </div>
     </div>
@@ -1122,6 +1322,11 @@
         <span class="skill-name" id="name-4">Phalanx Banner</span>
         <div class="skill-cd-overlay" id="cd-4"></div>
       </div>
+      <div class="skill-slot" id="slot-jump" data-slot="jump" onclick="window.game.jump()" style="width: 62px;">
+        <span class="skill-key">SPACE</span>
+        <span class="skill-icon">🪽</span>
+        <span class="skill-name">Vault Jump</span>
+      </div>
       <div class="skill-slot" id="slot-potion" data-slot="potion" onclick="window.game.usePotion()">
         <span class="skill-key">H</span>
         <span class="skill-icon">🧪</span>
@@ -1170,9 +1375,13 @@
           <label style="font-size: 11px; color: var(--gold-bright); font-weight: 700; display: block; margin-bottom: 4px;">HERO CALLSIGN</label>
           <input id="hero-name-input" type="text" maxlength="22" value="" placeholder="Enter Hero Name..." style="width: 100%; padding: 9px 12px; border-radius: 7px; border: 1px solid var(--gold); background: rgba(6, 10, 20, 0.78); color: #fff; font-weight: 600;" />
         </div>
-        <div style="flex: 1; min-width: 220px;">
-          <label style="font-size: 11px; color: var(--cyan); font-weight: 700; display: block; margin-bottom: 4px;">CO-OP REALM ROOM CODE (SHARE WITH FRIENDS)</label>
-          <input id="room-code-input" type="text" maxlength="18" value="ASHEN-1" style="width: 100%; padding: 9px 12px; border-radius: 7px; border: 1px solid var(--cyan); background: rgba(6, 10, 20, 0.78); color: var(--cyan); font-family: 'JetBrains Mono', monospace; font-weight: 700;" />
+        <div style="flex: 1.25; min-width: 260px;">
+          <label style="font-size: 11px; color: var(--cyan); font-weight: 700; display: block; margin-bottom: 4px;">CO-OP REALM ROOM CODE (DEFAULT PUBLIC REALM: ASHEN-1)</label>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <input id="room-code-input" type="text" maxlength="18" value="ASHEN-1" oninput="window.game?.onRoomInputChanged(this.value)" style="flex: 1; min-width: 110px; padding: 9px 12px; border-radius: 7px; border: 1px solid var(--cyan); background: rgba(6, 10, 20, 0.78); color: var(--cyan); font-family: 'JetBrains Mono', monospace; font-weight: 700;" />
+            <button type="button" class="mini-btn" style="padding: 9px 10px; border-color: var(--cyan); color: var(--cyan); white-space: nowrap;" onclick="window.game.selectPublicRealm()">🏰 Join Public: ASHEN-1</button>
+            <button type="button" class="mini-btn" style="padding: 9px 9px; white-space: nowrap;" onclick="window.game.generatePrivateRoomCode()">🎲 Private</button>
+          </div>
         </div>
       </div>
 
@@ -1202,7 +1411,7 @@
 
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.14);">
         <div style="font-size: 11.5px; color: var(--text-main); line-height: 1.5;">
-          <strong>Controls:</strong> <span class="key-cap">WASD</span> Move • <span class="key-cap">Q/E</span> Orbit Camera • <span class="key-cap">LMB</span> Combo Attack • <span class="key-cap">RMB</span> Heavy Skill • <span class="key-cap">Shift</span> Dodge/Movement • <span class="key-cap">4</span> Class Skill • <span class="key-cap">H</span> Elixir • <span class="key-cap">R</span> Convergence • <span class="key-cap">I</span> Inventory • <span class="key-cap">F</span> Talk/Interact
+          <strong>Controls:</strong> <span class="key-cap">WASD</span> Move • <span class="key-cap">Space</span> Jump/Vault • <span class="key-cap">Q/E</span> Orbit Camera • <span class="key-cap">LMB / 1 / J</span> Combo Attack • <span class="key-cap">RMB / 2</span> Heavy Skill • <span class="key-cap">Shift</span> Dodge/Movement • <span class="key-cap">4</span> Class Skill • <span class="key-cap">H</span> Elixir • <span class="key-cap">R</span> Convergence • <span class="key-cap">I</span> Inventory • <span class="key-cap">F</span> Talk/Interact
         </div>
         <button class="cta-btn" onclick="window.game.startOrResumeGame()">⚡ ENTER ASHENVALE REALM</button>
       </div>
@@ -1304,6 +1513,30 @@
         <button class="mini-btn" onclick="window.game.closeModals()">✕ Farewell (ESC)</button>
       </div>
       <div id="npc-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- REAL-TIME 3D CUTSCENE DIRECTOR OVERLAY -->
+  <div id="cutscene-overlay">
+    <div class="cutscene-bar top">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-family:'Cinzel',serif; font-weight:900; font-size:14px; color:var(--gold-bright); letter-spacing:1px;">🎬 CHRONICLES OF ASHENVALE</span>
+        <span id="cutscene-chapter-badge">CHAPTER I</span>
+      </div>
+      <button id="cutscene-skip-btn" class="mini-btn" style="padding:6px 14px; border-color:var(--gold); color:var(--gold-bright);" onclick="window.game.skipCutscene()">⏭ Skip [ESC]</button>
+    </div>
+    <div id="cutscene-dialogue-card">
+      <div class="cutscene-speaker-row">
+        <span id="cutscene-speaker">📜 Lorekeeper Aldous</span>
+        <span id="cutscene-shot-counter" style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-muted);">1 / 2</span>
+      </div>
+      <div id="cutscene-subtitle"></div>
+      <div class="cutscene-progress-track">
+        <div id="cutscene-progress-fill"></div>
+      </div>
+    </div>
+    <div class="cutscene-bar bottom">
+      <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-muted); letter-spacing:0.6px;">LIVE 3D REALTIME CINEMATIC • PRESS [ESC] TO SKIP</span>
     </div>
   </div>
 
@@ -1439,6 +1672,150 @@
       'Idle_FoldArms_Loop', 'Walk_Loop', 'Jog_Fwd_Loop',
       'Sprint_Loop', 'Zombie_Idle_Loop', 'Zombie_Walk_Fwd_Loop'
     ]);
+
+    const STORY_CHAPTERS = {
+      ch1: {
+        id: 'ch1',
+        badge: 'CHAPTER I • PROLOGUE',
+        title: 'The Shattered Dawn',
+        objective: 'Clear the Outskirts Raiders north of Sanctuary Gate.',
+        shots: [
+          {
+            duration: 3.8,
+            speaker: '📜 Lorekeeper Aldous',
+            pitch: 0.92,
+            text: 'When the Chrono-Rifts tore open above Ashenvale Bastion, ancient stone and astral steel collided across time.',
+            camStart: [-8.5, 8.8, 20.5],
+            camEnd: [6.2, 5.2, 17.5],
+            lookStart: [0, 2.4, 0],
+            lookEnd: [0, 1.5, 11.5]
+          },
+          {
+            duration: 3.8,
+            speaker: '🌀 Rift Gatekeeper Lyra',
+            pitch: 1.08,
+            text: 'Abyssal Imps and Puglin Marauders are breaching the northern gate! Clear the Outskirts Raiders and rally your party!',
+            camStart: [5.5, 5.0, 4.5],
+            camEnd: [-4.5, 6.4, -2.5],
+            lookStart: [0, 1.2, -10.0],
+            lookEnd: [-5.0, 1.3, -10.5]
+          }
+        ]
+      },
+      ch2: {
+        id: 'ch2',
+        badge: 'CHAPTER II • CATACOMBS',
+        title: 'Crypts of the Warlord',
+        objective: 'Defeat ★ Gronk, Puglin Warlord in the Catacombs.',
+        shots: [
+          {
+            duration: 3.6,
+            speaker: '☠️ Gronk, Puglin Warlord',
+            pitch: 0.72,
+            text: 'Fresh steel wanders into my crypts! Come, heroes—feed your chrono-shards to the Bestiary!',
+            camStart: [-15.0, 4.6, -22.0],
+            camEnd: [-18.5, 3.6, -29.0],
+            lookStart: [-22.0, 1.8, -36.0],
+            lookEnd: [-22.0, 2.0, -36.0]
+          },
+          {
+            duration: 3.2,
+            speaker: '⚒️ Blacksmith Kaelen',
+            pitch: 0.88,
+            text: 'Strike down Gronk and his Bestiary pack—their cores will temper your relics for the Astral Breach ahead!',
+            camStart: [-26.0, 4.4, -33.0],
+            camEnd: [-19.5, 5.2, -24.5],
+            lookStart: [-18.0, 1.5, -18.0],
+            lookEnd: [-22.0, 1.6, -34.0]
+          }
+        ]
+      },
+      ch3: {
+        id: 'ch3',
+        badge: 'CHAPTER III • XENO BREACH',
+        title: 'The Xeno Convergence',
+        objective: 'Defeat Astral Cyclops Juggernaut in the Astral Breach.',
+        shots: [
+          {
+            duration: 3.6,
+            speaker: '🛸 Xeno-Harbinger',
+            pitch: 0.78,
+            text: 'Timeline convergence detected. Astral Cyclops Juggernaut, purge all organic anomalies.',
+            camStart: [12.5, 7.6, -18.0],
+            camEnd: [21.0, 4.8, -26.5],
+            lookStart: [24.0, 2.0, -31.0],
+            lookEnd: [26.0, 2.4, -34.0]
+          },
+          {
+            duration: 3.2,
+            speaker: '🌀 Rift Gatekeeper Lyra',
+            pitch: 1.08,
+            text: 'Press Space to vault over shockwaves and focus fire on the Astral Cyclops Juggernaut!',
+            camStart: [31.0, 4.4, -29.0],
+            camEnd: [20.5, 5.6, -23.0],
+            lookStart: [26.0, 2.2, -34.0],
+            lookEnd: [18.0, 1.5, -18.0]
+          }
+        ]
+      },
+      ch4: {
+        id: 'ch4',
+        badge: 'CHAPTER IV • THE ARCHON',
+        title: 'Archon of the Rift',
+        objective: 'Vanquish Malakor, the Chrono-Fused Archon.',
+        shots: [
+          {
+            duration: 4.0,
+            speaker: '⚔️ Archon Malakor',
+            pitch: 0.68,
+            text: 'I am the nexus of every broken age! Kneel before the Chrono-Fused Throne, mortals!',
+            camStart: [-6.0, 3.8, -36.0],
+            camEnd: [4.2, 4.6, -42.5],
+            lookStart: [0, 2.4, -50.0],
+            lookEnd: [0, 2.6, -50.0]
+          },
+          {
+            duration: 3.2,
+            speaker: '✨ High Cleric Seraphina',
+            pitch: 1.12,
+            text: 'Charge your Co-Op Synergy to 100% and unleash Astral Convergence together—now!',
+            camStart: [9.0, 6.2, -45.0],
+            camEnd: [-7.0, 5.8, -37.0],
+            lookStart: [0, 1.8, -46.0],
+            lookEnd: [0, 1.8, -45.0]
+          }
+        ]
+      },
+      ch5: {
+        id: 'ch5',
+        badge: 'CHAPTER V • EPILOGUE',
+        title: 'Dawn of the Endless Rift',
+        objective: 'Victory! Endless Rift Wave escalation awaits.',
+        goldenSky: true,
+        shots: [
+          {
+            duration: 4.0,
+            speaker: '📜 Lorekeeper Aldous',
+            pitch: 0.94,
+            text: 'Malakor falls, and golden light breaks across Ashenvale! Yet deeper echoes stir beyond the Endless Rift...',
+            camStart: [8.5, 5.2, -41.5],
+            camEnd: [-8.5, 7.6, -46.5],
+            lookStart: [0, 1.6, -42.0],
+            lookEnd: [0, 2.2, -50.0]
+          },
+          {
+            duration: 3.4,
+            speaker: '🌀 Rift Gatekeeper Lyra',
+            pitch: 1.08,
+            text: 'Victory belongs to your party! Prepare yourselves—the Endless Rift escalates to the next tier!',
+            camStart: [-8.5, 7.6, -46.5],
+            camEnd: [0, 13.0, -28.0],
+            lookStart: [0, 2.5, -45.0],
+            lookEnd: [0, 3.8, 0]
+          }
+        ]
+      }
+    };
 
     const WEAPON_ATTACH_SPECS = {
       Sword_Golden:         { hand: 'right', targetLen: 1.12, scale: 0.1877, gripOffset: [0.0,  0.05,  0.0], holderPos: [-0.02, 0.08, 0.0], rotation: [Math.PI / 2, -Math.PI / 2, 0], leftRotation: [Math.PI / 2, Math.PI / 2, 0], isShield: false },
@@ -1783,6 +2160,23 @@
         });
       }
 
+      playJump() {
+        if (!this.ctx || this.muted) return;
+        this.playSample('sfx_swipe', 1.35, 0.24);
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(175, now);
+        osc.frequency.exponentialRampToValueAtTime(430, now + 0.14);
+        g.gain.setValueAtTime(0.18, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+        osc.connect(g);
+        g.connect(this.sfxGain);
+        osc.start(now);
+        osc.stop(now + 0.17);
+      }
+
       speakVoiceLine(text, pitch = 0.9, rate = 1.0) {
         if (this.muted) return;
         this.duckMusic(2.6);
@@ -1820,15 +2214,20 @@
         this.playerToken = sessionPeerId;
 
         const urlParams = new URLSearchParams(window.location.search);
-        let initialRoom = urlParams.get('room') || localStorage.getItem('arpg_room_code');
-        if (!initialRoom) {
-          initialRoom = 'RIFT-' + Math.random().toString(36).slice(2, 6).toUpperCase();
-          localStorage.setItem('arpg_room_code', initialRoom);
-        }
-        this.roomCode = initialRoom.trim().toUpperCase() || 'ASHEN-1';
+        const urlRoom = urlParams.get('room');
+        const initialRoom = (urlRoom && urlRoom.trim()) ? urlRoom.trim().toUpperCase() : 'ASHEN-1';
+        this.roomCode = initialRoom;
+        localStorage.setItem('arpg_room_code', this.roomCode);
         document.getElementById('room-code-input').value = this.roomCode;
         document.getElementById('hud-room-code').textContent = this.roomCode;
         document.getElementById('modal-room-indicator').textContent = 'ROOM: ' + this.roomCode;
+
+        this.joinedAt = Date.now();
+        this.worldJoinedAt = 0;
+        this.canonicalHostId = null;
+        this._worldStateUpdatedAt = 0;
+        this._worldStatePersistTimer = null;
+        this._pendingWaveAdvanceTimer = null;
 
         const savedName = localStorage.getItem('arpg_hero_name') || ('Knight_' + Math.floor(100 + Math.random() * 899));
         document.getElementById('hero-name-input').value = savedName;
@@ -1876,6 +2275,10 @@
           bagItems: { elixir_vial: 1 },
           pos: new THREE.Vector3(spawnOffX, 0, 12 + spawnOffZ),
           vel: new THREE.Vector3(),
+          vy: 0,
+          grounded: true,
+          jumpTimer: 0,
+          isJumping: false,
           yaw: Math.PI,
           animState: 'Idle_Shield_Loop',
           attackCombo: 0,
@@ -1904,6 +2307,24 @@
           catacombBounty: { state: 'available', kills: 0, target: 5 },
           archonBoss: { state: 'available', kills: 0, target: 1 }
         };
+        this.storyState = {
+          activeChapter: 'ch1',
+          seen: new Set(),
+          completed: new Set(),
+          collapsed: false
+        };
+        try {
+          const savedStory = JSON.parse(localStorage.getItem('arpg_story_state') || 'null');
+          if (savedStory) {
+            if (Array.isArray(savedStory.seen)) savedStory.seen.forEach(c => this.storyState.seen.add(c));
+            if (Array.isArray(savedStory.completed)) savedStory.completed.forEach(c => this.storyState.completed.add(c));
+            if (savedStory.activeChapter && STORY_CHAPTERS[savedStory.activeChapter]) {
+              this.storyState.activeChapter = savedStory.activeChapter;
+            }
+          }
+        } catch (e) {}
+        this.cutsceneActive = false;
+        this.cutsceneState = null;
         this.townNPCs = [];
         this.activeNpcId = null;
         this.activeLoreChapter = 0;
@@ -2845,7 +3266,7 @@
         );
 
         WEAPON_CATALOG.forEach((w) => {
-          const wUrl = `assets/models/weapons/${w.id}.glb`;
+          const wUrl = `public/assets/models/weapons/${w.id}.glb`;
           this.loader.load(
             wUrl,
             (gltf) => {
@@ -2916,7 +3337,7 @@
         });
 
         ['npc_blacksmith', 'npc_cleric', 'npc_scholar'].forEach((nKey) => {
-          const nUrl = `assets/models/npcs/${nKey}.glb`;
+          const nUrl = `public/assets/models/npcs/${nKey}.glb`;
           this.loader.load(
             nUrl,
             (gltf) => {
@@ -2942,7 +3363,7 @@
           'monster_alien_scolitex', 'monster_alien_oculichrysalis', 'monster_alien_cyclop', 'boss_chrono_archon'
         ];
         monsterModels.forEach((mKey) => {
-          const mUrl = `assets/models/monsters/${mKey}.glb`;
+          const mUrl = `public/assets/models/monsters/${mKey}.glb`;
           this.loader.load(
             mUrl,
             (gltf) => {
@@ -3106,7 +3527,7 @@
             return;
           }
           pendingPropCallbacks[file] = [cb];
-          const pUrl = `assets/models/props/${file}`;
+          const pUrl = `public/assets/models/props/${file}`;
           this.loader.load(
             pUrl,
             (gltf) => {
@@ -3260,6 +3681,10 @@
             if (node.material) {
               node.material = node.material.clone();
               if (node.isSkinnedMesh) node.material.skinning = true;
+              node.material.userData.origEmissive = node.material.emissive ? node.material.emissive.clone() : null;
+              node.material.userData.origEmissiveIntensity = typeof node.material.emissiveIntensity === 'number' ? node.material.emissiveIntensity : 1.0;
+              node.material.userData.origTransparent = !!node.material.transparent;
+              node.material.userData.origOpacity = typeof node.material.opacity === 'number' ? node.material.opacity : 1.0;
               entity.materials.push(node.material);
             }
           }
@@ -3299,6 +3724,12 @@
         this.bindAnimationsToEntity(entity);
         if (entity.weaponId || entity.offhandId) {
           this.attachWeaponsToEntity(entity);
+        }
+        if (entity.dead) {
+          this.playEntityAnim(entity, 'Death01', true);
+          if (entity.deathTimer <= -0.5) {
+            entity.meshRoot.visible = false;
+          }
         }
       }
 
@@ -3399,16 +3830,28 @@
 
         entity.mixer.addEventListener('finished', () => {
           if (entity.dead || entity.animState === 'Death01') return;
+          if (entity === this.player && !entity.grounded) {
+            if (entity.actions && entity.actions['Jump_Loop']) {
+              this.playEntityAnim(entity, 'Jump_Loop', true);
+            }
+            return;
+          }
           this.playEntityAnim(entity, this.getEntityIdleAnim(entity), true);
         });
 
-        this.playEntityAnim(entity, defaultIdle, true);
+        if (entity.dead) {
+          this.playEntityAnim(entity, 'Death01', true);
+        } else {
+          this.playEntityAnim(entity, defaultIdle, true);
+        }
       }
 
       playEntityAnim(entity, animName, force = false) {
         if (!entity.mixer || !entity.actions) return;
+        const isDeath = animName === 'Death01' || !!entity.dead;
+        if (entity.dead && animName !== 'Death01') return;
+
         const mk = entity.modelKey || '';
-        const isAlien = mk.includes('alien');
         const aliasMap = {
           Zombie_Walk_Fwd_Loop: 'Jog_Fwd_Loop',
           Sword_Heavy_Combo: 'Sword_Attack',
@@ -3416,36 +3859,51 @@
           Hit_Knockback: 'Hit_Chest'
         };
         const fallbackAnim = aliasMap[animName];
-        const target =
-          (mk && entity.actions[mk + '_' + animName]) ||
-          entity.actions[animName] ||
-          (fallbackAnim && ((mk && entity.actions[mk + '_' + fallbackAnim]) || entity.actions[fallbackAnim])) ||
-          (mk && entity.actions[mk + '_Idle_Loop']) ||
-          entity.actions['Idle_Loop'] ||
-          (mk && entity.actions[mk + '_idle']);
 
-        if (!target) {
-          if (entity.dead && isAlien && entity.activeAction) {
-            entity.activeAction.paused = true;
+        let target = null;
+        if (isDeath) {
+          target = (mk && entity.actions[mk + '_Death01']) || entity.actions['Death01'];
+          if (!target) {
+            const deathKey = Object.keys(entity.actions).find(k => /death|die/i.test(k));
+            if (deathKey) target = entity.actions[deathKey];
           }
-          return;
+          if (!target) {
+            if (entity.activeAction) {
+              entity.activeAction.paused = true;
+            }
+            entity.hasDeathClip = false;
+            entity.animState = 'Death01';
+            return;
+          }
+          entity.hasDeathClip = true;
+        } else {
+          target =
+            (mk && entity.actions[mk + '_' + animName]) ||
+            entity.actions[animName] ||
+            (fallbackAnim && ((mk && entity.actions[mk + '_' + fallbackAnim]) || entity.actions[fallbackAnim])) ||
+            (mk && entity.actions[mk + '_Idle_Loop']) ||
+            entity.actions['Idle_Loop'] ||
+            (mk && entity.actions[mk + '_idle']);
         }
+
+        if (!target) return;
         if (entity.activeAction === target && !force) return;
 
+        const fadeDur = isDeath ? 0.06 : 0.14;
         const prev = entity.activeAction;
         if (prev && prev !== target) {
-          prev.fadeOut(0.14);
+          prev.fadeOut(fadeDur);
         }
         target.reset();
         target.paused = false;
         target.setEffectiveTimeScale(1);
         target.setEffectiveWeight(1);
         if (prev && prev !== target) {
-          target.fadeIn(0.14);
+          target.fadeIn(fadeDur);
         }
         target.play();
         entity.activeAction = target;
-        entity.animState = animName;
+        entity.animState = isDeath ? 'Death01' : animName;
       }
 
       attachWeaponsToEntity(entity) {
@@ -5014,7 +5472,7 @@
           this.hitStopTimer = 0.042;
           this.screenShake = Math.max(this.screenShake, 0.22);
         }
-        if (!mob.isBoss && !opts.noKnockback) {
+        if (!mob.isBoss && !opts.noKnockback && mob.hp > 0) {
           if (mob.kbVel) {
             mob.kbVel.copy(hitDir).multiplyScalar(isHeavy ? 9.5 : 4.5);
           } else {
@@ -5033,32 +5491,124 @@
             isHeavy: !!isHeavy,
             attackerId: this.playerToken,
             attackerName: this.player.name,
+            riftWave: this.riftWave,
             kbX: Number(hitDir.x.toFixed(3)),
             kbZ: Number(hitDir.z.toFixed(3))
           });
+          if (mob.hp > 0 && this.isRoomHost) {
+            this.scheduleWorldStatePersist();
+          }
         }
 
         if (mob.hp <= 0) {
-          this.handleMonsterDeath(mob, fromNetwork);
+          this.handleMonsterDeath(mob, fromNetwork, hitDir);
         }
       }
 
-      handleMonsterDeath(mob, fromNetwork = false) {
+      resetMonsterVisualState(mob) {
+        if (!mob) return;
+        if (mob._hitFlashTimeout) {
+          clearTimeout(mob._hitFlashTimeout);
+          mob._hitFlashTimeout = null;
+        }
+        if (mob.meshRoot) {
+          mob.meshRoot.position.y = 0;
+          mob.meshRoot.rotation.set(0, mob.yaw || 0, 0);
+          mob.meshRoot.scale.setScalar(1);
+          mob.meshRoot.visible = true;
+        }
+        if (mob.glbNode) {
+          mob.glbNode.position.set(0, 0, 0);
+          mob.glbNode.rotation.set(0, 0, 0);
+          mob.glbNode.scale.setScalar(mob.scale || 1.0);
+        }
+        if (mob.materials) {
+          mob.materials.forEach((mat) => {
+            if (mat.emissive && mat.userData.origEmissive) {
+              mat.emissive.copy(mat.userData.origEmissive);
+              mat.emissiveIntensity = mat.userData.origEmissiveIntensity ?? 1.0;
+            }
+            if (mat.userData.origTransparent !== undefined) {
+              mat.transparent = mat.userData.origTransparent;
+            }
+            if (mat.userData.origOpacity !== undefined) {
+              mat.opacity = mat.userData.origOpacity;
+            }
+          });
+        }
+      }
+
+      handleMonsterDeath(mob, fromNetwork = false, hitDir = null) {
         if (!mob || mob.dead) return;
         mob.dead = true;
         mob.hp = 0;
-        mob.deathTimer = 2.6;
+        if (mob._hitFlashTimeout) {
+          clearTimeout(mob._hitFlashTimeout);
+          mob._hitFlashTimeout = null;
+        }
+
+        const isAlien = (mob.modelKey || '').includes('alien');
+        mob.deathDuration = mob.isBoss ? 2.85 : (isAlien ? 1.95 : 2.35);
+        mob.deathTimer = mob.deathDuration;
+        mob.deathElapsed = 0.03;
+        mob.deathToppleDir = (Math.random() < 0.5 ? 1 : -1);
+        if (mob.glbNode && isAlien) {
+          mob.glbNode.rotation.x = -0.14;
+          mob.glbNode.rotation.z = mob.deathToppleDir * 0.06;
+        }
+
+        // Lethal knockback slide impulse away from lethal blow
+        const kbDir = hitDir && hitDir.lengthSq() > 0.001
+          ? hitDir.clone().setY(0).normalize()
+          : new THREE.Vector3(-Math.sin(mob.yaw || 0), 0, -Math.cos(mob.yaw || 0));
+        if (mob.kbVel) {
+          mob.kbVel.copy(kbDir).multiplyScalar(mob.isBoss ? 3.5 : (mob.isElite ? 7.5 : 10.5));
+        }
+
         this.playEntityAnim(mob, 'Death01', true);
-        this.spawnVFXFlipbook('anima', mob.pos, mob.isBoss ? 6.0 : 3.4, 0.65, 0x38e8ff, false, { depthTest: false });
+
+        // Lethal hit burst, directional sparks & rising soul wisps
+        const deathColor = mob.isBoss ? 0xf3c86b : (isAlien ? 0x38e8ff : 0xff3b5c);
+        this.spawnVFXFlipbook('anima', mob.pos, mob.isBoss ? 6.5 : 3.6, 0.7, deathColor, false, { depthTest: false });
+        this.spawnShockwaveRing(mob.pos, mob.isBoss ? 6.8 : (mob.isElite ? 4.4 : 2.8), deathColor, 0.42);
+        this.spawnHitSparks(mob.pos, kbDir, deathColor, mob.isBoss ? 28 : 16);
         this.spawnLootDrop(mob.pos, mob.isElite || mob.isBoss, mob.isBoss);
+
+        if (!fromNetwork && (mob.isElite || mob.isBoss)) {
+          this.hitStopTimer = mob.isBoss ? 0.065 : 0.045;
+          this.screenShake = Math.max(this.screenShake, mob.isBoss ? 0.65 : 0.38);
+        }
+
+        if (mob.isBoss) {
+          const bossPos = mob.pos.clone();
+          [450, 950, 1550].forEach((delay, idx) => {
+            setTimeout(() => {
+              const col = idx % 2 === 0 ? 0xf3c86b : 0x38e8ff;
+              this.spawnVFXFlipbook('explosion', bossPos, 5.5 + idx * 1.1, 0.65, col, false, { depthTest: false });
+              this.spawnShockwaveRing(bossPos, 5.0 + idx * 1.6, col, 0.45);
+              this.spawnHitSparks(bossPos, new THREE.Vector3(Math.cos(idx), 0.4, Math.sin(idx)), col, 18);
+              this.screenShake = Math.max(this.screenShake, 0.34);
+            }, delay);
+          });
+          setTimeout(() => {
+            this.spawnVFXFlipbook('eldenring', bossPos, 9.5, 0.9, 0xf3c86b, true);
+            this.spawnShockwaveRing(bossPos, 11.0, 0xffe599, 0.6);
+            this.audio.playSpell('ult');
+          }, 2050);
+        }
 
         if (!fromNetwork) {
           this.broadcastGameEvent('mob_death', {
             mobId: mob.id,
             killerId: this.playerToken,
             killerName: this.player.name,
-            riftWave: this.riftWave
+            riftWave: this.riftWave,
+            kbX: Number(kbDir.x.toFixed(3)),
+            kbZ: Number(kbDir.z.toFixed(3))
           });
+        }
+        if (this.isRoomHost || this.remotePeers.size === 0) {
+          this.persistWorldStateToSupabase(true);
         }
 
         // Update active NPC Bounty & Boss quests
@@ -5096,11 +5646,27 @@
           this.saveHeroToSupabase();
         }
 
+        this.checkStoryMilestonesOnDeath(mob);
+
         if (mob.isBoss) {
           this.audio.speakVoiceLine('Impossible! The Chrono Rift will consume all timelines!', 0.65, 0.92);
           this.addChatMessage('Raid Victory', `🏆 ${this.player.name}'s Party vanquished ${mob.name} on Rift Wave ${this.riftWave}!`, 'sys-boss');
           if (!fromNetwork) this.recordLeaderboardVictory();
-          this.riftWave++;
+          this.triggerStoryChapter('ch5');
+          if (this.isRoomHost && !this._pendingWaveAdvanceTimer) {
+            const targetWave = this.riftWave + 1;
+            this._pendingWaveAdvanceTimer = setTimeout(() => {
+              this._pendingWaveAdvanceTimer = null;
+              if (this.isRoomHost && this.riftWave < targetWave) {
+                this.riftWave = targetWave;
+                this.spawnZoneMonsters();
+                this.broadcastGameEvent('portal_wave', { riftWave: this.riftWave, byName: 'Endless Rift' });
+                this.sendWaveSync(true);
+                this.persistWorldStateToSupabase(true);
+                this.addChatMessage('Endless Rift', `🌀 Endless Rift Wave ${this.riftWave} has begun across Ashenvale!`, 'sys-synergy');
+              }
+            }, 7800);
+          }
         }
       }
 
@@ -5175,11 +5741,12 @@
 
       activateAstralPortal(fromNetwork = false, targetWave = null, byName = null) {
         if (fromNetwork) {
-          if (typeof targetWave === 'number' && targetWave > this.riftWave) {
+          if (typeof targetWave === 'number' && targetWave !== this.riftWave && targetWave > this.riftWave) {
             this.riftWave = targetWave;
             this.spawnZoneMonsters();
             this.audio.playSpell('ult');
             this.addChatMessage('Astral Gate', `🌀 ${byName || 'Ally'} opened Rift Wave ${this.riftWave}! Fresh Bestiary & Xeno-Constructs spawned!`, 'sys-synergy');
+            this.updateStoryTrackerUI();
           }
           return;
         }
@@ -5189,7 +5756,8 @@
         this.audio.speakVoiceLine(`Astral Rift Wave ${this.riftWave} awakened!`, 0.85, 1.0);
         this.addChatMessage('Astral Gate', `🌀 Rift Wave ${this.riftWave} opened! Fresh Bestiary & Xeno-Constructs spawned!`, 'sys-synergy');
         this.broadcastGameEvent('portal_wave', { riftWave: this.riftWave, byName: this.player.name });
-        this.sendWaveSync();
+        this.sendWaveSync(true);
+        this.persistWorldStateToSupabase(true);
         this.warpToZone('astral_breach');
       }
 
@@ -5238,6 +5806,10 @@
         };
         const t = zoneTargets[zoneId] || zoneTargets.ashenvale_bastion;
         this.player.pos.copy(t.pos);
+        this.player.vy = 0;
+        this.player.grounded = true;
+        this.player.jumpTimer = 0;
+        this.player.isJumping = false;
         this.aiAllies.forEach((a) => a.pos.copy(t.pos).add(a.offset));
         document.getElementById('hud-zone-title').textContent = t.label;
 
@@ -5255,6 +5827,12 @@
         this.audio.playSpell('arcane');
         this.spawnVFXFlipbook('vortex', this.player.pos, 4.0, 0.5, 0x38e8ff);
         this.broadcastPlayerState(true);
+
+        if (this.isInWorld) {
+          if (zoneId === 'bestiary_catacombs') this.triggerStoryChapter('ch2');
+          else if (zoneId === 'astral_breach') this.triggerStoryChapter('ch3');
+          else if (zoneId === 'boss_citadel') this.triggerStoryChapter('ch4');
+        }
       }
 
       warpToPeer(peerId) {
@@ -5262,6 +5840,10 @@
         if (!peer) return;
         this.audio.init();
         this.player.pos.set(peer.pos.x + 1.4, 0, peer.pos.z + 1.4);
+        this.player.vy = 0;
+        this.player.grounded = true;
+        this.player.jumpTimer = 0;
+        this.player.isJumping = false;
         this.resolveObstacleCollisions(this.player.pos, 0.55);
         this.audio.playSpell('arcane');
         this.spawnVFXFlipbook('vortex', this.player.pos, 3.8, 0.45, 0x38e8ff);
@@ -5339,15 +5921,19 @@
         return {
           id: this.playerToken,
           inWorld: !!this.isInWorld,
+          joinedAt: this.worldJoinedAt || this.joinedAt,
           name: p.name,
           classId: p.classId,
           weaponId: p.weaponId,
           offhandId: p.offhandId,
           level: p.level,
           x: Number(p.pos.x.toFixed(2)),
+          y: Number(p.pos.y.toFixed(2)),
           z: Number(p.pos.z.toFixed(2)),
           vx: Number(p.vel.x.toFixed(2)),
+          vy: Number((p.vy || 0).toFixed(2)),
           vz: Number(p.vel.z.toFixed(2)),
+          grounded: !!p.grounded,
           yaw: Number(p.yaw.toFixed(2)),
           hp: Math.round(p.hp),
           maxHp: p.maxHp,
@@ -5356,15 +5942,165 @@
       }
 
       updateRoomHost() {
+        const wasHost = this.isRoomHost;
         if (!this.isInWorld || !this.channelSubscribed || this.remotePeers.size === 0) {
           this.roomHostId = this.playerToken;
           this.isRoomHost = true;
           return;
         }
-        const ids = [this.playerToken, ...Array.from(this.remotePeers.keys())];
-        ids.sort();
-        this.roomHostId = ids[0];
+        const candidates = [{ id: this.playerToken, joinedAt: this.worldJoinedAt || this.joinedAt }];
+        this.remotePeers.forEach((peer) => {
+          candidates.push({
+            id: peer.id,
+            joinedAt: typeof peer.joinedAt === 'number' ? peer.joinedAt : Number.MAX_SAFE_INTEGER
+          });
+        });
+
+        // Respect canonical host from arpg_rooms.host_id / wave_sync if still active in the room
+        const activeSet = new Set(candidates.map(c => c.id));
+        if (this.canonicalHostId && activeSet.has(this.canonicalHostId)) {
+          this.roomHostId = this.canonicalHostId;
+        } else {
+          candidates.sort((a, b) => (a.joinedAt - b.joinedAt) || a.id.localeCompare(b.id));
+          this.roomHostId = candidates[0].id;
+        }
         this.isRoomHost = (this.roomHostId === this.playerToken);
+
+        if (!wasHost && this.isRoomHost && this.isInWorld) {
+          this.canonicalHostId = this.playerToken;
+          this.persistWorldStateToSupabase(true);
+        }
+      }
+
+      buildWorldStatePayload() {
+        const deadMobs = [];
+        const mobHps = {};
+        for (let i = 0; i < this.monsters.length; i++) {
+          const m = this.monsters[i];
+          if (m.dead) {
+            deadMobs.push(m.id);
+          } else if (m.hp < m.maxHp) {
+            mobHps[m.id] = Math.round(m.hp);
+          }
+        }
+        return {
+          waveId: this.riftWave,
+          riftWave: this.riftWave,
+          deadMobs,
+          mobHps,
+          deadDestructibles: this.destructibles.filter(d => d.dead).map(d => d.id),
+          updatedAt: Date.now()
+        };
+      }
+
+      applyWorldStatePayload(ws) {
+        if (!ws || typeof ws !== 'object') return;
+        const ts = typeof ws.updatedAt === 'number' ? ws.updatedAt : 0;
+        if (ts && ts < (this._worldStateUpdatedAt || 0)) return;
+        if (ts) this._worldStateUpdatedAt = ts;
+
+        const targetWave = typeof ws.riftWave === 'number' ? ws.riftWave : (typeof ws.waveId === 'number' ? ws.waveId : null);
+        if (targetWave && targetWave >= 1 && targetWave !== this.riftWave) {
+          this.riftWave = targetWave;
+          this.spawnZoneMonsters();
+        }
+
+        const deadSet = new Set(Array.isArray(ws.deadMobs) ? ws.deadMobs : []);
+        const mobHps = ws.mobHps && typeof ws.mobHps === 'object' ? ws.mobHps : {};
+
+        this.monsters.forEach((mob) => {
+          if (deadSet.has(mob.id)) {
+            mob.dead = true;
+            mob.hp = 0;
+            mob.deathTimer = -1;
+            if (mob.meshRoot) mob.meshRoot.visible = false;
+          } else {
+            const wasDead = mob.dead;
+            mob.dead = false;
+            mob.deathTimer = 0;
+            mob.hp = typeof mobHps[mob.id] === 'number'
+              ? Math.max(1, Math.min(mob.maxHp, mobHps[mob.id]))
+              : mob.maxHp;
+            if (wasDead) {
+              this.resetMonsterVisualState(mob);
+              this.playEntityAnim(mob, 'Idle_Loop', true);
+            } else if (mob.meshRoot && mob.pos.distanceToSquared(this.player.pos) <= 2704) {
+              mob.meshRoot.visible = true;
+            }
+          }
+        });
+
+        if (Array.isArray(ws.deadDestructibles)) {
+          const deadDestSet = new Set(ws.deadDestructibles);
+          this.destructibles.forEach((dest) => {
+            if (deadDestSet.has(dest.id) && !dest.dead) {
+              dest.dead = true;
+              if (dest.group) this.scene.remove(dest.group);
+            }
+          });
+        }
+        this.updateStoryTrackerUI();
+      }
+
+      scheduleWorldStatePersist() {
+        if (this._worldStatePersistTimer) return;
+        this._worldStatePersistTimer = setTimeout(() => {
+          this._worldStatePersistTimer = null;
+          this.persistWorldStateToSupabase(false);
+        }, 450);
+      }
+
+      async persistWorldStateToSupabase(immediate = false) {
+        if (!this.supabase || !this.roomCode) return;
+        const now = Date.now();
+        if (!immediate && now - (this._lastDbPersistMs || 0) < 900) return;
+        this._lastDbPersistMs = now;
+        const worldState = this.buildWorldStatePayload();
+        this._worldStateUpdatedAt = worldState.updatedAt;
+        try {
+          await this.supabase.from('arpg_rooms').upsert({
+            room_code: this.roomCode,
+            room_name: this.roomCode === 'ASHEN-1' ? '🏰 Ashenvale Public Co-Op Plaza' : `${this.player.name}'s Co-Op Expedition`,
+            host_id: this.roomHostId || this.playerToken,
+            host_name: this.player.name,
+            current_zone: this.currentZone,
+            rift_wave: this.riftWave,
+            world_state: worldState,
+            status: 'open',
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'room_code' });
+        } catch (err) {
+          console.warn('persistWorldState fallback:', err);
+        }
+      }
+
+      async hydrateRoomWorldState(roomCode = this.roomCode) {
+        if (!this.supabase || !roomCode) return;
+        try {
+          const { data } = await this.supabase
+            .from('arpg_rooms')
+            .select('room_code,host_id,host_name,rift_wave,world_state,updated_at')
+            .eq('room_code', roomCode)
+            .maybeSingle();
+
+          if (this.roomCode !== roomCode) return;
+          if (data) {
+            if (data.host_id) {
+              this.canonicalHostId = data.host_id;
+              this.updateRoomHost();
+            }
+            if (data.world_state && typeof data.world_state === 'object' && Object.keys(data.world_state).length > 0) {
+              this.applyWorldStatePayload(data.world_state);
+            } else if (typeof data.rift_wave === 'number' && data.rift_wave >= 1 && data.rift_wave !== this.riftWave) {
+              this.riftWave = data.rift_wave;
+              this.spawnZoneMonsters();
+            }
+          } else if (this.isInWorld && this.remotePeers.size === 0) {
+            await this.persistWorldStateToSupabase(true);
+          }
+        } catch (err) {
+          console.warn('hydrateRoomWorldState fallback:', err);
+        }
       }
 
       broadcastGameEvent(event, payload) {
@@ -5387,8 +6123,10 @@
         if (!force && now - (this._lastWaveSyncSent || 0) < 200) return;
         this._lastWaveSyncSent = now;
         this.broadcastGameEvent('wave_sync', {
-          hostId: this.playerToken,
+          hostId: this.roomHostId || this.playerToken,
+          senderId: this.playerToken,
           riftWave: this.riftWave,
+          updatedAt: this._worldStateUpdatedAt || Date.now(),
           mobs: this.monsters.map(m => ({
             id: m.id,
             x: Number(m.pos.x.toFixed(2)),
@@ -5404,9 +6142,17 @@
       }
 
       applyWaveSync(payload) {
-        if (!payload || payload.hostId === this.playerToken) return;
+        if (!payload || payload.senderId === this.playerToken) return;
+        if (payload.hostId === this.playerToken && this.isRoomHost && (!this._awaitingInitialWaveSyncUntil || performance.now() >= this._awaitingInitialWaveSyncUntil)) return;
         this._awaitingInitialWaveSyncUntil = 0;
         this._receivedWaveSyncOnce = true;
+        if (payload.hostId) {
+          this.canonicalHostId = payload.hostId;
+          this.updateRoomHost();
+        }
+        if (typeof payload.updatedAt === 'number') {
+          this._worldStateUpdatedAt = Math.max(this._worldStateUpdatedAt || 0, payload.updatedAt);
+        }
 
         if (typeof payload.riftWave === 'number' && payload.riftWave !== this.riftWave) {
           this.riftWave = payload.riftWave;
@@ -5437,8 +6183,13 @@
               mob.deathTimer = -1;
               if (mob.meshRoot) mob.meshRoot.visible = false;
             } else {
+              const wasDead = mob.dead;
               mob.dead = false;
               mob.deathTimer = 0;
+              this.resetMonsterVisualState(mob);
+              if (wasDead) {
+                this.playEntityAnim(mob, sm.anim || 'Idle_Loop', true);
+              }
             }
           });
         }
@@ -5451,6 +6202,7 @@
             }
           });
         }
+        this.updateStoryTrackerUI();
       }
 
       applyMobsSnapshot(payload) {
@@ -5458,7 +6210,11 @@
         if (this.isRoomHost && this.roomHostId === this.playerToken && (!this._awaitingInitialWaveSyncUntil || performance.now() >= this._awaitingInitialWaveSyncUntil)) {
           return;
         }
-        if (typeof payload.riftWave === 'number' && payload.riftWave > this.riftWave) {
+        this._receivedWaveSyncOnce = true;
+        if (payload.hostId) {
+          this.canonicalHostId = payload.hostId;
+        }
+        if (typeof payload.riftWave === 'number' && payload.riftWave !== this.riftWave) {
           this.riftWave = payload.riftWave;
           this.spawnZoneMonsters();
         }
@@ -5473,7 +6229,12 @@
             }
             return;
           }
-          if (mob.dead) return;
+          if (mob.dead) {
+            mob.dead = false;
+            mob.deathTimer = 0;
+            this.resetMonsterVisualState(mob);
+            this.playEntityAnim(mob, s.anim || 'Idle_Loop', true);
+          }
           if (typeof s.hp === 'number') {
             mob.hp = Math.max(0, Math.min(mob.maxHp, s.hp));
           }
@@ -5493,13 +6254,19 @@
         });
       }
 
-      enterWorld() {
+      async enterWorld() {
         const wasInWorld = this.isInWorld;
         this.isInWorld = true;
+        if (!this.worldJoinedAt) {
+          this.worldJoinedAt = Date.now();
+        }
         if (!wasInWorld) {
           this._receivedWaveSyncOnce = false;
-          this._awaitingInitialWaveSyncUntil = performance.now() + 1800;
+          this._awaitingInitialWaveSyncUntil = performance.now() + 2000;
+          this.triggerStoryChapter('ch1');
         }
+        this.updateStoryTrackerUI();
+        await this.hydrateRoomWorldState(this.roomCode);
         this.updateRoomHost();
         if (this.channel && this.channelSubscribed && this.channel.state === 'joined') {
           this.trackPresence(true);
@@ -5507,10 +6274,16 @@
           this.sendHelloSync();
           setTimeout(() => {
             if (this.isInWorld && this.remotePeers.size > 0 && !this._receivedWaveSyncOnce) {
-              this.broadcastGameEvent('request_wave_sync', { id: this.playerToken });
+              this.broadcastGameEvent('request_wave_sync', { id: this.playerToken, fallback: false });
             }
-          }, 550);
+          }, 420);
+          setTimeout(() => {
+            if (this.isInWorld && this.remotePeers.size > 0 && !this._receivedWaveSyncOnce) {
+              this.broadcastGameEvent('request_wave_sync', { id: this.playerToken, fallback: true });
+            }
+          }, 1150);
         }
+        this.updateStoryTrackerUI();
       }
 
       updateNetDiagnosticsUI() {
@@ -5717,6 +6490,36 @@
         }
       }
 
+      syncRoomUrlParam(code) {
+        try {
+          const u = new URL(window.location.href);
+          u.searchParams.set('room', code);
+          window.history.replaceState(null, '', u.toString());
+        } catch (e) {}
+      }
+
+      onRoomInputChanged(val) {
+        const clean = (val || '').trim().toUpperCase() || 'ASHEN-1';
+        const badge = document.getElementById('modal-room-indicator');
+        if (badge) badge.textContent = 'ROOM: ' + clean;
+      }
+
+      selectPublicRealm() {
+        const inp = document.getElementById('room-code-input');
+        if (inp) inp.value = 'ASHEN-1';
+        this.onRoomInputChanged('ASHEN-1');
+        this.syncRoomUrlParam('ASHEN-1');
+        this.audio?.playSample?.('ui_select', 1.1, 0.3);
+      }
+
+      generatePrivateRoomCode() {
+        const code = 'RIFT-' + Math.random().toString(36).slice(2, 6).toUpperCase();
+        const inp = document.getElementById('room-code-input');
+        if (inp) inp.value = code;
+        this.onRoomInputChanged(code);
+        this.audio?.playSample?.('ui_select', 1.0, 0.3);
+      }
+
       async joinRealtimeRoom(newCode, isReconnect = false) {
         if (!this.supabase) return;
         if (this.reconnectTimer) {
@@ -5726,6 +6529,7 @@
         const targetRoom = (newCode || 'ASHEN-1').trim().toUpperCase() || 'ASHEN-1';
         this.roomCode = targetRoom;
         localStorage.setItem('arpg_room_code', this.roomCode);
+        this.syncRoomUrlParam(this.roomCode);
         document.getElementById('hud-room-code').textContent = this.roomCode;
         document.getElementById('room-code-input').value = this.roomCode;
         document.getElementById('modal-room-indicator').textContent = 'ROOM: ' + this.roomCode;
@@ -5735,6 +6539,10 @@
           this.remotePeers.clear();
           this.reconnectAttempts = 0;
           this._receivedWaveSyncOnce = false;
+          this.canonicalHostId = null;
+          this._worldStateUpdatedAt = 0;
+          this.worldJoinedAt = this.isInWorld ? Date.now() : 0;
+          await this.hydrateRoomWorldState(this.roomCode);
         }
         this.channelSubscribed = false;
         this._hasTrackedOnce = false;
@@ -5823,23 +6631,36 @@
           })
           .on('broadcast', { event: 'hello_sync' }, ({ payload }) => {
             if (!payload || payload.id === this.playerToken || payload.inWorld !== true) return;
-            const existingIds = [this.playerToken, ...Array.from(this.remotePeers.keys()).filter(id => id !== payload.id)].sort();
-            const shouldRespondWaveSync = this.isInWorld && existingIds[0] === this.playerToken;
             if (!this.remotePeers.has(payload.id)) {
               this.handleRemotePlayerState(payload, false);
+            } else if (typeof payload.joinedAt === 'number') {
+              this.remotePeers.get(payload.id).joinedAt = payload.joinedAt;
+              this.updateRoomHost();
             }
             if (this.isInWorld) {
               this.broadcastPlayerState(false);
             }
-            if (shouldRespondWaveSync) {
+            if (this.isInWorld && this.isRoomHost) {
               this.sendWaveSync(true);
             }
           })
           .on('broadcast', { event: 'request_wave_sync' }, ({ payload }) => {
             if (!payload || payload.id === this.playerToken || !this.isInWorld) return;
-            const existingIds = [this.playerToken, ...Array.from(this.remotePeers.keys()).filter(id => id !== payload.id)].sort();
-            if (existingIds[0] === this.playerToken) {
+            if (this.isRoomHost) {
               this.sendWaveSync(true);
+              return;
+            }
+            if (payload.fallback) {
+              const otherPeers = [{ id: this.playerToken, joinedAt: this.worldJoinedAt || this.joinedAt }];
+              this.remotePeers.forEach((p) => {
+                if (p.id !== payload.id) {
+                  otherPeers.push({ id: p.id, joinedAt: p.joinedAt || Number.MAX_SAFE_INTEGER });
+                }
+              });
+              otherPeers.sort((a, b) => (a.joinedAt - b.joinedAt) || a.id.localeCompare(b.id));
+              if (otherPeers[0] && otherPeers[0].id === this.playerToken) {
+                this.sendWaveSync(true);
+              }
             }
           })
           .on('broadcast', { event: 'wave_sync' }, ({ payload }) => {
@@ -5850,16 +6671,27 @@
           })
           .on('broadcast', { event: 'mob_hit' }, ({ payload }) => {
             if (!payload || payload.attackerId === this.playerToken) return;
+            if (typeof payload.riftWave === 'number' && payload.riftWave !== this.riftWave) {
+              this.riftWave = payload.riftWave;
+              this.spawnZoneMonsters();
+            }
             const mob = this.monsters.find(m => m.id === payload.mobId);
             if (!mob) return;
             this.applyDamageToMonster(mob, payload.dmg, payload.isHeavy, null, true, payload);
           })
           .on('broadcast', { event: 'mob_death' }, ({ payload }) => {
             if (!payload || payload.killerId === this.playerToken) return;
+            if (typeof payload.riftWave === 'number' && payload.riftWave !== this.riftWave) {
+              this.riftWave = payload.riftWave;
+              this.spawnZoneMonsters();
+            }
             const mob = this.monsters.find(m => m.id === payload.mobId);
             if (mob && !mob.dead) {
               mob.hp = 0;
-              this.handleMonsterDeath(mob, true);
+              const hitDir = (typeof payload.kbX === 'number' && typeof payload.kbZ === 'number')
+                ? new THREE.Vector3(payload.kbX, 0, payload.kbZ)
+                : null;
+              this.handleMonsterDeath(mob, true, hitDir);
             }
           })
           .on('broadcast', { event: 'mob_attack' }, ({ payload }) => {
@@ -5888,8 +6720,13 @@
                 const hitCenter = mob.pos.clone().add(new THREE.Vector3(Math.sin(mob.yaw), 0, Math.cos(mob.yaw)).multiplyScalar(1.6));
                 this.spawnVFXFlipbook('smallhit', hitCenter, teleRadius, 0.3, 0xff3b5c);
                 this.spawnSlashArc(mob.pos, mob.yaw, teleRadius * 0.95, 0xff3b5c, 0, mob.isBoss);
-                if (this.player.pos.distanceTo(hitCenter) <= teleRadius && this.player.dodgeTimer <= 0) {
-                  this.damagePlayer(mob.dmg, mob.name);
+                const xzHitDist = Math.hypot(this.player.pos.x - hitCenter.x, this.player.pos.z - hitCenter.z);
+                if (xzHitDist <= teleRadius && this.player.dodgeTimer <= 0) {
+                  if (this.player.pos.y <= 0.7) {
+                    this.damagePlayer(mob.dmg, mob.name);
+                  } else {
+                    this.spawnFloatingText(this.player.pos, 'VAULTED!', '#38e8ff', 14);
+                  }
                 }
               }
             });
@@ -5935,15 +6772,20 @@
               this.netStatus = 'connected';
               this.updateRoomHost();
               if (this.isInWorld) {
-                this._awaitingInitialWaveSyncUntil = performance.now() + 1800;
+                this._awaitingInitialWaveSyncUntil = performance.now() + 2000;
                 this.trackPresence(true);
                 this.broadcastPlayerState(false);
                 this.sendHelloSync();
                 setTimeout(() => {
                   if (this.isInWorld && this.remotePeers.size > 0 && !this._receivedWaveSyncOnce) {
-                    this.broadcastGameEvent('request_wave_sync', { id: this.playerToken });
+                    this.broadcastGameEvent('request_wave_sync', { id: this.playerToken, fallback: false });
                   }
-                }, 550);
+                }, 420);
+                setTimeout(() => {
+                  if (this.isInWorld && this.remotePeers.size > 0 && !this._receivedWaveSyncOnce) {
+                    this.broadcastGameEvent('request_wave_sync', { id: this.playerToken, fallback: true });
+                  }
+                }, 1150);
               }
               this.updateNetDiagnosticsUI();
               this.updatePartyRosterUI();
@@ -5995,19 +6837,21 @@
         }
         const now = performance.now();
         const px = typeof p.x === 'number' ? p.x : 0;
+        const py = typeof p.y === 'number' ? p.y : 0;
         const pz = typeof p.z === 'number' ? p.z : 12;
         let peer = this.remotePeers.get(p.id);
         let isNew = false;
         if (!peer) {
           isNew = true;
           const root = new THREE.Group();
-          root.position.set(px, 0, pz);
+          root.position.set(px, py, pz);
           root.visible = true;
           this.scene.add(root);
           const nameplate = this.createPeerNameplateSprite(p.name || 'Co-Op Ally');
           root.add(nameplate);
           peer = {
             id: p.id,
+            joinedAt: typeof p.joinedAt === 'number' ? p.joinedAt : Date.now(),
             name: p.name || 'Co-Op Ally',
             classId: p.classId || 'vanguard',
             weaponId: p.weaponId || 'Sword_Golden',
@@ -6016,9 +6860,11 @@
             hp: p.hp || 500,
             maxHp: p.maxHp || 500,
             pos: root.position,
-            targetPos: new THREE.Vector3(px, 0, pz),
+            targetPos: new THREE.Vector3(px, py, pz),
             vx: typeof p.vx === 'number' ? p.vx : 0,
+            vy: typeof p.vy === 'number' ? p.vy : 0,
             vz: typeof p.vz === 'number' ? p.vz : 0,
+            grounded: p.grounded !== undefined ? !!p.grounded : (py <= 0.05),
             yaw: typeof p.yaw === 'number' ? p.yaw : 0,
             meshRoot: root,
             nameplateSprite: nameplate,
@@ -6032,6 +6878,9 @@
           else root.add(this.createArticulatedFallback(0x38e8ff, 1.0));
           this.updateNetDiagnosticsUI();
           this.updatePartyRosterUI();
+        } else if (typeof p.joinedAt === 'number' && p.joinedAt < (peer.joinedAt || Number.MAX_SAFE_INTEGER)) {
+          peer.joinedAt = p.joinedAt;
+          this.updateRoomHost();
         }
 
         if (p.name && p.name !== peer.name) {
@@ -6051,13 +6900,15 @@
 
         if (!ignoreStalePresencePos) {
           if (typeof p.x === 'number' && typeof p.z === 'number') {
-            peer.targetPos.set(p.x, 0, p.z);
+            peer.targetPos.set(p.x, py, p.z);
             if (peer.pos.distanceToSquared(peer.targetPos) > 625) {
               peer.pos.copy(peer.targetPos);
             }
           }
           peer.vx = typeof p.vx === 'number' ? p.vx : 0;
+          peer.vy = typeof p.vy === 'number' ? p.vy : 0;
           peer.vz = typeof p.vz === 'number' ? p.vz : 0;
+          peer.grounded = p.grounded !== undefined ? !!p.grounded : (py <= 0.05);
           if (typeof p.yaw === 'number') peer.yaw = p.yaw;
           if (p.animState && p.animState !== peer.animState) {
             this.playEntityAnim(peer, p.animState);
@@ -6165,18 +7016,27 @@
 
       async joinRoomFromLobby(code) {
         this.isInWorld = true;
+        if (!this.worldJoinedAt) this.worldJoinedAt = Date.now();
         this._receivedWaveSyncOnce = false;
-        this._awaitingInitialWaveSyncUntil = performance.now() + 1800;
+        this._awaitingInitialWaveSyncUntil = performance.now() + 2000;
         await this.joinRealtimeRoom(code);
+        this.updateStoryTrackerUI();
         this.closeModals();
+        this.triggerStoryChapter('ch1');
       }
 
       async createAndJoinRoom() {
         const codeInput = document.getElementById('new-room-code').value.trim().toUpperCase() || ('RIFT-' + Math.floor(10 + Math.random() * 89));
         const nameInput = document.getElementById('new-room-name').value.trim() || `${this.player.name}'s Co-Op Expedition`;
         this.isInWorld = true;
-        this._receivedWaveSyncOnce = false;
-        this._awaitingInitialWaveSyncUntil = performance.now() + 1800;
+        this.worldJoinedAt = Date.now();
+        this.canonicalHostId = this.playerToken;
+        this.riftWave = 1;
+        this.spawnZoneMonsters();
+        const freshWorldState = this.buildWorldStatePayload();
+        this._worldStateUpdatedAt = freshWorldState.updatedAt;
+        this._receivedWaveSyncOnce = true;
+        this._awaitingInitialWaveSyncUntil = 0;
         if (this.supabase) {
           await this.supabase.from('arpg_rooms').upsert({
             room_code: codeInput,
@@ -6185,12 +7045,15 @@
             host_name: this.player.name,
             current_zone: this.currentZone,
             rift_wave: this.riftWave,
+            world_state: freshWorldState,
             status: 'open',
             updated_at: new Date().toISOString()
           }, { onConflict: 'room_code' });
         }
         await this.joinRealtimeRoom(codeInput);
+        this.updateStoryTrackerUI();
         this.closeModals();
+        this.triggerStoryChapter('ch1');
       }
 
       async recordLeaderboardVictory() {
@@ -6303,9 +7166,13 @@
         const roomVal = document.getElementById('room-code-input').value.trim().toUpperCase();
         if (roomVal && roomVal !== this.roomCode) {
           this.isInWorld = true;
+          if (!this.worldJoinedAt) this.worldJoinedAt = Date.now();
           this._receivedWaveSyncOnce = false;
-          this._awaitingInitialWaveSyncUntil = performance.now() + 1800;
-          this.joinRealtimeRoom(roomVal);
+          this._awaitingInitialWaveSyncUntil = performance.now() + 2000;
+          this.joinRealtimeRoom(roomVal).then(() => {
+            this.updateStoryTrackerUI();
+            this.triggerStoryChapter('ch1');
+          });
         } else {
           this.enterWorld();
         }
@@ -6783,7 +7650,21 @@
           }
           const k = e.key.toLowerCase();
           this.keys[k] = true;
-          if (k === '1' || k === ' ' || k === 'j') this.useSkill(1);
+          if (e.key === 'Escape') {
+            if (this.cutsceneActive) {
+              this.skipCutscene();
+              return;
+            }
+            this.closeModals();
+            return;
+          }
+          if (this.cutsceneActive || this.isAnyModalOpen) return;
+          if (e.code === 'Space' || k === ' ') {
+            e.preventDefault();
+            this.jump();
+            return;
+          }
+          if (k === '1' || k === 'j') this.useSkill(1);
           if (k === '2' || k === 'k') this.useSkill(2);
           if (k === 'shift' || k === '3' || k === 'l') this.useSkill(3);
           if (k === '4' || k === 'v') this.useSkill(4);
@@ -6791,7 +7672,6 @@
           if (k === 'h' || k === 'c') this.usePotion();
           if (k === 'i') this.toggleModal('inventory-modal');
           if (k === 'f') this.triggerInteract();
-          if (k === 'escape') this.closeModals();
         });
 
         window.addEventListener('keyup', (e) => {
@@ -6917,9 +7797,13 @@
         const tip = document.getElementById('skill-tooltip');
         if (!tip) return;
         const cls = HERO_CLASSES[this.player.classId] || HERO_CLASSES.vanguard;
-        const keyMap = { '1': 'LMB / 1', '2': 'RMB / 2', '3': 'SHIFT / 3', '4': '4 / V', 'potion': 'H / C', '5': 'R / 5' };
+        const keyMap = { '1': 'LMB / 1', '2': 'RMB / 2', '3': 'SHIFT / 3', '4': '4 / V', 'jump': 'SPACE', 'potion': 'H / C', '5': 'R / 5' };
         let title = '', meta = '', desc = '';
-        if (slotKey === 'potion') {
+        if (slotKey === 'jump') {
+          title = 'Vault Jump';
+          meta = 'Instant • 3D Vertical Leap & Telegraph Dodge';
+          desc = 'Leap high into the air to vault over low ground shockwaves and enemy projectiles in full Co-Op 3D.';
+        } else if (slotKey === 'potion') {
           title = 'Ashenvale Elixir';
           meta = 'CD: 4.0s • Restores 48% HP & 100% Aether';
           desc = `Drink an enchanted sanctuary vial (${this.player.potions} remaining). Refills at High Cleric Seraphina.`;
@@ -7058,28 +7942,47 @@
         this.remotePeers.forEach((peer) => {
           this.updateEntityChatBubble(peer, nowPerf);
           const sinceSeen = (nowPerf - peer.lastSeen) * 0.001;
-          if (sinceSeen < 0.25 && (peer.vx || peer.vz)) {
-            peer.targetPos.x += (peer.vx || 0) * dt;
-            peer.targetPos.z += (peer.vz || 0) * dt;
+          if (sinceSeen < 0.25) {
+            if (peer.vx || peer.vz) {
+              peer.targetPos.x += (peer.vx || 0) * dt;
+              peer.targetPos.z += (peer.vz || 0) * dt;
+            }
+            if (!peer.grounded || peer.targetPos.y > 0) {
+              peer.targetPos.y = Math.max(0, peer.targetPos.y + (peer.vy || 0) * dt);
+              peer.vy = (peer.vy || 0) - 26.0 * dt;
+              if (peer.targetPos.y <= 0) {
+                peer.targetPos.y = 0;
+                peer.vy = 0;
+                peer.grounded = true;
+              }
+            }
           }
           const distToTarget = peer.pos.distanceTo(peer.targetPos);
           if (distToTarget > 25) {
             peer.pos.copy(peer.targetPos);
           } else {
-            peer.pos.lerp(peer.targetPos, Math.min(1, dt * 12));
+            peer.pos.lerp(peer.targetPos, Math.min(1, dt * 16));
           }
           const speedSq = (peer.vx || 0) * (peer.vx || 0) + (peer.vz || 0) * (peer.vz || 0);
           const peerMoving = distToTarget > 0.05 || speedSq > 0.09;
+          const peerAirborne = !peer.grounded || peer.pos.y > 0.08 || peer.targetPos.y > 0.08;
           const isOneShot = peer.animState && !LOOP_ANIM_SET.has(peer.animState);
-          if (!isOneShot) {
+          if (peerAirborne) {
+            const airClip = (peer.actions && peer.actions['Jump_Loop'])
+              ? 'Jump_Loop'
+              : ((peer.actions && peer.actions['Jump_Start']) ? 'Jump_Start' : 'Spell_Simple_Enter');
+            if (peer.animState !== airClip && peer.animState !== 'Jump_Start' && peer.animState !== 'Spell_Simple_Enter' && peer.animState !== 'Roll') {
+              this.playEntityAnim(peer, airClip);
+            }
+          } else if (!isOneShot) {
             this.playEntityAnim(peer, peerMoving ? 'Jog_Fwd_Loop' : this.getEntityIdleAnim(peer));
           }
           if (peer.meshRoot) {
             peer.meshRoot.position.copy(peer.pos);
-            if (peerMoving && !peer.activeAction) {
+            if (!peerAirborne && peerMoving && !peer.activeAction) {
               peer.meshRoot.position.y += Math.abs(Math.sin(elapsed * 11)) * 0.14;
             }
-            peer.meshRoot.rotation.y = peer.yaw;
+            peer.meshRoot.rotation.set(peerAirborne ? THREE.MathUtils.clamp(-(peer.vy || 0) * 0.016, -0.16, 0.16) : 0, peer.yaw, 0);
           }
           if (peer.mixer) peer.mixer.update(dt);
         });
@@ -7088,25 +7991,29 @@
         this.updateProjectilesAndVFX(dt);
         this.updateSynergyTethers(dt);
 
-        // While Hero Selection Modal is open, gently orbit the camera so the 3D Village & Sky Dome shine behind the UI!
-        const heroModalOpen = this.ui.heroModal ? this.ui.heroModal.classList.contains('active') : false;
-        const activeYaw = heroModalOpen ? Math.sin(elapsed * 0.28) * 0.55 : this.cameraYaw;
-        const activePitch = heroModalOpen ? 0.50 : 0.64;
-        const activeZoom = heroModalOpen ? 14.5 : this.cameraZoom;
+        if (this.cutsceneActive && this.cutsceneState) {
+          this.updateCutscene(dt);
+        } else {
+          // While Hero Selection Modal is open, gently orbit the camera so the 3D Village & Sky Dome shine behind the UI!
+          const heroModalOpen = this.ui.heroModal ? this.ui.heroModal.classList.contains('active') : false;
+          const activeYaw = heroModalOpen ? Math.sin(elapsed * 0.28) * 0.55 : this.cameraYaw;
+          const activePitch = heroModalOpen ? 0.50 : 0.64;
+          const activeZoom = heroModalOpen ? 14.5 : this.cameraZoom;
 
-        this._camOffset.set(
-          Math.sin(activeYaw) * activeZoom * 0.85,
-          activeZoom * activePitch,
-          Math.cos(activeYaw) * activeZoom * 0.85
-        );
-        this._desiredCam.copy(this.player.pos).add(this._camOffset);
-        if (this.screenShake > 0) {
-          this._desiredCam.x += (Math.random() - 0.5) * this.screenShake;
-          this._desiredCam.y += (Math.random() - 0.5) * this.screenShake;
-          this.screenShake = Math.max(0, this.screenShake - dt * 2.2);
+          this._camOffset.set(
+            Math.sin(activeYaw) * activeZoom * 0.85,
+            activeZoom * activePitch,
+            Math.cos(activeYaw) * activeZoom * 0.85
+          );
+          this._desiredCam.copy(this.player.pos).add(this._camOffset);
+          if (this.screenShake > 0) {
+            this._desiredCam.x += (Math.random() - 0.5) * this.screenShake;
+            this._desiredCam.y += (Math.random() - 0.5) * this.screenShake;
+            this.screenShake = Math.max(0, this.screenShake - dt * 2.2);
+          }
+          this.camera.position.lerp(this._desiredCam, Math.min(1, dt * 8.5));
+          this.camera.lookAt(this.player.pos.x, this.player.pos.y + (heroModalOpen ? 2.2 : 1.3), this.player.pos.z - (heroModalOpen ? 4.0 : 0));
         }
-        this.camera.position.lerp(this._desiredCam, Math.min(1, dt * 8.5));
-        this.camera.lookAt(this.player.pos.x, this.player.pos.y + (heroModalOpen ? 2.2 : 1.3), this.player.pos.z - (heroModalOpen ? 4.0 : 0));
 
         // Only update shadow camera anchor when player moves > 3.0m (9.0 sq meters)
         if (this.player.pos.distanceToSquared(this.lastShadowAnchor) > 9.0) {
@@ -7124,6 +8031,254 @@
         }
 
         this.renderer.render(this.scene, this.camera);
+      }
+
+      jump() {
+        const p = this.player;
+        if (!p || this.isAnyModalOpen || this.cutsceneActive) return;
+        if (!p.grounded || p.pos.y > 0.05 || p.leapTimer > 0) return;
+
+        this.audio.init();
+        p.grounded = false;
+        p.isJumping = true;
+        p.vy = 10.2;
+        p.jumpTimer = 0;
+
+        const slotEl = document.getElementById('slot-jump');
+        if (slotEl) {
+          slotEl.classList.add('triggered');
+          setTimeout(() => slotEl.classList.remove('triggered'), 160);
+        }
+
+        const jumpClip = (p.actions && p.actions['Jump_Start'])
+          ? 'Jump_Start'
+          : ((p.actions && p.actions['Spell_Simple_Enter']) ? 'Spell_Simple_Enter' : 'Roll');
+        this.playEntityAnim(p, jumpClip, true);
+
+        this.audio.playJump();
+        this.spawnShockwaveRing(new THREE.Vector3(p.pos.x, 0.04, p.pos.z), 1.45, 0xf3c86b, 0.24);
+        this.spawnVFXFlipbook('smallhit', new THREE.Vector3(p.pos.x, 0.12, p.pos.z), 1.5, 0.22, 0x38e8ff, true);
+        this.broadcastPlayerState(false);
+      }
+
+      saveStoryState() {
+        try {
+          localStorage.setItem('arpg_story_state', JSON.stringify({
+            activeChapter: this.storyState.activeChapter,
+            seen: Array.from(this.storyState.seen),
+            completed: Array.from(this.storyState.completed)
+          }));
+        } catch (e) {}
+      }
+
+      toggleStoryTracker() {
+        const el = document.getElementById('story-tracker');
+        const btn = document.getElementById('btn-story-collapse');
+        if (!el) return;
+        this.storyState.collapsed = !this.storyState.collapsed;
+        el.classList.toggle('collapsed', this.storyState.collapsed);
+        if (btn) btn.textContent = this.storyState.collapsed ? '▸' : '▾';
+      }
+
+      triggerStoryChapter(chapterId) {
+        if (!STORY_CHAPTERS[chapterId]) return;
+        if (this.storyState.seen.has(chapterId)) {
+          this.storyState.activeChapter = chapterId;
+          this.updateStoryTrackerUI();
+          return;
+        }
+        this.playCutscene(chapterId, false);
+      }
+
+      playCutscene(chapterId = 'ch1', isReplay = false) {
+        const chap = STORY_CHAPTERS[chapterId];
+        if (!chap) return;
+        if (!isReplay && this.storyState.seen.has(chapterId)) return;
+
+        this.audio.init();
+        this.storyState.seen.add(chapterId);
+        this.storyState.activeChapter = chapterId;
+        this.saveStoryState();
+        this.updateStoryTrackerUI();
+
+        this._savedSkyState = {
+          horizon: this.skyUniforms.uHorizonColor.value.getHex(),
+          zenith: this.skyUniforms.uZenithColor.value.getHex(),
+          nebula: this.skyUniforms.uNebulaColor.value.getHex(),
+          fog: this.scene.fog.color.getHex()
+        };
+        if (chap.goldenSky) {
+          this.skyUniforms.uHorizonColor.value.setHex(0xffd27d);
+          this.skyUniforms.uZenithColor.value.setHex(0x24468a);
+          this.skyUniforms.uNebulaColor.value.setHex(0xffe599);
+          this.scene.fog.color.setHex(0x2a2438);
+        }
+
+        const totalDuration = chap.shots.reduce((sum, s) => sum + s.duration, 0);
+        this.cutsceneActive = true;
+        this.mouseDownLeft = false;
+        this.cutsceneState = {
+          chapter: chap,
+          shotIdx: -1,
+          shotElapsed: 0,
+          totalElapsed: 0,
+          totalDuration
+        };
+
+        const overlay = document.getElementById('cutscene-overlay');
+        const badgeEl = document.getElementById('cutscene-chapter-badge');
+        if (overlay) overlay.classList.add('active');
+        if (badgeEl) badgeEl.textContent = `${chap.badge} — ${chap.title.toUpperCase()}`;
+
+        this._applyCutsceneShot(0);
+      }
+
+      _applyCutsceneShot(idx) {
+        if (!this.cutsceneState) return;
+        const shots = this.cutsceneState.chapter.shots;
+        if (idx >= shots.length) {
+          this.skipCutscene();
+          return;
+        }
+        this.cutsceneState.shotIdx = idx;
+        this.cutsceneState.shotElapsed = 0;
+        const shot = shots[idx];
+
+        const speakerEl = document.getElementById('cutscene-speaker');
+        const subEl = document.getElementById('cutscene-subtitle');
+        const counterEl = document.getElementById('cutscene-shot-counter');
+        if (speakerEl) speakerEl.textContent = shot.speaker;
+        if (subEl) subEl.textContent = shot.text;
+        if (counterEl) counterEl.textContent = `${idx + 1} / ${shots.length}`;
+
+        this.audio.duckMusic(shot.duration);
+        this.audio.speakVoiceLine(shot.text, shot.pitch || 0.95, 1.02);
+      }
+
+      updateCutscene(dt) {
+        const st = this.cutsceneState;
+        if (!st) return;
+        const shots = st.chapter.shots;
+        const shot = shots[st.shotIdx];
+        if (!shot) {
+          this.skipCutscene();
+          return;
+        }
+        st.shotElapsed += dt;
+        st.totalElapsed += dt;
+
+        const t = Math.min(1, st.shotElapsed / Math.max(0.1, shot.duration));
+        const smoothT = t * t * (3 - 2 * t);
+        this._v1.set(shot.camStart[0], shot.camStart[1], shot.camStart[2]);
+        this._v2.set(shot.camEnd[0], shot.camEnd[1], shot.camEnd[2]);
+        this._v1.lerp(this._v2, smoothT);
+        this.camera.position.copy(this._v1);
+
+        this._v2.set(shot.lookStart[0], shot.lookStart[1], shot.lookStart[2]);
+        this._v3.set(shot.lookEnd[0], shot.lookEnd[1], shot.lookEnd[2]);
+        this._v2.lerp(this._v3, smoothT);
+        this.camera.lookAt(this._v2);
+
+        const fill = document.getElementById('cutscene-progress-fill');
+        if (fill) {
+          fill.style.width = `${Math.min(100, (st.totalElapsed / Math.max(0.1, st.totalDuration)) * 100)}%`;
+        }
+
+        if (st.shotElapsed >= shot.duration) {
+          this._applyCutsceneShot(st.shotIdx + 1);
+        }
+      }
+
+      skipCutscene() {
+        if (!this.cutsceneActive) return;
+        this.cutsceneActive = false;
+        this.cutsceneState = null;
+        if ('speechSynthesis' in window) {
+          try { window.speechSynthesis.cancel(); } catch (e) {}
+        }
+        if (this._savedSkyState) {
+          this.skyUniforms.uHorizonColor.value.setHex(this._savedSkyState.horizon);
+          this.skyUniforms.uZenithColor.value.setHex(this._savedSkyState.zenith);
+          this.skyUniforms.uNebulaColor.value.setHex(this._savedSkyState.nebula);
+          this.scene.fog.color.setHex(this._savedSkyState.fog);
+          this._savedSkyState = null;
+        }
+        const overlay = document.getElementById('cutscene-overlay');
+        if (overlay) overlay.classList.remove('active');
+        this.updateStoryTrackerUI();
+      }
+
+      checkStoryMilestonesOnDeath(mob) {
+        if (!mob) return;
+        const w = this.riftWave;
+        const outskirtsDead = [0, 1, 2].filter(i => this.monsters.find(m => m.id === `mob_${w}_${i}`)?.dead).length;
+        if (outskirtsDead >= 3 && !this.storyState.completed.has('ch1')) {
+          this.storyState.completed.add('ch1');
+          this.showLootToast('📖 Chapter I Complete: Outskirts Cleared!');
+          this.saveStoryState();
+        }
+        if (mob.id === `mob_${w}_7` && !this.storyState.completed.has('ch2')) {
+          this.storyState.completed.add('ch2');
+          this.showLootToast('📖 Chapter II Complete: Gronk Vanquished!');
+          this.saveStoryState();
+        }
+        if (mob.id === `mob_${w}_11` && !this.storyState.completed.has('ch3')) {
+          this.storyState.completed.add('ch3');
+          this.showLootToast('📖 Chapter III Complete: Xeno Juggernaut Purged!');
+          this.saveStoryState();
+        }
+        if (mob.isBoss) {
+          this.storyState.completed.add('ch4');
+          this.storyState.completed.add('ch5');
+          this.saveStoryState();
+        }
+        this.updateStoryTrackerUI();
+      }
+
+      updateStoryTrackerUI() {
+        const chapEl = document.getElementById('story-chapter-label');
+        const objEl = document.getElementById('story-objective-text');
+        const rowEl = document.getElementById('story-chapters-row');
+        if (!chapEl || !objEl) return;
+
+        const activeId = this.storyState?.activeChapter || 'ch1';
+        const chap = STORY_CHAPTERS[activeId] || STORY_CHAPTERS.ch1;
+        const w = this.riftWave;
+        const outskirtsDead = [0, 1, 2].filter(i => this.monsters.find(m => m.id === `mob_${w}_${i}`)?.dead).length;
+        const gronkDead = !!this.monsters.find(m => m.id === `mob_${w}_7`)?.dead;
+        const cyclopsDead = !!this.monsters.find(m => m.id === `mob_${w}_11`)?.dead;
+        const bossDead = !!this.monsters.find(m => m.isBoss)?.dead;
+
+        chapEl.textContent = `${chap.badge} • ${chap.title.toUpperCase()}`;
+        let objText = chap.objective;
+        if (activeId === 'ch1') {
+          objText = outskirtsDead >= 3
+            ? '✓ Outskirts Raiders cleared! Warp to Catacombs.'
+            : `Clear Outskirts Raiders (${outskirtsDead} / 3)`;
+        } else if (activeId === 'ch2') {
+          objText = gronkDead
+            ? '✓ Gronk defeated! Enter Astral Breach.'
+            : 'Defeat ★ Gronk, Puglin Warlord (0 / 1)';
+        } else if (activeId === 'ch3') {
+          objText = cyclopsDead
+            ? '✓ Astral Cyclops purged! Enter Archon Citadel.'
+            : 'Defeat Astral Cyclops Juggernaut (0 / 1)';
+        } else if (activeId === 'ch4') {
+          objText = bossDead
+            ? '✓ Archon Malakor vanquished!'
+            : 'Vanquish Malakor, Chrono-Fused Archon (0 / 1)';
+        } else if (activeId === 'ch5') {
+          objText = `✓ Dawn Restored! Endless Rift Wave ${this.riftWave} active.`;
+        }
+        objEl.textContent = objText;
+
+        if (rowEl) {
+          rowEl.querySelectorAll('.story-chap-btn').forEach((btn) => {
+            const cid = btn.getAttribute('data-ch');
+            btn.classList.toggle('active', cid === activeId);
+            btn.classList.toggle('unlocked', cid === 'ch1' || this.storyState.seen.has(cid) || this.storyState.completed.has(cid));
+          });
+        }
       }
 
       updatePlayer(dt) {
@@ -7200,8 +8355,41 @@
           this.vfxSprites.push({ mesh: cMesh, isMesh: true, isCometTrail: true, elapsed: 0, duration: 0.28 });
         }
 
+        if (this.cutsceneActive) {
+          if (p.mixer) p.mixer.update(dt);
+          return;
+        }
+
         if (this.mouseDownLeft && cds[1] <= 0 && !this.isAnyModalOpen) {
           this.useSkill(1);
+        }
+
+        // 3D Vertical Jump Physics (Gravity 26 m/s^2, Takeoff vy 10.2 m/s)
+        if (!p.grounded || p.pos.y > 0 || p.vy !== 0) {
+          p.jumpTimer += dt;
+          p.vy -= 26.0 * dt;
+          p.pos.y += p.vy * dt;
+          if (p.pos.y <= 0) {
+            const hadAirTime = p.jumpTimer > 0.08;
+            p.pos.y = 0;
+            p.vy = 0;
+            p.grounded = true;
+            p.isJumping = false;
+            p.jumpTimer = 0;
+            if (hadAirTime) {
+              if (p.actions && p.actions['Jump_Land']) {
+                this.playEntityAnim(p, 'Jump_Land', true);
+              } else {
+                this.playEntityAnim(p, this.getEntityIdleAnim(p), true);
+              }
+              this.spawnShockwaveRing(new THREE.Vector3(p.pos.x, 0.04, p.pos.z), 1.65, 0xd8c8a8, 0.26);
+              this.spawnVFXFlipbook('smallhit', new THREE.Vector3(p.pos.x, 0.14, p.pos.z), 1.8, 0.24, 0xffe599, true);
+              this.audio.playFootstep(this.currentZone);
+              this.broadcastPlayerState(false);
+            }
+          } else if (p.vy < 1.5 && p.actions && p.actions['Jump_Loop'] && p.animState !== 'Jump_Loop') {
+            this.playEntityAnim(p, 'Jump_Loop', true);
+          }
         }
 
         let ix = this.touchVec.x;
@@ -7224,30 +8412,43 @@
           const mz = -ix * sinY + iz * cosY;
           const spd = cls.speed * speedMult;
 
-          p.vel.set(mx * spd, 0, mz * spd);
+          p.vel.set(mx * spd, p.vy || 0, mz * spd);
           p.pos.x = Math.max(-75, Math.min(75, p.pos.x + p.vel.x * dt));
           p.pos.z = Math.max(-75, Math.min(45, p.pos.z + p.vel.z * dt));
           this.resolveObstacleCollisions(p.pos, 0.55);
           p.yaw = Math.atan2(mx, mz);
 
-          if (p.dodgeTimer <= 0) {
+          if (p.grounded && p.dodgeTimer <= 0) {
             this.playEntityAnim(p, 'Jog_Fwd_Loop');
           }
-          p.stepAccum += dt * cls.speed;
-          if (p.stepAccum > 2.6) {
-            p.stepAccum = 0;
-            this.audio.playFootstep(this.currentZone);
+          if (p.grounded) {
+            p.stepAccum += dt * cls.speed;
+            if (p.stepAccum > 2.6) {
+              p.stepAccum = 0;
+              this.audio.playFootstep(this.currentZone);
+            }
           }
         } else if (p.leapTimer <= 0) {
-          p.vel.set(0, 0, 0);
+          p.vel.set(0, p.vy || 0, 0);
           if (p.attackTimer > 0) {
             this._v1.copy(this.mouseWorld).sub(p.pos);
             if (this._v1.lengthSq() > 0.25) {
               p.yaw = Math.atan2(this._v1.x, this._v1.z);
             }
           }
-          if (p.attackTimer <= 0 && p.dodgeTimer <= 0 && p.spinTimer <= 0) {
+          if (p.grounded && p.attackTimer <= 0 && p.dodgeTimer <= 0 && p.spinTimer <= 0) {
             this.playEntityAnim(p, this.getEntityIdleAnim(p));
+          }
+        }
+
+        // Organic zone-entry story triggers when walking directly into biomes
+        if (this.isInWorld && !this.cutsceneActive) {
+          if (p.pos.x < -12 && p.pos.z < -13 && !this.storyState.seen.has('ch2')) {
+            this.triggerStoryChapter('ch2');
+          } else if (p.pos.x > 12 && p.pos.z < -13 && !this.storyState.seen.has('ch3')) {
+            this.triggerStoryChapter('ch3');
+          } else if (Math.abs(p.pos.x) < 12 && p.pos.z < -33 && !this.storyState.seen.has('ch4')) {
+            this.triggerStoryChapter('ch4');
           }
         }
 
@@ -7255,14 +8456,17 @@
           p.meshRoot.position.copy(p.pos);
           if (leapY > 0) p.meshRoot.position.y += leapY;
           const spinOffset = p.spinTimer > 0 ? ((0.72 - p.spinTimer) / 0.72) * Math.PI * 4 : 0;
-          p.meshRoot.rotation.set(0, p.yaw + spinOffset, 0);
+          const airTilt = !p.grounded && !(p.actions && p.actions['Jump_Loop'])
+            ? THREE.MathUtils.clamp(-p.vy * 0.018, -0.18, 0.18)
+            : 0;
+          p.meshRoot.rotation.set(airTilt, p.yaw + spinOffset, 0);
           // Procedural locomotion/combat fallback when skeletal clip has not loaded yet
           if (!p.activeAction) {
             if (p.attackTimer > 0) {
               const swingPhase = Math.sin((p.attackTimer / 0.35) * Math.PI);
               p.meshRoot.position.y += swingPhase * 0.16;
               p.meshRoot.rotation.x = swingPhase * 0.28;
-            } else if (isMoving) {
+            } else if (isMoving && p.grounded) {
               p.meshRoot.position.y += Math.abs(Math.sin(elapsed * 11)) * 0.14;
               p.meshRoot.rotation.z = Math.sin(elapsed * 11) * 0.05;
             }
@@ -7303,7 +8507,8 @@
           const movedOrChanged =
             this.player.pos.distanceToSquared(this._lastSentPos) > 0.0025 ||
             Math.abs(this.player.yaw - this._lastSentYaw) > 0.04 ||
-            this.player.animState !== this._lastSentAnim;
+            this.player.animState !== this._lastSentAnim ||
+            !this.player.grounded;
           const interval = movedOrChanged ? 95 : 1200;
           if (now - this.lastBroadcastTime >= interval) {
             this.broadcastPlayerState(false);
@@ -7391,11 +8596,55 @@
           if (m.dead) {
             if (m.meshRoot && m.meshRoot.visible) {
               if (m.mixer) m.mixer.update(dt);
+              m.deathElapsed = (m.deathElapsed || 0) + dt;
+              const totalDur = m.deathDuration || 2.35;
+              const phase = Math.min(1, m.deathElapsed / totalDur);
               m.deathTimer -= dt;
-              if (m.deathTimer < 0.4) {
-                m.meshRoot.position.y -= dt * 1.1;
+
+              // Stage 1: Lethal knockback slide impulse
+              if (m.kbVel && m.kbVel.lengthSq() > 0.01) {
+                m.pos.addScaledVector(m.kbVel, dt);
+                m.kbVel.multiplyScalar(Math.max(0, 1 - dt * 7.5));
+                this.resolveObstacleCollisions(m.pos, m.isBoss ? 1.1 : 0.55);
+                m.meshRoot.position.x = m.pos.x;
+                m.meshRoot.position.z = m.pos.z;
               }
-              if (m.deathTimer <= -0.5) {
+
+              // Stage 2: Weighted multi-stage collapse for aliens / clip-less rigs
+              const isAlien = (m.modelKey || '').includes('alien');
+              if (m.glbNode && (isAlien || !m.hasDeathClip)) {
+                const collapseP = Math.min(1, m.deathElapsed / 0.65);
+                const easeOut = 1 - Math.pow(1 - collapseP, 3);
+                const bounce = collapseP > 0.72 ? Math.sin(((collapseP - 0.72) / 0.28) * Math.PI) * 0.08 : 0;
+                const dirSign = m.deathToppleDir || 1;
+                m.glbNode.rotation.x = -easeOut * (m.isBoss ? 1.15 : 1.32);
+                m.glbNode.rotation.z = dirSign * easeOut * 0.34;
+                m.glbNode.position.y = Math.max(-0.18, -easeOut * 0.14 + bounce);
+              }
+
+              // Stage 3: Emissive dissolve glow + smooth opacity fade out
+              const fadeStart = 0.58;
+              if (phase > fadeStart) {
+                const fadeT = Math.min(1, (phase - fadeStart) / (1 - fadeStart));
+                const alpha = Math.max(0, 1 - fadeT);
+                const dissolveHex = m.isBoss ? 0xf3c86b : (isAlien ? 0x38e8ff : 0xff3b5c);
+                if (m.materials) {
+                  m.materials.forEach((mat) => {
+                    mat.transparent = true;
+                    mat.opacity = alpha;
+                    if (mat.emissive) {
+                      mat.emissive.setHex(dissolveHex);
+                      mat.emissiveIntensity = 0.8 + fadeT * 2.2;
+                    }
+                  });
+                }
+                if (m.glbNode) {
+                  const baseS = m.scale || 1.0;
+                  m.glbNode.scale.set(baseS, baseS * Math.max(0.25, 1 - fadeT * 0.55), baseS);
+                }
+              }
+
+              if (m.deathTimer <= 0) {
                 m.meshRoot.visible = false;
               }
             }
@@ -7405,7 +8654,7 @@
           const toLocalX = px - m.pos.x;
           const toLocalZ = pz - m.pos.z;
           const distSqToLocal = toLocalX * toLocalX + toLocalZ * toLocalZ;
-          const visibleToLocal = distSqToLocal <= 1024;
+          const visibleToLocal = distSqToLocal <= 2704;
 
           if (!isHostSim) {
             if (m.meshRoot) m.meshRoot.visible = visibleToLocal;
@@ -7437,7 +8686,7 @@
             if (distSqToLocal < (m.isBoss ? 576 : 240)) {
               activeCombatCount++;
               if (m.isBoss) activeBoss = m;
-            } else if (m.isBoss && (m.aggroTimer > 0 || m.hp < m.maxHp) && distSqToLocal < 1024) {
+            } else if (m.isBoss && (m.aggroTimer > 0 || m.hp < m.maxHp) && distSqToLocal < 2704) {
               activeBoss = m;
             }
             m.isMovingNow = isMoving;
@@ -7462,8 +8711,8 @@
             }
           }
 
-          // Distance culling: skip AI if NO player is within 32m (1024 sq meters)
-          if (distSqToPlayer > 1024) {
+          // Distance culling: skip AI if NO player is within 52m (2704 sq meters)
+          if (distSqToPlayer > 2704) {
             if (m.meshRoot && m.meshRoot.visible) m.meshRoot.visible = false;
             m.isMovingNow = false;
             continue;
@@ -7571,8 +8820,13 @@
                   const hitCenter = m.pos.clone().add(new THREE.Vector3(Math.sin(m.yaw), 0, Math.cos(m.yaw)).multiplyScalar(1.6));
                   this.spawnVFXFlipbook('smallhit', hitCenter, teleRadius, 0.3, 0xff3b5c);
                   this.spawnSlashArc(m.pos, m.yaw, teleRadius * 0.95, 0xff3b5c, 0, m.isBoss);
-                  if (this.player.pos.distanceTo(hitCenter) <= teleRadius && this.player.dodgeTimer <= 0) {
-                    this.damagePlayer(m.dmg, m.name);
+                  const xzHitDist = Math.hypot(this.player.pos.x - hitCenter.x, this.player.pos.z - hitCenter.z);
+                  if (xzHitDist <= teleRadius && this.player.dodgeTimer <= 0) {
+                    if (this.player.pos.y <= 0.7) {
+                      this.damagePlayer(m.dmg, m.name);
+                    } else {
+                      this.spawnFloatingText(this.player.pos, 'VAULTED!', '#38e8ff', 14);
+                    }
                   }
                 }
               });
@@ -7694,6 +8948,15 @@
             });
           }
         }
+        if (
+          isHostSim &&
+          this.isInWorld &&
+          (!this._awaitingInitialWaveSyncUntil || nowSnap >= this._awaitingInitialWaveSyncUntil) &&
+          nowSnap - (this._lastPeriodicWorldSave || 0) >= 8000
+        ) {
+          this._lastPeriodicWorldSave = nowSnap;
+          this.persistWorldStateToSupabase(false);
+        }
 
         this.audio.combatIntensity = Math.min(1, activeCombatCount * 0.25);
         this.audio.bossActive = !!activeBoss;
@@ -7719,6 +8982,7 @@
       }
 
       damagePlayer(dmg, sourceName) {
+        if (this.cutsceneActive) return;
         const mitigated = this.player.buffTimer > 0 ? Math.round(dmg * 0.6) : dmg;
         this.player.hp = Math.max(0, this.player.hp - mitigated);
         this.triggerEntityHitFlash(this.player);
@@ -7837,7 +9101,7 @@
             }
           } else {
             const xzDist = Math.hypot(this.player.pos.x - pr.mesh.position.x, this.player.pos.z - pr.mesh.position.z);
-            if (xzDist < 1.15 && this.player.dodgeTimer <= 0) {
+            if (xzDist < 1.15 && Math.abs((this.player.pos.y + 1.0) - pr.mesh.position.y) < 1.25 && this.player.dodgeTimer <= 0) {
               this.damagePlayer(pr.dmg, 'Projectile');
               removeProj = true;
             }
