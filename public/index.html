@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>CHRONO-RIFT: Chronicles of Ashenvale â€” 3D Co-Op ARPG</title>
+  <title>CHRONO-RIFT: Chronicles of Ashenvale — 3D Co-Op ARPG</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -13,17 +13,17 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
-      --bg-deep: #07080f;
-      --panel-bg: rgba(12, 15, 26, 0.86);
-      --panel-border: rgba(212, 175, 95, 0.42);
+      --bg-deep: #121726;
+      --panel-bg: rgba(14, 18, 32, 0.84);
+      --panel-border: rgba(235, 192, 104, 0.48);
       --gold: #f3c86b;
       --gold-bright: #ffe599;
       --cyan: #38e8ff;
       --violet: #b266ff;
       --crimson: #ff3b5c;
       --emerald: #2ee68a;
-      --text-main: #f4f1ea;
-      --text-muted: #9aa3b8;
+      --text-main: #f7f4ed;
+      --text-muted: #b0b9ce;
     }
 
     * {
@@ -38,7 +38,7 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: var(--bg-deep);
+      background: radial-gradient(circle at 50% 30%, #2a3556 0%, #111625 100%);
       color: var(--text-main);
       font-family: 'Inter', system-ui, sans-serif;
     }
@@ -53,13 +53,13 @@
       cursor: crosshair;
     }
 
-    /* Vignette & Low-HP Screen Pulse */
+    /* Subtle Atmospheric Vignette & Low-HP Screen Pulse */
     #screen-fx {
       position: fixed;
       inset: 0;
       pointer-events: none;
       z-index: 2;
-      background: radial-gradient(circle at center, transparent 58%, rgba(4, 5, 12, 0.68) 100%);
+      background: radial-gradient(circle at center, transparent 68%, rgba(8, 10, 22, 0.42) 100%);
       transition: box-shadow 0.25s ease;
     }
     #screen-fx.low-hp {
@@ -111,11 +111,11 @@
     }
 
     .hud-card {
-      background: var(--panel-bg);
+      background: linear-gradient(160deg, rgba(20, 26, 44, 0.88), rgba(10, 14, 26, 0.88));
       border: 1px solid var(--panel-border);
       border-radius: 10px;
       backdrop-filter: blur(12px);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.12);
     }
 
     /* Hero & Co-Op Party Left Panel */
@@ -125,6 +125,9 @@
       gap: 8px;
       min-width: 280px;
       padding: 12px 14px;
+      background-image: linear-gradient(160deg, rgba(16, 21, 36, 0.90), rgba(10, 13, 24, 0.94)), url('assets/vfx/bg_village.jpg');
+      background-size: cover;
+      background-position: center;
     }
     .hero-header {
       display: flex;
@@ -175,15 +178,15 @@
     }
     .pill-gold {
       color: #ffd56b;
-      background: rgba(243, 200, 107, 0.12);
-      border: 1px solid rgba(243, 200, 107, 0.35);
+      background: rgba(243, 200, 107, 0.14);
+      border: 1px solid rgba(243, 200, 107, 0.4);
       padding: 3px 8px;
       border-radius: 6px;
     }
     .pill-shard {
       color: var(--cyan);
-      background: rgba(56, 232, 255, 0.12);
-      border: 1px solid rgba(56, 232, 255, 0.35);
+      background: rgba(56, 232, 255, 0.14);
+      border: 1px solid rgba(56, 232, 255, 0.4);
       padding: 3px 8px;
       border-radius: 6px;
     }
@@ -200,7 +203,7 @@
       background: rgba(0, 0, 0, 0.65);
       border-radius: 5px;
       overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.14);
     }
     .stat-bar-fill {
       height: 100%;
@@ -244,18 +247,13 @@
       justify-content: space-between;
       gap: 8px;
       font-size: 11px;
-      background: rgba(255, 255, 255, 0.03);
+      background: rgba(255, 255, 255, 0.05);
       padding: 4px 7px;
       border-radius: 6px;
       border-left: 3px solid var(--cyan);
     }
     .ally-row.ai-ally {
       border-left-color: var(--emerald);
-    }
-    .ally-row.downed {
-      border-left-color: var(--crimson);
-      background: rgba(255, 59, 92, 0.16);
-      animation: pulseDanger 0.8s infinite alternate;
     }
     .ally-mini-hp {
       width: 68px;
@@ -276,7 +274,7 @@
       flex-direction: column;
       align-items: center;
       gap: 8px;
-      max-width: 500px;
+      max-width: 540px;
       width: 100%;
       pointer-events: none;
     }
@@ -293,14 +291,17 @@
       font-size: 14px;
       letter-spacing: 0.8px;
       color: var(--gold-bright);
+      background-image: linear-gradient(90deg, rgba(14, 18, 34, 0.9), rgba(26, 20, 40, 0.88)), url('assets/vfx/bg_fantasy.jpg');
+      background-size: cover;
+      background-position: center;
     }
     .zone-warp-btns {
       display: flex;
       gap: 5px;
     }
     .mini-btn {
-      background: rgba(243, 200, 107, 0.14);
-      border: 1px solid rgba(243, 200, 107, 0.4);
+      background: rgba(243, 200, 107, 0.16);
+      border: 1px solid rgba(243, 200, 107, 0.45);
       color: var(--text-main);
       font-family: 'Inter', sans-serif;
       font-size: 11px;
@@ -311,7 +312,7 @@
       transition: all 0.15s ease;
     }
     .mini-btn:hover {
-      background: rgba(243, 200, 107, 0.32);
+      background: rgba(243, 200, 107, 0.35);
       border-color: var(--gold-bright);
       transform: translateY(-1px);
     }
@@ -330,6 +331,8 @@
       gap: 5px;
       border-color: rgba(255, 59, 92, 0.65);
       box-shadow: 0 0 28px rgba(255, 59, 92, 0.35);
+      background-image: linear-gradient(90deg, rgba(32, 8, 18, 0.92), rgba(16, 10, 28, 0.92)), url('assets/vfx/bg_bestiary.jpg');
+      background-size: cover;
     }
     #boss-hud.visible {
       display: flex;
@@ -389,8 +392,8 @@
       font-size: 12px;
       font-weight: 700;
       color: var(--cyan);
-      background: rgba(56, 232, 255, 0.12);
-      border: 1px solid rgba(56, 232, 255, 0.35);
+      background: rgba(56, 232, 255, 0.14);
+      border: 1px solid rgba(56, 232, 255, 0.4);
       padding: 2px 7px;
       border-radius: 5px;
     }
@@ -431,7 +434,7 @@
       min-width: 22px;
       height: 22px;
       padding: 0 5px;
-      background: rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.16);
       border: 1px solid var(--gold);
       border-radius: 4px;
       font-family: 'JetBrains Mono', monospace;
@@ -607,7 +610,7 @@
       height: 140px;
       border-radius: 50%;
       border: 2px solid var(--gold);
-      background: #060913;
+      background: radial-gradient(circle, #18233c 0%, #090d18 100%);
       box-shadow: inset 0 0 15px rgba(0,0,0,0.9);
     }
     .minimap-caption {
@@ -616,13 +619,14 @@
       color: var(--text-muted);
     }
 
-    /* Modals (Start Screen / Class Select, Forge, Room Lobby, Leaderboard, Victory/Defeat) */
+    /* Modals with Rich Illustrated & Live-3D Diorama Backgrounds */
     .modal-backdrop {
       position: fixed;
       inset: 0;
       z-index: 50;
-      background: rgba(4, 6, 14, 0.82);
-      backdrop-filter: blur(10px);
+      /* Glassmorphic overlay that lets the live 3D village & sky dome shine through! */
+      background: radial-gradient(circle at 50% 45%, rgba(16, 22, 42, 0.35) 0%, rgba(6, 9, 18, 0.72) 100%);
+      backdrop-filter: blur(4px);
       display: none;
       align-items: center;
       justify-content: center;
@@ -632,23 +636,37 @@
       display: flex;
     }
     .modal-box {
-      background: linear-gradient(165deg, rgba(18, 22, 38, 0.97), rgba(9, 11, 20, 0.98));
+      background-image:
+        linear-gradient(165deg, rgba(16, 22, 40, 0.88) 0%, rgba(10, 14, 26, 0.93) 65%, rgba(22, 18, 34, 0.90) 100%),
+        url('assets/vfx/bg_village.jpg');
+      background-size: cover;
+      background-position: center;
       border: 1.5px solid var(--gold);
-      border-radius: 14px;
-      max-width: 880px;
+      border-radius: 16px;
+      max-width: 900px;
       width: 100%;
       max-height: 90vh;
       overflow-y: auto;
-      padding: 26px 30px;
-      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.85), 0 0 40px rgba(243, 200, 107, 0.18);
+      padding: 24px 28px;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.85), 0 0 45px rgba(243, 200, 107, 0.24);
     }
-    .modal-header {
+    .modal-hero-banner {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      padding: 20px 22px;
+      margin-bottom: 16px;
+      border: 1px solid rgba(243, 200, 107, 0.45);
+      background-image:
+        linear-gradient(90deg, rgba(10, 14, 28, 0.92) 0%, rgba(10, 14, 28, 0.65) 55%, rgba(10, 14, 28, 0.25) 100%),
+        url('assets/vfx/bg_village.jpg');
+      background-size: cover;
+      background-position: center 35%;
+      box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.6);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid rgba(243, 200, 107, 0.25);
-      padding-bottom: 14px;
-      margin-bottom: 18px;
+      gap: 14px;
     }
     .modal-title {
       font-family: 'Cinzel', serif;
@@ -656,16 +674,21 @@
       font-weight: 900;
       color: var(--gold-bright);
       letter-spacing: 1px;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9);
     }
     .class-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
       gap: 12px;
-      margin: 14px 0 20px;
+      margin: 12px 0 18px;
     }
     .class-card {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1.5px solid rgba(255, 255, 255, 0.12);
+      background-image:
+        linear-gradient(180deg, rgba(16, 20, 36, 0.78) 0%, rgba(10, 13, 24, 0.94) 100%),
+        url('assets/vfx/bg_fantasy.jpg');
+      background-size: cover;
+      background-position: center;
+      border: 1.5px solid rgba(255, 255, 255, 0.16);
       border-radius: 10px;
       padding: 14px;
       cursor: pointer;
@@ -677,12 +700,14 @@
     .class-card:hover {
       border-color: var(--gold);
       transform: translateY(-3px);
-      background: rgba(243, 200, 107, 0.07);
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.6);
     }
     .class-card.selected {
       border-color: var(--gold-bright);
-      background: linear-gradient(160deg, rgba(243, 200, 107, 0.18), rgba(56, 232, 255, 0.08));
-      box-shadow: 0 0 20px rgba(243, 200, 107, 0.28);
+      background-image:
+        linear-gradient(160deg, rgba(243, 200, 107, 0.26), rgba(56, 232, 255, 0.14)),
+        url('assets/vfx/bg_fantasy.jpg');
+      box-shadow: 0 0 22px rgba(243, 200, 107, 0.35);
     }
     .class-card h3 {
       font-family: 'Cinzel', serif;
@@ -691,7 +716,8 @@
     }
     .class-card p {
       font-size: 11.5px;
-      color: var(--text-muted);
+      color: var(--text-main);
+      opacity: 0.9;
       line-height: 1.4;
     }
     .class-weapons-tag {
@@ -729,8 +755,11 @@
       margin-top: 12px;
     }
     .weapon-card {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.14);
+      background-image:
+        linear-gradient(160deg, rgba(18, 22, 38, 0.88), rgba(10, 13, 24, 0.94)),
+        url('assets/vfx/bg_fantasy.jpg');
+      background-size: cover;
+      border: 1px solid rgba(255,255,255,0.18);
       border-radius: 8px;
       padding: 11px;
       display: flex;
@@ -739,7 +768,7 @@
     }
     .weapon-card.equipped {
       border-color: var(--emerald);
-      background: rgba(46, 230, 138, 0.09);
+      box-shadow: 0 0 16px rgba(46, 230, 138, 0.25);
     }
     .rarity-mythic { color: #ff66c4; font-weight: 700; }
     .rarity-epic { color: #b266ff; font-weight: 700; }
@@ -792,14 +821,14 @@
             <div id="hud-hero-name" class="hero-name-line">Vanguard Kaelen</div>
             <div class="hero-sub-line">
               <span id="hud-hero-lvl">Lv. 1</span>
-              <span>â€¢</span>
+              <span>•</span>
               <span id="hud-weapon-label" style="color: var(--cyan);">Sword_Golden +1</span>
             </div>
           </div>
         </div>
         <div class="currency-pills">
-          <span class="pill-gold">ðŸª™ <span id="hud-gold">150</span></span>
-          <span class="pill-shard">ðŸ’  <span id="hud-shards">10</span></span>
+          <span class="pill-gold">🪙 <span id="hud-gold">150</span></span>
+          <span class="pill-shard">💠 <span id="hud-shards">10</span></span>
         </div>
       </div>
 
@@ -834,18 +863,18 @@
     <!-- Center: Biome Switcher & Boss Raid Bar -->
     <div id="center-banner">
       <div class="hud-card zone-pill">
-        <span id="hud-zone-title">ðŸ° ASHENVALE BASTION</span>
+        <span id="hud-zone-title">🏰 ASHENVALE BASTION</span>
         <div class="zone-warp-btns">
-          <button class="mini-btn active" onclick="window.game.warpToZone('ashenvale_bastion')">Sanctuary</button>
-          <button class="mini-btn" onclick="window.game.warpToZone('bestiary_catacombs')">Catacombs</button>
-          <button class="mini-btn" onclick="window.game.warpToZone('astral_breach')">Astral Breach</button>
-          <button class="mini-btn" style="border-color: var(--crimson); color: #ff99a8;" onclick="window.game.warpToZone('boss_citadel')">âš”ï¸ Archon Boss</button>
+          <button class="mini-btn active" id="warp-btn-ashenvale_bastion" onclick="window.game.warpToZone('ashenvale_bastion')">Sanctuary</button>
+          <button class="mini-btn" id="warp-btn-bestiary_catacombs" onclick="window.game.warpToZone('bestiary_catacombs')">Catacombs</button>
+          <button class="mini-btn" id="warp-btn-astral_breach" onclick="window.game.warpToZone('astral_breach')">Astral Breach</button>
+          <button class="mini-btn" id="warp-btn-boss_citadel" style="border-color: var(--crimson); color: #ff99a8;" onclick="window.game.warpToZone('boss_citadel')">⚔️ Archon Boss</button>
         </div>
       </div>
 
       <div id="boss-hud" class="hud-card">
         <div class="boss-name-row">
-          <span id="boss-name-label">â˜ ï¸ MALAKOR, THE CHRONO-FUSED ARCHON</span>
+          <span id="boss-name-label">☠️ MALAKOR, THE CHRONO-FUSED ARCHON</span>
           <span id="boss-hp-label" style="font-family: 'JetBrains Mono', monospace; font-size: 12px;">4500 / 4500</span>
         </div>
         <div class="boss-hp-track">
@@ -861,15 +890,15 @@
         <span id="hud-room-code" class="room-badge">ASHEN-1</span>
       </div>
       <div class="net-actions">
-        <button class="mini-btn" onclick="window.game.openModal('lobby-modal')">ðŸŒ Rooms (<span id="hud-online-count">1</span>)</button>
-        <button class="mini-btn" onclick="window.game.copyInviteLink()">ðŸ”— Invite Link</button>
-        <button class="mini-btn" onclick="window.game.toggleAICompanions()">ðŸ¤ AI Squad: <span id="hud-ai-count">2</span></button>
+        <button class="mini-btn" onclick="window.game.openModal('lobby-modal')">🌐 Rooms (<span id="hud-online-count">1</span>)</button>
+        <button class="mini-btn" onclick="window.game.copyInviteLink()">🔗 Invite Link</button>
+        <button class="mini-btn" onclick="window.game.toggleAICompanions()">🤝 AI Squad: <span id="hud-ai-count">2</span></button>
       </div>
       <div class="net-actions">
-        <button class="mini-btn" onclick="window.game.openModal('forge-modal')">âš’ï¸ Relic Forge</button>
-        <button class="mini-btn" onclick="window.game.openModal('leaderboard-modal')">ðŸ† Hall of Legends</button>
-        <button class="mini-btn" onclick="window.game.openModal('hero-modal')">ðŸ›¡ï¸ Switch Class</button>
-        <button id="btn-mute" class="mini-btn" onclick="window.game.toggleAudio()">ðŸ”Š Audio</button>
+        <button class="mini-btn" onclick="window.game.openModal('forge-modal')">⚒️ Relic Forge</button>
+        <button class="mini-btn" onclick="window.game.openModal('leaderboard-modal')">🏆 Hall of Legends</button>
+        <button class="mini-btn" onclick="window.game.openModal('hero-modal')">🛡️ Switch Class</button>
+        <button id="btn-mute" class="mini-btn" onclick="window.game.toggleAudio()">🔊 Audio</button>
       </div>
     </div>
   </div>
@@ -890,37 +919,37 @@
     <div id="skill-bar" class="hud-card">
       <div class="skill-slot" id="slot-1" onclick="window.game.useSkill(1)">
         <span class="skill-key">LMB/1</span>
-        <span class="skill-icon" id="icon-1">âš”ï¸</span>
+        <span class="skill-icon" id="icon-1">⚔️</span>
         <span class="skill-name" id="name-1">Combo Strike</span>
         <div class="skill-cd-overlay" id="cd-1"></div>
       </div>
       <div class="skill-slot" id="slot-2" onclick="window.game.useSkill(2)">
         <span class="skill-key">RMB/2</span>
-        <span class="skill-icon" id="icon-2">ðŸ›¡ï¸</span>
+        <span class="skill-icon" id="icon-2">🛡️</span>
         <span class="skill-name" id="name-2">Seismic Slam</span>
         <div class="skill-cd-overlay" id="cd-2"></div>
       </div>
       <div class="skill-slot" id="slot-3" onclick="window.game.useSkill(3)">
         <span class="skill-key">SHIFT</span>
-        <span class="skill-icon" id="icon-3">ðŸ’¨</span>
+        <span class="skill-icon" id="icon-3">💨</span>
         <span class="skill-name" id="name-3">Aegis Dash</span>
         <div class="skill-cd-overlay" id="cd-3"></div>
       </div>
       <div class="skill-slot" id="slot-4" onclick="window.game.useSkill(4)">
         <span class="skill-key">E / 4</span>
-        <span class="skill-icon" id="icon-4">âœ¨</span>
+        <span class="skill-icon" id="icon-4">✨</span>
         <span class="skill-name" id="name-4">Phalanx Aura</span>
         <div class="skill-cd-overlay" id="cd-4"></div>
       </div>
       <div class="skill-slot" id="slot-potion" onclick="window.game.usePotion()">
         <span class="skill-key">Q</span>
-        <span class="skill-icon">ðŸ§ª</span>
+        <span class="skill-icon">🧪</span>
         <span class="skill-name">Elixir (<span id="potion-count">3</span>)</span>
         <div class="skill-cd-overlay" id="cd-potion"></div>
       </div>
       <div class="skill-slot ult-slot" id="slot-5" onclick="window.game.useSkill(5)">
         <span class="skill-key">R / 5</span>
-        <span class="skill-icon">ðŸŒŒ</span>
+        <span class="skill-icon">🌌</span>
         <span class="skill-name">Convergence</span>
         <div class="skill-cd-overlay" id="cd-5"></div>
       </div>
@@ -939,17 +968,17 @@
   <!-- MINIMAP -->
   <div id="minimap-wrap" class="hud-card">
     <canvas id="minimap-canvas" width="140" height="140"></canvas>
-    <div class="minimap-caption" id="minimap-coords">RIFT WAVE 1 â€¢ (0, 0)</div>
+    <div class="minimap-caption" id="minimap-coords">RIFT WAVE 1 • (0, 0)</div>
   </div>
 
   <!-- MODAL 1: HERO & CLASS SELECTION / START SCREEN -->
   <div id="hero-modal" class="modal-backdrop active">
     <div class="modal-box">
-      <div class="modal-header">
+      <div class="modal-hero-banner">
         <div>
-          <div class="modal-title">âš”ï¸ CHRONO-RIFT: CHRONICLES OF ASHENVALE</div>
-          <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
-            Blender 5.2 & Godot 4.7 Enhanced 3D Co-Op Action RPG â€¢ Powered by Supabase Realtime & Vercel
+          <div class="modal-title">⚔️ CHRONO-RIFT: CHRONICLES OF ASHENVALE</div>
+          <div style="font-size: 13px; color: var(--text-main); opacity: 0.92; margin-top: 4px; text-shadow: 0 1px 4px #000;">
+            Blender 5.2 & Godot 4.7 Enhanced 3D Co-Op Action RPG • Live 3D Village & Astral Panorama
           </div>
         </div>
         <span class="room-badge" id="modal-room-indicator">ROOM: ASHEN-1</span>
@@ -958,43 +987,43 @@
       <div style="display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin-bottom: 12px;">
         <div style="flex: 1; min-width: 220px;">
           <label style="font-size: 11px; color: var(--gold-bright); font-weight: 700; display: block; margin-bottom: 4px;">HERO CALLSIGN</label>
-          <input id="hero-name-input" type="text" maxlength="22" value="" placeholder="Enter Hero Name..." style="width: 100%; padding: 9px 12px; border-radius: 7px; border: 1px solid var(--gold); background: rgba(0,0,0,0.6); color: #fff; font-weight: 600;" />
+          <input id="hero-name-input" type="text" maxlength="22" value="" placeholder="Enter Hero Name..." style="width: 100%; padding: 9px 12px; border-radius: 7px; border: 1px solid var(--gold); background: rgba(6, 10, 20, 0.78); color: #fff; font-weight: 600;" />
         </div>
         <div style="flex: 1; min-width: 220px;">
           <label style="font-size: 11px; color: var(--cyan); font-weight: 700; display: block; margin-bottom: 4px;">CO-OP REALM ROOM CODE (SHARE WITH FRIENDS)</label>
-          <input id="room-code-input" type="text" maxlength="18" value="ASHEN-1" style="width: 100%; padding: 9px 12px; border-radius: 7px; border: 1px solid var(--cyan); background: rgba(0,0,0,0.6); color: var(--cyan); font-family: 'JetBrains Mono', monospace; font-weight: 700;" />
+          <input id="room-code-input" type="text" maxlength="18" value="ASHEN-1" style="width: 100%; padding: 9px 12px; border-radius: 7px; border: 1px solid var(--cyan); background: rgba(6, 10, 20, 0.78); color: var(--cyan); font-family: 'JetBrains Mono', monospace; font-weight: 700;" />
         </div>
       </div>
 
-      <div style="font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.6px;">CHOOSE YOUR 3D HERO CLASS (SWITCH ANYTIME):</div>
+      <div style="font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.6px;">CHOOSE YOUR 3D HERO CLASS (LIVE 3D PREVIEW BEHIND WINDOW):</div>
       <div class="class-grid">
         <div class="class-card selected" data-class="vanguard" onclick="window.game.selectClassCard('vanguard')">
-          <h3>ðŸ›¡ï¸ Vanguard Knight</h3>
+          <h3>🛡️ Vanguard Knight</h3>
           <p>Armored bastion wielding a Golden Broadsword or Claymore & Celtic Shield. Excels at Seismic Slams and party-wide Phalanx defense auras.</p>
           <div class="class-weapons-tag">3D Rig: Male_Ranger + Sword_Golden + Shield_Celtic</div>
         </div>
         <div class="class-card" data-class="ranger" onclick="window.game.selectClassCard('ranger')">
-          <h3>ðŸ¹ Shadow Ranger</h3>
+          <h3>🏹 Shadow Ranger</h3>
           <p>Lethal marksman firing piercing Astral Volleys, 7-way Fan of Daggers, and Starfall arrow rain while tumbling out of danger.</p>
           <div class="class-weapons-tag">3D Rig: Female_Ranger + Bow_Golden + Dagger_2</div>
         </div>
         <div class="class-card" data-class="arcanist" onclick="window.game.selectClassCard('arcanist')">
-          <h3>ðŸ”® Reaper Arcanist</h3>
+          <h3>🔮 Reaper Arcanist</h3>
           <p>Blender-kitbashed Battle-Mage with a levitating Arcane Halo & Astral Scythe. Summons pulling Anima Vortexes and Chrono Time-Freezes.</p>
           <div class="class-weapons-tag">3D Rig: Arcanist_Halo + Scythe + Anima Vortex</div>
         </div>
         <div class="class-card" data-class="berserker" onclick="window.game.selectClassCard('berserker')">
-          <h3>ðŸª“ Berserker Warlord</h3>
-          <p>Unstoppable juggernaut swinging Double Battleaxes & Great Hammers. Unleashes 360Â° Blood-Flame Whirlwinds and party Warcry Frenzy.</p>
+          <h3>🪓 Berserker Warlord</h3>
+          <p>Unstoppable juggernaut swinging Double Battleaxes & Great Hammers. Unleashes 360° Blood-Flame Whirlwinds and party Warcry Frenzy.</p>
           <div class="class-weapons-tag">3D Rig: Berserker + Axe_Double + Hammer_Double</div>
         </div>
       </div>
 
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
-        <div style="font-size: 11.5px; color: var(--text-muted); line-height: 1.5;">
-          <strong>Controls:</strong> <span class="key-cap">WASD</span> Move â€¢ <span class="key-cap">LMB</span> Combo Attack â€¢ <span class="key-cap">RMB</span> Heavy Skill â€¢ <span class="key-cap">Shift</span> Dodge Roll â€¢ <span class="key-cap">E</span> Class Spell â€¢ <span class="key-cap">R</span> Co-Op Convergence â€¢ <span class="key-cap">F</span> Interact
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.14);">
+        <div style="font-size: 11.5px; color: var(--text-main); line-height: 1.5;">
+          <strong>Controls:</strong> <span class="key-cap">WASD</span> Move • <span class="key-cap">LMB</span> Combo Attack • <span class="key-cap">RMB</span> Heavy Skill • <span class="key-cap">Shift</span> Dodge Roll • <span class="key-cap">E</span> Class Spell • <span class="key-cap">R</span> Co-Op Convergence • <span class="key-cap">F</span> Interact
         </div>
-        <button class="cta-btn" onclick="window.game.startOrResumeGame()">âš¡ ENTER ASHENVALE REALM</button>
+        <button class="cta-btn" onclick="window.game.startOrResumeGame()">⚡ ENTER ASHENVALE REALM</button>
       </div>
     </div>
   </div>
@@ -1002,19 +1031,19 @@
   <!-- MODAL 2: BLACKSMITH RELIC FORGE & ARMORY -->
   <div id="forge-modal" class="modal-backdrop">
     <div class="modal-box">
-      <div class="modal-header">
+      <div class="modal-hero-banner" style="background-image: linear-gradient(90deg, rgba(16, 12, 24, 0.92), rgba(16, 12, 24, 0.45)), url('assets/vfx/bg_fantasy.jpg');">
         <div>
-          <div class="modal-title">âš’ï¸ GRAND BLACKSMITH KAELEN'S RELIC FORGE</div>
-          <div style="font-size: 12px; color: var(--text-muted);">Equip 3D Weapons onto your Hero's Right/Left Hand Bones or Upgrade with Gold & Chrono-Shards</div>
+          <div class="modal-title">⚒️ GRAND BLACKSMITH KAELEN'S RELIC FORGE</div>
+          <div style="font-size: 12px; color: var(--text-main);">Equip 3D Weapons onto your Hero's Right/Left Hand Bones or Upgrade with Gold & Chrono-Shards</div>
         </div>
-        <button class="mini-btn" onclick="window.game.closeModals()">âœ• Close (ESC)</button>
+        <button class="mini-btn" onclick="window.game.closeModals()">✕ Close (ESC)</button>
       </div>
       <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 14px; flex-wrap: wrap;">
         <button class="cta-btn" style="padding: 8px 16px; font-size: 13px;" onclick="window.game.upgradeEquippedWeapon()">
-          ðŸ”¥ Temper Equipped Weapon (+18% DMG) â€” Cost: 80 ðŸª™ & 3 ðŸ’ 
+          🔥 Temper Equipped Weapon (+18% DMG) — Cost: 80 🪙 & 3 💠
         </button>
         <button class="mini-btn" style="padding: 8px 14px;" onclick="window.game.reforgeElement()">
-          âœ¨ Reforge Elemental Brand (Flame / Frost / Void / Astral) â€” 40 ðŸª™
+          ✨ Reforge Elemental Brand (Flame / Frost / Void / Astral) — 40 🪙
         </button>
       </div>
       <div id="forge-weapons-grid" class="forge-grid"></div>
@@ -1024,18 +1053,18 @@
   <!-- MODAL 3: SUPABASE LIVE CO-OP ROOM BROWSER -->
   <div id="lobby-modal" class="modal-backdrop">
     <div class="modal-box">
-      <div class="modal-header">
+      <div class="modal-hero-banner">
         <div>
-          <div class="modal-title">ðŸŒ SUPABASE LIVE CO-OP REALM LOBBIES</div>
-          <div style="font-size: 12px; color: var(--text-muted);">Join an active public Sanctuary/Raid room or create your own party code</div>
+          <div class="modal-title">🌐 SUPABASE LIVE CO-OP REALM LOBBIES</div>
+          <div style="font-size: 12px; color: var(--text-main);">Join an active public Sanctuary/Raid room or create your own party code</div>
         </div>
-        <button class="mini-btn" onclick="window.game.closeModals()">âœ• Close</button>
+        <button class="mini-btn" onclick="window.game.closeModals()">✕ Close</button>
       </div>
       <div style="display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap;">
         <input id="new-room-code" type="text" maxlength="16" placeholder="Custom Room Code (e.g. SQUAD-9)" style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--cyan); background: rgba(0,0,0,0.6); color: #fff; font-family: 'JetBrains Mono', monospace;" />
         <input id="new-room-name" type="text" maxlength="36" placeholder="Room Title (e.g. Mythic Archon Hunt)" style="flex: 1; padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.6); color: #fff;" />
         <button class="cta-btn" style="padding: 8px 18px; font-size: 13px;" onclick="window.game.createAndJoinRoom()">+ Create & Join Room</button>
-        <button class="mini-btn" onclick="window.game.refreshRoomsList()">â†» Refresh</button>
+        <button class="mini-btn" onclick="window.game.refreshRoomsList()">↻ Refresh</button>
       </div>
       <div id="rooms-list-container" style="display: flex; flex-direction: column; gap: 8px;"></div>
     </div>
@@ -1044,12 +1073,12 @@
   <!-- MODAL 4: HALL OF LEGENDS LEADERBOARD -->
   <div id="leaderboard-modal" class="modal-backdrop">
     <div class="modal-box">
-      <div class="modal-header">
+      <div class="modal-hero-banner" style="background-image: linear-gradient(90deg, rgba(24, 10, 20, 0.92), rgba(14, 12, 28, 0.5)), url('assets/vfx/bg_bestiary.jpg');">
         <div>
-          <div class="modal-title">ðŸ† HALL OF LEGENDS â€” SUPABASE CO-OP LEADERBOARD</div>
-          <div style="font-size: 12px; color: var(--text-muted);">Top Co-Op Parties & Solo Champions recorded in Supabase Postgres</div>
+          <div class="modal-title">🏆 HALL OF LEGENDS — SUPABASE CO-OP LEADERBOARD</div>
+          <div style="font-size: 12px; color: var(--text-main);">Top Co-Op Parties & Solo Champions recorded in Supabase Postgres</div>
         </div>
-        <button class="mini-btn" onclick="window.game.closeModals()">âœ• Close</button>
+        <button class="mini-btn" onclick="window.game.closeModals()">✕ Close</button>
       </div>
       <div id="leaderboard-container" style="display: flex; flex-direction: column; gap: 8px;"></div>
     </div>
@@ -1113,10 +1142,10 @@
         speed: 8.4,
         color: 0xf3c86b,
         skills: [
-          { icon: 'âš”ï¸', name: 'Sunsteel Combo', cd: 0.38 },
-          { icon: 'ðŸ›¡ï¸', name: 'Seismic Slam', cd: 4.5 },
-          { icon: 'ðŸ’¨', name: 'Aegis Rush', cd: 3.2 },
-          { icon: 'âœ¨', name: 'Phalanx Banner', cd: 10.0 }
+          { icon: '⚔️', name: 'Sunsteel Combo', cd: 0.38 },
+          { icon: '🛡️', name: 'Seismic Slam', cd: 4.5 },
+          { icon: '💨', name: 'Aegis Rush', cd: 3.2 },
+          { icon: '✨', name: 'Phalanx Banner', cd: 10.0 }
         ]
       },
       ranger: {
@@ -1131,10 +1160,10 @@
         speed: 9.8,
         color: 0x2ee68a,
         skills: [
-          { icon: 'ðŸ¹', name: 'Astral Volley', cd: 0.34 },
-          { icon: 'ðŸ—¡ï¸', name: 'Fan of Blades', cd: 4.0 },
-          { icon: 'ðŸƒ', name: 'Shadow Vault', cd: 2.8 },
-          { icon: 'ðŸŒ ', name: 'Starfall Rain', cd: 9.0 }
+          { icon: '🏹', name: 'Astral Volley', cd: 0.34 },
+          { icon: '🗡️', name: 'Fan of Blades', cd: 4.0 },
+          { icon: '🍃', name: 'Shadow Vault', cd: 2.8 },
+          { icon: '🌠', name: 'Starfall Rain', cd: 9.0 }
         ]
       },
       arcanist: {
@@ -1149,10 +1178,10 @@
         speed: 9.0,
         color: 0xb266ff,
         skills: [
-          { icon: 'ðŸ”®', name: 'Reaper Sweep', cd: 0.40 },
-          { icon: 'ðŸŒ€', name: 'Anima Vortex', cd: 5.0 },
-          { icon: 'âš¡', name: 'Chrono Blink', cd: 3.0 },
-          { icon: 'â³', name: 'Time Freeze', cd: 11.0 }
+          { icon: '🔮', name: 'Reaper Sweep', cd: 0.40 },
+          { icon: '🌀', name: 'Anima Vortex', cd: 5.0 },
+          { icon: '⚡', name: 'Chrono Blink', cd: 3.0 },
+          { icon: '⏳', name: 'Time Freeze', cd: 11.0 }
         ]
       },
       berserker: {
@@ -1167,10 +1196,10 @@
         speed: 8.9,
         color: 0xff3b5c,
         skills: [
-          { icon: 'ðŸª“', name: 'Twin-Axe Cleave', cd: 0.35 },
-          { icon: 'ðŸŒªï¸', name: 'Blood Whirlwind', cd: 4.8 },
-          { icon: 'â˜„ï¸', name: 'Crusher Leap', cd: 3.5 },
-          { icon: 'ðŸ”¥', name: 'Warlord Frenzy', cd: 10.5 }
+          { icon: '🪓', name: 'Twin-Axe Cleave', cd: 0.35 },
+          { icon: '🌪️', name: 'Blood Whirlwind', cd: 4.8 },
+          { icon: '☄️', name: 'Crusher Leap', cd: 3.5 },
+          { icon: '🔥', name: 'Warlord Frenzy', cd: 10.5 }
         ]
       }
     };
@@ -1216,7 +1245,6 @@
         if (!AudioCtx) return;
         this.ctx = new AudioCtx();
 
-        // Low-pass filter for low-HP acoustic muffle (Pillar 3)
         this.lowpassNode = this.ctx.createBiquadFilter();
         this.lowpassNode.type = 'lowpass';
         this.lowpassNode.frequency.value = 18000;
@@ -1260,7 +1288,7 @@
             .then(r => r.ok ? r.arrayBuffer() : Promise.reject())
             .then(buf => this.ctx.decodeAudioData(buf))
             .then(decoded => { this.buffers[key] = decoded; })
-            .catch(() => {}); // Procedural Web Audio API fallback is always active
+            .catch(() => {});
         });
       }
 
@@ -1279,7 +1307,6 @@
 
       startAdaptiveSoundtrack() {
         if (this.musicTimer) clearInterval(this.musicTimer);
-        // D Dorian / Dark Fantasy Arpeggio Scale (Hz)
         const scale = [146.83, 164.81, 174.61, 196.00, 220.00, 246.94, 261.63, 293.66, 329.63, 349.23, 440.00];
         const bassRoots = [73.42, 65.41, 58.27, 82.41];
 
@@ -1288,7 +1315,6 @@
           const now = this.ctx.currentTime;
           const step = this.stepIndex++;
 
-          // 1. Sub-bass & Warm Drone Pad every 8 steps
           if (step % 8 === 0) {
             const root = bassRoots[(step / 8) % bassRoots.length];
             const osc = this.ctx.createOscillator();
@@ -1308,7 +1334,6 @@
             osc.stop(now + 2.35);
           }
 
-          // 2. Melodic Marimba / Harp Arpeggio
           const noteIdx = (step * 3 + ((step >> 2) & 3)) % scale.length;
           const freq = scale[noteIdx] * (this.bossActive && step % 2 === 0 ? 1.5 : 1.0);
           const arp = this.ctx.createOscillator();
@@ -1323,7 +1348,6 @@
           arp.start(now);
           arp.stop(now + 0.45);
 
-          // 3. Adaptive Combat Percussion (Taiko Pulse when combatIntensity > 0.2)
           if (this.combatIntensity > 0.2 || this.bossActive) {
             if (step % 2 === 0 || (this.bossActive && step % 4 === 3)) {
               const drum = this.ctx.createOscillator();
@@ -1361,7 +1385,6 @@
         const key = zone === 'astral_breach' ? 'step_metal' : (zone === 'bestiary_catacombs' ? 'step_stone' : 'step_grass');
         this.playSample(key, rate, 0.22);
 
-        // Procedural surface transient
         const now = this.ctx.currentTime;
         const osc = this.ctx.createOscillator();
         const g = this.ctx.createGain();
@@ -1473,7 +1496,6 @@
         this.audio = new ChronoAudioEngine();
         this.loader = new THREE.GLTFLoader();
 
-        // Persistent Player Identity
         this.playerToken = localStorage.getItem('arpg_player_token') || ('hero_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36));
         localStorage.setItem('arpg_player_token', this.playerToken);
 
@@ -1486,18 +1508,16 @@
         const savedName = localStorage.getItem('arpg_hero_name') || ('Knight_' + Math.floor(100 + Math.random() * 899));
         document.getElementById('hero-name-input').value = savedName;
 
-        // Asset caches
         this.animClips = {};
         this.modelCache = {};
         this.vfxTextures = {};
 
-        // World & Entities
         this.currentZone = 'ashenvale_bastion';
         this.riftWave = 1;
         this.hitStopTimer = 0;
         this.screenShake = 0;
         this.cameraYaw = 0;
-        this.cameraZoom = 18.5;
+        this.cameraZoom = 18.0;
 
         this.player = {
           id: this.playerToken,
@@ -1553,14 +1573,15 @@
         this.destructibles = [];
         this.interactables = [];
         this.tetherLines = [];
+        this.floatingMonoliths = [];
         this.aiCompanionTargetCount = 2;
 
-        // Supabase Client & Channel
         this.supabase = null;
         this.channel = null;
         this.lastBroadcastTime = 0;
 
         this.initThreeScene();
+        this.initSkyDomeAndHorizonScenery();
         this.initEnvironmentAndZones();
         this.initInputHandlers();
         this.loadAllAssets();
@@ -1575,14 +1596,14 @@
       }
 
       // -----------------------------------------------------------------------
-      // THREE.JS SCENE, LIGHTING & CUSTOM GLSL SHADERS
+      // THREE.JS SCENE, LIGHTING & TEXTURED MULTI-BIOME GROUND
       // -----------------------------------------------------------------------
       initThreeScene() {
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x070913);
-        this.scene.fog = new THREE.FogExp2(0x090c1a, 0.0115);
+        this.scene.background = new THREE.Color(0x1b243e);
+        this.scene.fog = new THREE.FogExp2(0x1b233b, 0.0052);
 
-        this.camera = new THREE.PerspectiveCamera(44, window.innerWidth / window.innerHeight, 0.5, 220);
+        this.camera = new THREE.PerspectiveCamera(44, window.innerWidth / window.innerHeight, 0.5, 320);
 
         this.renderer = new THREE.WebGLRenderer({
           canvas: this.canvas,
@@ -1594,20 +1615,20 @@
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.18;
+        this.renderer.toneMappingExposure = 1.25;
 
-        // Rich Atmospheric Lighting (Pillar 1)
-        this.hemiLight = new THREE.HemisphereLight(0x8ab4ff, 0x38261a, 0.78);
+        // Warm Golden-Hour + Astral Hemispheric & Directional Lighting
+        this.hemiLight = new THREE.HemisphereLight(0xa8c8ff, 0x4d3726, 0.95);
         this.scene.add(this.hemiLight);
 
-        this.sunLight = new THREE.DirectionalLight(0xffe2b8, 1.45);
-        this.sunLight.position.set(22, 36, 18);
+        this.sunLight = new THREE.DirectionalLight(0xffe4bc, 1.65);
+        this.sunLight.position.set(24, 42, 22);
         this.sunLight.castShadow = true;
         this.sunLight.shadow.mapSize.width = 2048;
         this.sunLight.shadow.mapSize.height = 2048;
         this.sunLight.shadow.camera.near = 2;
-        this.sunLight.shadow.camera.far = 110;
-        const d = 38;
+        this.sunLight.shadow.camera.far = 130;
+        const d = 42;
         this.sunLight.shadow.camera.left = -d;
         this.sunLight.shadow.camera.right = d;
         this.sunLight.shadow.camera.top = d;
@@ -1616,12 +1637,28 @@
         this.scene.add(this.sunLight);
         this.scene.add(this.sunLight.target);
 
-        // Custom GLSL Multi-Biome Ground Shader (Ashenvale Stone, Bestiary Catacombs, Astral Sci-Fi Hex)
-        const groundGeo = new THREE.PlaneGeometry(180, 180, 1, 1);
+        // Load Real Kit Textures for Multi-Biome Ground Shader
+        const texLoader = new THREE.TextureLoader();
+        const loadTiledTex = (url) => {
+          const t = texLoader.load(url);
+          t.wrapS = THREE.RepeatWrapping;
+          t.wrapT = THREE.RepeatWrapping;
+          return t;
+        };
+        const texCobble = loadTiledTex('assets/vfx/tex_cobble.png');
+        const texRedBrick = loadTiledTex('assets/vfx/tex_redbrick.png');
+        const texDungeon = loadTiledTex('assets/vfx/tex_dungeon.png');
+        const texScifi = loadTiledTex('assets/vfx/tex_scifi.png');
+
+        const groundGeo = new THREE.PlaneGeometry(260, 260, 1, 1);
         groundGeo.rotateX(-Math.PI / 2);
         this.groundUniforms = {
           uTime: { value: 0 },
-          uPlayerPos: { value: new THREE.Vector3() }
+          uPlayerPos: { value: new THREE.Vector3() },
+          uTexCobble: { value: texCobble },
+          uTexBrick: { value: texRedBrick },
+          uTexDungeon: { value: texDungeon },
+          uTexScifi: { value: texScifi }
         };
         const groundMat = new THREE.ShaderMaterial({
           uniforms: this.groundUniforms,
@@ -1636,6 +1673,10 @@
           fragmentShader: `
             uniform float uTime;
             uniform vec3 uPlayerPos;
+            uniform sampler2D uTexCobble;
+            uniform sampler2D uTexBrick;
+            uniform sampler2D uTexDungeon;
+            uniform sampler2D uTexScifi;
             varying vec3 vWorldPos;
 
             float hash(vec2 p) {
@@ -1651,42 +1692,52 @@
 
             void main() {
               vec2 uv = vWorldPos.xz;
-              float n1 = noise(uv * 0.45);
-              float n2 = noise(uv * 2.2);
+              float n1 = noise(uv * 0.25);
 
-              // Cobblestone / Tile grid
-              vec2 tile = abs(fract(uv * 0.5) - 0.5);
-              float mortar = smoothstep(0.44, 0.49, max(tile.x, tile.y));
+              // Sample real kit textures
+              vec3 smpCobble = texture2D(uTexCobble, uv * 0.22).rgb;
+              vec3 smpBrick  = texture2D(uTexBrick,  uv * 0.25).rgb;
+              vec3 smpDung   = texture2D(uTexDungeon, uv * 0.20).rgb;
+              vec3 smpScifi  = texture2D(uTexScifi,   uv * 0.22).rgb;
 
-              // Biome weights based on world position
-              float wBastion = smoothstep(-15.0, 10.0, vWorldPos.z);
-              float wCatacomb = (1.0 - wBastion) * smoothstep(5.0, -15.0, vWorldPos.x);
+              // Sanctuary Brick Plaza & Village Roads + Lush Grass Outskirts
+              float dPlaza = length(uv - vec2(0.0, 10.0));
+              float roadMask = smoothstep(3.8, 2.2, abs(uv.x)) * step(-50.0, uv.y) * step(uv.y, 40.0)
+                             + smoothstep(3.4, 1.8, abs(uv.y - 10.0)) * step(-25.0, uv.x) * step(uv.x, 25.0);
+              float plazaMask = clamp(smoothstep(16.0, 11.0, dPlaza) + roadMask, 0.0, 1.0);
+
+              vec3 grassCol = mix(vec3(0.16, 0.29, 0.14), vec3(0.25, 0.38, 0.18), n1);
+              vec3 villageCol = mix(grassCol, mix(smpCobble * 0.95, smpBrick * 1.05, smoothstep(10.0, 5.0, dPlaza)), plazaMask);
+
+              // Biome weights
+              float wBastion = smoothstep(-12.0, 6.0, vWorldPos.z);
+              float wCatacomb = (1.0 - wBastion) * smoothstep(4.0, -12.0, vWorldPos.x);
               float wAstral = (1.0 - wBastion) * (1.0 - wCatacomb);
 
-              vec3 colBastion = mix(vec3(0.18, 0.16, 0.14), vec3(0.26, 0.23, 0.19), n1) * (1.0 - mortar * 0.45);
-              vec3 colCatacomb = mix(vec3(0.09, 0.12, 0.11), vec3(0.15, 0.22, 0.18), n1) * (1.0 - mortar * 0.6);
-              vec3 colAstral = mix(vec3(0.07, 0.09, 0.17), vec3(0.12, 0.18, 0.30), n2);
+              // Catacomb stone + glowing emerald/magma cracks
+              vec2 tile = abs(fract(uv * 0.4) - 0.5);
+              float crack = smoothstep(0.46, 0.495, max(tile.x, tile.y));
+              vec3 catacombCol = smpDung * vec3(0.55, 0.68, 0.62) + vec3(0.1, 0.75, 0.45) * crack * 0.45;
 
-              // Glowing Astral energy veins in North/Northeast zone
-              float vein = smoothstep(0.47, 0.50, max(tile.x, tile.y)) * (0.5 + 0.5 * sin(uTime * 2.5 + uv.x * 0.4));
-              colAstral += vec3(0.08, 0.55, 0.85) * vein * 0.65;
+              // Astral Sci-Fi metallic deck + neon grid veins
+              float vein = smoothstep(0.465, 0.495, max(tile.x, tile.y)) * (0.55 + 0.45 * sin(uTime * 2.5 + uv.x * 0.4));
+              vec3 astralCol = smpScifi * vec3(0.65, 0.75, 0.95) + vec3(0.15, 0.75, 1.0) * vein * 0.65;
 
-              vec3 baseCol = colBastion * wBastion + colCatacomb * wCatacomb + colAstral * wAstral;
+              vec3 baseCol = villageCol * wBastion + catacombCol * wCatacomb + astralCol * wAstral;
 
-              // Sanctuary Golden Rune Circle at (0, 8)
+              // Golden Sanctuary Rune Circle at (0, 8)
               float dSanctuary = length(uv - vec2(0.0, 8.0));
-              float ring = smoothstep(0.18, 0.0, abs(dSanctuary - 7.5)) + smoothstep(0.12, 0.0, abs(dSanctuary - 4.2));
-              baseCol += vec3(0.95, 0.72, 0.25) * ring * 0.45;
+              float ring = smoothstep(0.22, 0.0, abs(dSanctuary - 7.5)) + smoothstep(0.14, 0.0, abs(dSanctuary - 4.2));
+              baseCol += vec3(1.0, 0.78, 0.28) * ring * 0.55;
 
-              // Subtle player torchlight warmth
+              // Warm player torchlight
               float dPlayer = length(vWorldPos.xz - uPlayerPos.xz);
-              float playerGlow = exp(-dPlayer * 0.11);
-              baseCol += vec3(0.14, 0.10, 0.05) * playerGlow;
+              baseCol += vec3(0.16, 0.11, 0.05) * exp(-dPlayer * 0.09);
 
-              // Distance fog blend
+              // Horizon atmospheric perspective blend
               float distCam = length(vWorldPos - uPlayerPos);
-              float fogF = clamp(1.0 - exp(-distCam * 0.015), 0.0, 1.0);
-              baseCol = mix(baseCol, vec3(0.035, 0.045, 0.09), fogF);
+              float fogF = clamp(1.0 - exp(-distCam * 0.0085), 0.0, 1.0);
+              baseCol = mix(baseCol, vec3(0.14, 0.18, 0.30), fogF);
 
               gl_FragColor = vec4(baseCol, 1.0);
             }
@@ -1696,17 +1747,17 @@
         this.groundMesh.receiveShadow = true;
         this.scene.add(this.groundMesh);
 
-        // Environmental Floating Particles (Embers, Arcane Motes, Rift Sparks)
-        const pCount = 260;
+        // Environmental Floating Particles
+        const pCount = 280;
         const pGeo = new THREE.BufferGeometry();
         const pPos = new Float32Array(pCount * 3);
         const pCol = new Float32Array(pCount * 3);
         for (let i = 0; i < pCount; i++) {
-          pPos[i * 3] = (Math.random() - 0.5) * 110;
-          pPos[i * 3 + 1] = 0.5 + Math.random() * 9;
-          pPos[i * 3 + 2] = (Math.random() - 0.5) * 110;
+          pPos[i * 3] = (Math.random() - 0.5) * 120;
+          pPos[i * 3 + 1] = 0.5 + Math.random() * 11;
+          pPos[i * 3 + 2] = (Math.random() - 0.5) * 120;
           const cChoice = Math.random();
-          const c = cChoice < 0.4 ? new THREE.Color(0xffb84d) : (cChoice < 0.75 ? new THREE.Color(0x38e8ff) : new THREE.Color(0xb266ff));
+          const c = cChoice < 0.45 ? new THREE.Color(0xffc66b) : (cChoice < 0.75 ? new THREE.Color(0x38e8ff) : new THREE.Color(0xc580ff));
           pCol[i * 3] = c.r;
           pCol[i * 3 + 1] = c.g;
           pCol[i * 3 + 2] = c.b;
@@ -1714,33 +1765,232 @@
         pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
         pGeo.setAttribute('color', new THREE.BufferAttribute(pCol, 3));
         this.envParticles = new THREE.Points(pGeo, new THREE.PointsMaterial({
-          size: 0.24,
+          size: 0.25,
           vertexColors: true,
           transparent: true,
-          opacity: 0.8,
+          opacity: 0.85,
           blending: THREE.AdditiveBlending
         }));
         this.scene.add(this.envParticles);
       }
 
       // -----------------------------------------------------------------------
+      // 360° 3D SKYBOX DOME, MOUNTAINS, CASTLE SILHOUETTE & PINE FOREST
+      // -----------------------------------------------------------------------
+      initSkyDomeAndHorizonScenery() {
+        // 1. 360° 3D Panoramic Sky Dome (Custom GLSL Sunset + Twin Moons + Astral Rift Aurora)
+        const skyGeo = new THREE.SphereGeometry(210, 48, 32);
+        this.skyUniforms = {
+          uTime: { value: 0 },
+          uHorizonColor: { value: new THREE.Color(0xd97d48) },
+          uZenithColor: { value: new THREE.Color(0x121936) },
+          uNebulaColor: { value: new THREE.Color(0x4b9eff) }
+        };
+        const skyMat = new THREE.ShaderMaterial({
+          uniforms: this.skyUniforms,
+          side: THREE.BackSide,
+          depthWrite: false,
+          vertexShader: `
+            varying vec3 vDir;
+            void main() {
+              vDir = normalize(position);
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+          `,
+          fragmentShader: `
+            uniform float uTime;
+            uniform vec3 uHorizonColor;
+            uniform vec3 uZenithColor;
+            uniform vec3 uNebulaColor;
+            varying vec3 vDir;
+
+            float hash(vec2 p) {
+              return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+            }
+            float noise(vec2 p) {
+              vec2 i = floor(p);
+              vec2 f = fract(p);
+              f = f * f * (3.0 - 2.0 * f);
+              return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+                         mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+            }
+            float fbm(vec2 p) {
+              float v = 0.0;
+              float a = 0.5;
+              for (int i = 0; i < 4; i++) {
+                v += a * noise(p);
+                p *= 2.05;
+                a *= 0.5;
+              }
+              return v;
+            }
+
+            void main() {
+              float elev = clamp(vDir.y, 0.0, 1.0);
+              // Rich Twilight Horizon to Zenith Gradient
+              vec3 sky = mix(uHorizonColor, uZenithColor, pow(elev, 0.48));
+
+              // Warm Sunset / Dawn Glow in the South-West
+              vec3 sunDir = normalize(vec3(0.45, 0.24, 0.85));
+              float sunDot = max(0.0, dot(vDir, sunDir));
+              sky += vec3(1.0, 0.68, 0.32) * pow(sunDot, 6.0) * 0.55;
+              sky += vec3(1.0, 0.92, 0.75) * smoothstep(0.996, 0.999, sunDot) * 1.4;
+
+              // Second Astral Cyan Moon in the North-East
+              vec3 moon2Dir = normalize(vec3(-0.4, 0.38, -0.82));
+              float m2Dot = max(0.0, dot(vDir, moon2Dir));
+              sky += uNebulaColor * pow(m2Dot, 10.0) * 0.5;
+              sky += vec3(0.75, 0.96, 1.0) * smoothstep(0.9975, 0.9992, m2Dot) * 1.2;
+
+              // Swirling Volumetric Clouds & Astral Rift Aurora Ribbon
+              vec2 skyUV = vDir.xz / (vDir.y + 0.35);
+              float clouds = fbm(skyUV * 1.4 + vec2(uTime * 0.015, -uTime * 0.01));
+              vec3 cloudCol = mix(uHorizonColor * 1.15, uNebulaColor, smoothstep(-0.2, 0.5, -vDir.z));
+              sky = mix(sky, cloudCol, smoothstep(0.42, 0.78, clouds) * 0.45 * smoothstep(0.02, 0.25, elev));
+
+              // Giant Astral Rift Crack in the Northern Sky
+              float riftBand = exp(-abs(vDir.x + sin(vDir.y * 4.0 + uTime * 0.4) * 0.18) * 9.0) * step(0.0, -vDir.z) * smoothstep(0.1, 0.6, elev);
+              sky += mix(vec3(0.75, 0.25, 1.0), vec3(0.2, 0.95, 1.0), sin(uTime + vDir.y * 6.0) * 0.5 + 0.5) * riftBand * 0.95;
+
+              // Stars at higher elevation
+              float starHash = hash(floor(vDir.xz * 260.0));
+              float star = step(0.9965, starHash) * smoothstep(0.18, 0.55, elev);
+              sky += vec3(0.9, 0.95, 1.0) * star * (0.6 + 0.4 * sin(uTime * 3.0 + starHash * 50.0));
+
+              gl_FragColor = vec4(sky, 1.0);
+            }
+          `
+        });
+        this.skyDome = new THREE.Mesh(skyGeo, skyMat);
+        this.scene.add(this.skyDome);
+
+        // 2. 360° 3D Mountain Range Encircling the Horizon
+        const mountainGroup = new THREE.Group();
+        const mtnMatBastion = new THREE.MeshStandardMaterial({ color: 0x2a3148, roughness: 0.88, metalness: 0.12 });
+        const mtnPeakMat = new THREE.MeshStandardMaterial({ color: 0x566385, roughness: 0.7, metalness: 0.2 });
+        const mtnRiftMat = new THREE.MeshStandardMaterial({ color: 0x1e1836, emissive: 0x3b1566, emissiveIntensity: 0.45, roughness: 0.6 });
+
+        for (let i = 0; i < 40; i++) {
+          const ang = (i / 40) * Math.PI * 2;
+          const dist = 92 + (i % 3) * 14;
+          const h = 26 + (i * 17 % 28);
+          const r = 16 + (i * 13 % 12);
+          const isNorth = Math.sin(ang) < -0.15;
+
+          const peak = new THREE.Mesh(
+            new THREE.ConeGeometry(r, h, 6),
+            isNorth ? mtnRiftMat : (i % 2 === 0 ? mtnMatBastion : mtnPeakMat)
+          );
+          peak.position.set(Math.cos(ang) * dist, h * 0.45 - 2, Math.sin(ang) * dist);
+          peak.rotation.y = i * 0.7;
+          mountainGroup.add(peak);
+        }
+
+        // 3. Distant Medieval Castle & Cathedral Silhouette on the Southern/Eastern Ridge
+        const castleMat = new THREE.MeshStandardMaterial({ color: 0x23293d, roughness: 0.75, metalness: 0.25 });
+        const roofMat = new THREE.MeshStandardMaterial({ color: 0x5c2c2c, roughness: 0.6 });
+        const windowMat = new THREE.MeshBasicMaterial({ color: 0xffc864 });
+
+        const castleBase = new THREE.Group();
+        castleBase.position.set(0, 8, 72);
+        const keep = new THREE.Mesh(new THREE.BoxGeometry(22, 18, 12), castleMat);
+        keep.position.y = 9;
+        castleBase.add(keep);
+
+        [-13, -7, 7, 13].forEach((tx, idx) => {
+          const th = idx % 2 === 0 ? 24 : 28;
+          const tower = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 3.0, th, 8), castleMat);
+          tower.position.set(tx, th / 2, 0);
+          castleBase.add(tower);
+
+          const spire = new THREE.Mesh(new THREE.ConeGeometry(3.2, 8, 8), roofMat);
+          spire.position.set(tx, th + 4, 0);
+          castleBase.add(spire);
+
+          const win = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 2.2), windowMat);
+          win.position.set(tx, th * 0.65, -3.05);
+          win.rotation.y = Math.PI;
+          castleBase.add(win);
+        });
+        mountainGroup.add(castleBase);
+
+        // 4. Stylized 3D Pine & Autumn Forest Ring around Ashenvale Village
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x422918, roughness: 0.9 });
+        const foliageGreen = new THREE.MeshStandardMaterial({ color: 0x244d29, roughness: 0.8 });
+        const foliageGold = new THREE.MeshStandardMaterial({ color: 0x9c5a22, roughness: 0.8 });
+
+        for (let i = 0; i < 68; i++) {
+          const ang = (i / 68) * Math.PI * 2;
+          const radius = 32 + (i * 19 % 34);
+          const tx = Math.cos(ang) * radius;
+          const tz = Math.sin(ang) * radius;
+          // Keep central roads & boss arena clear
+          if (Math.abs(tx) < 15 && Math.abs(tz) < 24) continue;
+          if (Math.abs(tx) < 7 && tz < 0) continue;
+
+          const tree = new THREE.Group();
+          tree.position.set(tx, 0, tz);
+          const s = 0.85 + (i % 5) * 0.22;
+          tree.scale.setScalar(s);
+
+          const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.35, 2.2, 6), trunkMat);
+          trunk.position.y = 1.1;
+          trunk.castShadow = true;
+          tree.add(trunk);
+
+          const fMat = (i % 4 === 0 || tz > 15) ? foliageGold : foliageGreen;
+          const cone1 = new THREE.Mesh(new THREE.ConeGeometry(1.65, 3.2, 7), fMat);
+          cone1.position.y = 2.8;
+          cone1.castShadow = true;
+          tree.add(cone1);
+
+          const cone2 = new THREE.Mesh(new THREE.ConeGeometry(1.25, 2.6, 7), fMat);
+          cone2.position.y = 4.4;
+          cone2.castShadow = true;
+          tree.add(cone2);
+
+          mountainGroup.add(tree);
+        }
+
+        // 5. Floating Astral Monoliths & Energy Spires in the Northern Sky
+        const monoMat = new THREE.MeshStandardMaterial({
+          color: 0x151c33,
+          emissive: 0x2488ff,
+          emissiveIntensity: 0.65,
+          metalness: 0.85,
+          roughness: 0.2
+        });
+        for (let i = 0; i < 10; i++) {
+          const m = new THREE.Mesh(new THREE.OctahedronGeometry(2.2 + (i % 3) * 1.1, 0), monoMat);
+          m.scale.set(0.6, 2.4, 0.6);
+          m.position.set(-42 + i * 9.5, 14 + (i % 3) * 5, -62 - (i % 2) * 10);
+          this.scene.add(m);
+          this.floatingMonoliths.push({ mesh: m, baseY: m.position.y, phase: i * 0.9 });
+        }
+
+        this.scene.add(mountainGroup);
+      }
+
+      // -----------------------------------------------------------------------
       // WORLD ARCHITECTURE, INTERACTABLES & 3 BIOME ZONES
       // -----------------------------------------------------------------------
       initEnvironmentAndZones() {
-        // Point lights for Sanctuary Forge, Astral Portal, and Boss Citadel
-        const forgeLight = new THREE.PointLight(0xff7b29, 2.4, 18);
-        forgeLight.position.set(-7.5, 2.6, 8);
+        const forgeLight = new THREE.PointLight(0xff8c3b, 2.8, 22);
+        forgeLight.position.set(-7.5, 3.0, 8);
         this.scene.add(forgeLight);
 
-        const portalLight = new THREE.PointLight(0x38e8ff, 3.0, 22);
-        portalLight.position.set(0, 3.5, 0);
+        const portalLight = new THREE.PointLight(0x38e8ff, 3.2, 25);
+        portalLight.position.set(0, 3.8, 0);
         this.scene.add(portalLight);
 
-        const shrineLight = new THREE.PointLight(0x2ee68a, 2.2, 16);
-        shrineLight.position.set(7.5, 2.8, 8);
+        const shrineLight = new THREE.PointLight(0x2ee68a, 2.5, 20);
+        shrineLight.position.set(7.5, 3.0, 8);
         this.scene.add(shrineLight);
 
-        // Register Interactive Stations in Ashenvale Sanctuary
+        const villageWarmLight = new THREE.PointLight(0xffb866, 2.2, 28);
+        villageWarmLight.position.set(0, 5.0, 20);
+        this.scene.add(villageWarmLight);
+
         this.interactables = [
           { id: 'forge', pos: new THREE.Vector3(-7.5, 0, 8), radius: 3.4, label: 'Open Blacksmith Relic Forge & Armory', action: () => this.openModal('forge-modal') },
           { id: 'shrine', pos: new THREE.Vector3(7.5, 0, 8), radius: 3.4, label: 'Invoke Sanctuary Blessing Shrine (Full Heal + Revive Party)', action: () => this.activateSanctuaryShrine() },
@@ -1750,10 +2000,9 @@
       }
 
       // -----------------------------------------------------------------------
-      // LOAD ALL BLENDER-ENHANCED GLB MODELS, ANIMATIONS & VFX SPRITESHEETS
+      // LOAD ALL BLENDER-ENHANCED GLB MODELS, BUILDINGS, ANIMATIONS & VFX
       // -----------------------------------------------------------------------
       loadAllAssets() {
-        // 1. Load VFX Textures
         const texLoader = new THREE.TextureLoader();
         const vfxList = {
           anima: 'assets/vfx/effect_anima.png',
@@ -1769,10 +2018,8 @@
           texLoader.load(url, (t) => { this.vfxTextures[k] = t; });
         });
 
-        // 2. Build immediate procedural articulated fallback for player so frame 1 is ready
         this.rebuildHeroMesh();
 
-        // 3. Load Curated ARPG Skeletal Animations (animations_arpg.glb)
         this.loader.load('assets/models/animations_arpg.glb', (gltf) => {
           gltf.animations.forEach((clip) => {
             this.animClips[clip.name] = clip;
@@ -1782,7 +2029,6 @@
           this.monsters.forEach(m => this.bindAnimationsToEntity(m));
         });
 
-        // 4. Preload Weapons & Shields
         WEAPON_CATALOG.forEach((w) => {
           this.loader.load(`assets/models/weapons/${w.id}.glb`, (gltf) => {
             gltf.scene.traverse(c => { if (c.isMesh) { c.castShadow = true; } });
@@ -1797,7 +2043,6 @@
           this.modelCache['weapon_Arrow'] = gltf.scene;
         });
 
-        // 5. Load 4 Playable Hero GLBs
         Object.values(HERO_CLASSES).forEach((cls) => {
           this.loader.load(cls.model, (gltf) => {
             gltf.scene.traverse(c => {
@@ -1813,7 +2058,6 @@
           });
         });
 
-        // 6. Load Monster & Raid Boss GLBs
         const monsterModels = [
           'monster_imp', 'monster_imp_frost', 'monster_puglin', 'monster_puglin_chieftain',
           'monster_alien_scolitex', 'monster_alien_oculichrysalis', 'monster_alien_cyclop', 'boss_chrono_archon'
@@ -1836,45 +2080,76 @@
           });
         });
 
-        // 7. Load Environment Props & Custom Blender Centerpieces
         this.placeWorldProps();
       }
 
       placeWorldProps() {
         const placements = [
           // Custom Blender Centerpieces
-          { file: 'prop_astral_portal.glb', x: 0, z: 0, scale: 1.15, yaw: 0 },
-          { file: 'prop_revive_shrine.glb', x: 7.5, z: 8, scale: 1.1, yaw: 0 },
-          // Blacksmith Forge & Sanctuary Village
+          { file: 'prop_astral_portal.glb', x: 0, z: 0, scale: 1.18, yaw: 0 },
+          { file: 'prop_revive_shrine.glb', x: 7.5, z: 8, scale: 1.15, yaw: 0 },
+
+          // COMPLETE ASSEMBLED 3D MEDIEVAL VILLAGE HOUSES & WATCHTOWERS (Ashenvale Town Square Background!)
+          { file: 'bg_medieval_house.glb', x: -19, z: 9, scale: 1.35, yaw: Math.PI / 2 },
+          { file: 'bg_medieval_house.glb', x: -19, z: 20, scale: 1.35, yaw: Math.PI / 2 },
+          { file: 'bg_medieval_house.glb', x: 19, z: 9, scale: 1.35, yaw: -Math.PI / 2 },
+          { file: 'bg_medieval_house.glb', x: 19, z: 20, scale: 1.35, yaw: -Math.PI / 2 },
+          { file: 'bg_medieval_house.glb', x: -10, z: 26, scale: 1.4, yaw: Math.PI },
+          { file: 'bg_medieval_house.glb', x: 10, z: 26, scale: 1.4, yaw: Math.PI },
+
+          // Medieval Bastion Guard Watchtowers framing the North & South Gates
+          { file: 'bg_medieval_tower.glb', x: -14, z: -2, scale: 1.35, yaw: 0 },
+          { file: 'bg_medieval_tower.glb', x: 14, z: -2, scale: 1.35, yaw: 0 },
+          { file: 'bg_medieval_tower.glb', x: -18, z: 28, scale: 1.35, yaw: 0 },
+          { file: 'bg_medieval_tower.glb', x: 18, z: 28, scale: 1.35, yaw: 0 },
+
+          // Village Market Bazaar Stalls & Fences
+          { file: 'bg_market_stall.glb', x: -12, z: 16, scale: 1.3, yaw: 0.6 },
+          { file: 'bg_market_stall.glb', x: 12, z: 16, scale: 1.3, yaw: -0.6 },
+          { file: 'bg_fence_iron.glb', x: -8, z: -2, scale: 1.3, yaw: 0 },
+          { file: 'bg_fence_iron.glb', x: 8, z: -2, scale: 1.3, yaw: 0 },
+          { file: 'bg_fence_wood.glb', x: -15, z: 14, scale: 1.3, yaw: Math.PI / 2 },
+          { file: 'bg_fence_wood.glb', x: 15, z: 14, scale: 1.3, yaw: Math.PI / 2 },
+
+          // Blacksmith Forge & Sanctuary Props
           { file: 'prop_anvil.glb', x: -7.5, z: 8, scale: 1.5, yaw: 0.5 },
           { file: 'prop_weaponstand.glb', x: -9.5, z: 6.5, scale: 1.35, yaw: 0.3 },
           { file: 'prop_cauldron.glb', x: 9.8, z: 6.5, scale: 1.4, yaw: -0.4 },
           { file: 'prop_bookstand.glb', x: -4.5, z: 13.5, scale: 1.45, yaw: 2.6 },
           { file: 'prop_banner.glb', x: -3.2, z: 1.2, scale: 1.3, yaw: 0 },
           { file: 'prop_banner.glb', x: 3.2, z: 1.2, scale: 1.3, yaw: 0 },
-          { file: 'prop_wagon.glb', x: -12, z: 15, scale: 1.25, yaw: 0.8 },
-          { file: 'prop_wall_arch.glb', x: -12, z: -4, scale: 1.3, yaw: 0.6 },
-          { file: 'prop_wall_arch.glb', x: 12, z: -4, scale: 1.3, yaw: -0.6 },
-          { file: 'prop_house_corner.glb', x: -18, z: 18, scale: 1.4, yaw: 0.7 },
-          { file: 'prop_house_corner.glb', x: 18, z: 18, scale: 1.4, yaw: -0.7 },
+          { file: 'prop_wagon.glb', x: -4, z: 22, scale: 1.25, yaw: 0.4 },
           { file: 'prop_torch.glb', x: -5.5, z: 4, scale: 1.4, yaw: 0 },
           { file: 'prop_torch.glb', x: 5.5, z: 4, scale: 1.4, yaw: 0 },
-          // Catacombs & Astral Breach Architecture
-          { file: 'prop_wall_arch.glb', x: -24, z: -22, scale: 1.4, yaw: 0.4 },
+
+          // Catacombs of the Bestiary (Complete Dungeon Cage Archways & Ruin Colonnades)
+          { file: 'bg_dungeon_cage_arch.glb', x: -14, z: -14, scale: 1.35, yaw: 0.5 },
+          { file: 'bg_dungeon_cage_arch.glb', x: -28, z: -18, scale: 1.35, yaw: 1.1 },
+          { file: 'bg_dungeon_cage_arch.glb', x: -30, z: -32, scale: 1.35, yaw: 0.8 },
+          { file: 'bg_dungeon_cage_arch.glb', x: -16, z: -38, scale: 1.35, yaw: 0.1 },
+          { file: 'prop_wall_arch.glb', x: -24, z: -24, scale: 1.45, yaw: 0.4 },
+
+          // The Astral Sci-Fi Breach & Boss Citadel Walls
+          { file: 'bg_scifi_citadel_wall.glb', x: 30, z: -18, scale: 1.3, yaw: -Math.PI / 2 },
+          { file: 'bg_scifi_citadel_wall.glb', x: 30, z: -30, scale: 1.3, yaw: -Math.PI / 2 },
+          { file: 'bg_scifi_citadel_wall.glb', x: 22, z: -40, scale: 1.3, yaw: 0 },
+          { file: 'bg_scifi_citadel_wall.glb', x: -12, z: -60, scale: 1.4, yaw: 0 },
+          { file: 'bg_scifi_citadel_wall.glb', x: 0, z: -62, scale: 1.4, yaw: 0 },
+          { file: 'bg_scifi_citadel_wall.glb', x: 12, z: -60, scale: 1.4, yaw: 0 },
           { file: 'prop_column_astra.glb', x: 20, z: -18, scale: 1.25, yaw: 0 },
           { file: 'prop_column_astra.glb', x: 28, z: -26, scale: 1.25, yaw: 0 },
           { file: 'prop_column_pipes.glb', x: 16, z: -30, scale: 1.25, yaw: 0.5 },
           { file: 'prop_access_point.glb', x: 24, z: -22, scale: 1.35, yaw: -0.6 },
-          // Boss Citadel Arena Pillars
           { file: 'prop_column_astra.glb', x: -10, z: -44, scale: 1.4, yaw: 0 },
           { file: 'prop_column_astra.glb', x: 10, z: -44, scale: 1.4, yaw: 0 },
-          { file: 'prop_column_astra.glb', x: -10, z: -58, scale: 1.4, yaw: 0 },
-          { file: 'prop_column_astra.glb', x: 10, z: -58, scale: 1.4, yaw: 0 }
+          { file: 'prop_column_astra.glb', x: -10, z: -56, scale: 1.4, yaw: 0 },
+          { file: 'prop_column_astra.glb', x: 10, z: -56, scale: 1.4, yaw: 0 }
         ];
 
+        const loadedPropCache = {};
         placements.forEach((p) => {
-          this.loader.load(`assets/models/props/${p.file}`, (gltf) => {
-            const obj = gltf.scene.clone();
+          const spawnInstance = (sceneTemplate) => {
+            const obj = sceneTemplate.clone();
             obj.position.set(p.x, 0, p.z);
             obj.scale.setScalar(p.scale);
             obj.rotation.y = p.yaw;
@@ -1885,7 +2160,16 @@
               }
             });
             this.scene.add(obj);
-          });
+          };
+
+          if (loadedPropCache[p.file]) {
+            spawnInstance(loadedPropCache[p.file]);
+          } else {
+            this.loader.load(`assets/models/props/${p.file}`, (gltf) => {
+              loadedPropCache[p.file] = gltf.scene;
+              spawnInstance(gltf.scene);
+            });
+          }
         });
 
         // Destructible Barrels, Crates & Loot Chests
@@ -1957,7 +2241,6 @@
         const cloned = cloneSkinnedModel(template);
         cloned.scale.setScalar(entity.scale || scale);
 
-        // Clone materials so white hit-flash only affects this specific entity
         entity.materials = [];
         entity.handRightBone = null;
         entity.handLeftBone = null;
@@ -1976,7 +2259,6 @@
         entity.meshRoot.add(cloned);
         entity.glbNode = cloned;
 
-        // Selection / Party Aura Ring under hero or ally
         if (entity === this.player || entity.isAlly) {
           const ringGeo = new THREE.RingGeometry(0.52, 0.64, 28);
           ringGeo.rotateX(-Math.PI / 2);
@@ -2034,7 +2316,6 @@
 
       attachWeaponsToEntity(entity) {
         if (entity.handRightBone && entity.weaponId && this.modelCache['weapon_' + entity.weaponId]) {
-          // Remove previous attached weapons
           for (let i = entity.handRightBone.children.length - 1; i >= 0; i--) {
             if (entity.handRightBone.children[i].userData.isAttachedWeapon) {
               entity.handRightBone.remove(entity.handRightBone.children[i]);
@@ -2085,33 +2366,28 @@
       // MONSTER & RAID BOSS SPAWNING ACROSS THE 3 BIOMES
       // -----------------------------------------------------------------------
       spawnZoneMonsters() {
-        // Clear old dead/existing monsters
         this.monsters.forEach(m => { if (m.meshRoot) this.scene.remove(m.meshRoot); });
         this.monsters = [];
 
         const waveScale = 1 + (this.riftWave - 1) * 0.22;
 
         const spawnDefs = [
-          // Zone 1 Outskirts (Northern Rim of Ashenvale Bastion)
           { modelKey: 'monster_imp', name: 'Abyssal Flame Imp', x: -10, z: -9, hp: 140, dmg: 16, speed: 5.6, scale: 1.0, xp: 35, ranged: true },
           { modelKey: 'monster_imp', name: 'Abyssal Flame Imp', x: 10, z: -9, hp: 140, dmg: 16, speed: 5.6, scale: 1.0, xp: 35, ranged: true },
           { modelKey: 'monster_puglin', name: 'Puglin Marauder', x: 0, z: -12, hp: 230, dmg: 24, speed: 4.8, scale: 1.15, xp: 55, ranged: false },
 
-          // Zone 2: Catacombs of the Bestiary (Northwest)
           { modelKey: 'monster_imp', name: 'Catacomb Flame Imp', x: -20, z: -18, hp: 160, dmg: 18, speed: 5.8, scale: 1.05, xp: 40, ranged: true },
           { modelKey: 'monster_imp_frost', name: 'Cryo-Rift Imp', x: -26, z: -22, hp: 185, dmg: 21, speed: 6.0, scale: 1.1, xp: 48, ranged: true },
           { modelKey: 'monster_puglin', name: 'Catacomb Puglin', x: -16, z: -25, hp: 260, dmg: 26, speed: 5.0, scale: 1.2, xp: 60, ranged: false },
           { modelKey: 'monster_puglin', name: 'Catacomb Puglin', x: -24, z: -30, hp: 260, dmg: 26, speed: 5.0, scale: 1.2, xp: 60, ranged: false },
-          { modelKey: 'monster_puglin_chieftain', name: 'â˜… Gronk, Puglin Warlord', x: -22, z: -36, hp: 780, dmg: 42, speed: 4.9, scale: 1.55, xp: 180, isElite: true, weaponId: 'Axe_Double' },
+          { modelKey: 'monster_puglin_chieftain', name: '★ Gronk, Puglin Warlord', x: -22, z: -36, hp: 780, dmg: 42, speed: 4.9, scale: 1.55, xp: 180, isElite: true, weaponId: 'Axe_Double' },
 
-          // Zone 3: The Astral Sci-Fi Breach (Northeast)
           { modelKey: 'monster_alien_scolitex', name: 'Xeno-Scolitex Swarmer', x: 18, z: -19, hp: 210, dmg: 24, speed: 6.8, scale: 1.15, xp: 55, ranged: false },
           { modelKey: 'monster_alien_scolitex', name: 'Xeno-Scolitex Swarmer', x: 25, z: -21, hp: 210, dmg: 24, speed: 6.8, scale: 1.15, xp: 55, ranged: false },
           { modelKey: 'monster_alien_oculichrysalis', name: 'Oculichrysalis Watcher', x: 22, z: -28, hp: 290, dmg: 30, speed: 5.2, scale: 1.25, xp: 75, ranged: true },
           { modelKey: 'monster_alien_cyclop', name: 'Astral Cyclops Juggernaut', x: 26, z: -34, hp: 520, dmg: 38, speed: 4.6, scale: 1.45, xp: 130, ranged: false },
 
-          // Zone 4: North Boss Citadel â€” Custom Blender Raid Boss!
-          { modelKey: 'boss_chrono_archon', name: 'â˜ ï¸ MALAKOR, THE CHRONO-FUSED ARCHON', x: 0, z: -50, hp: 3600, dmg: 58, speed: 5.2, scale: 1.78, xp: 800, isBoss: true, weaponId: 'Scythe', offhandId: 'Sword_Golden' }
+          { modelKey: 'boss_chrono_archon', name: '☠️ MALAKOR, THE CHRONO-FUSED ARCHON', x: 0, z: -50, hp: 3600, dmg: 58, speed: 5.2, scale: 1.78, xp: 800, isBoss: true, weaponId: 'Scythe', offhandId: 'Sword_Golden' }
         ];
 
         spawnDefs.forEach((d, idx) => {
@@ -2158,7 +2434,7 @@
       }
 
       // -----------------------------------------------------------------------
-      // AI CO-OP WINGMAN COMPANIONS (Solo + Hybrid Co-Op)
+      // AI CO-OP WINGMAN COMPANIONS
       // -----------------------------------------------------------------------
       spawnAICompanions(count) {
         this.aiAllies.forEach(a => { if (a.meshRoot) this.scene.remove(a.meshRoot); });
@@ -2333,7 +2609,6 @@
           this.broadcastCombatAction(slot);
         }
 
-        // SLOT 1: PRIMARY 3-STAGE COMBO OR RANGED VOLLEY
         if (slot === 1) {
           const comboAnims = ['Sword_Regular_A', 'Sword_Regular_B', 'Sword_Regular_C'];
           const anim = ent.classId === 'ranger' ? 'Spell_Simple_Shoot' : comboAnims[(ent.attackCombo || 0) % 3];
@@ -2349,36 +2624,30 @@
             this.damageEnemiesInCone(ent.pos, forward, 3.6, 0.45, wStats.dmg, false, ent);
           }
         }
-
-        // SLOT 2: CLASS HEAVY TELEGRAPHED SKILL
         else if (slot === 2) {
           this.playEntityAnim(ent, 'Sword_Heavy_Combo', true);
           ent.attackTimer = 0.55;
           this.audio.playSwing(true);
 
           if (ent.classId === 'ranger') {
-            // 7-Way Fan of Blades
             for (let i = -3; i <= 3; i++) {
               const dir = forward.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), i * 0.16);
               this.spawnProjectile(ent.pos.clone().add(new THREE.Vector3(0, 1.1, 0)), dir, 25, Math.round(wStats.dmg * 0.85), 0x38e8ff, true);
             }
           } else if (ent.classId === 'arcanist') {
-            // Anima Singularity Vortex
             const targetPos = ent.pos.clone().add(forward.clone().multiplyScalar(5.5));
             this.audio.playSpell('arcane');
             this.spawnVFXFlipbook('vortex', targetPos, 4.8, 0.85, 0xb266ff);
             this.spawnTelegraphCircle(targetPos, 4.5, 0.35, 0xb266ff, () => {
               this.monsters.forEach((m) => {
                 if (!m.dead && m.pos.distanceTo(targetPos) < 4.8) {
-                  // Pull toward vortex center
-                  const pull = targetPos.clone().sub(m.pos). multiplyScalar(0.55);
+                  const pull = targetPos.clone().sub(m.pos).multiplyScalar(0.55);
                   m.pos.add(pull);
                   this.applyDamageToMonster(m, Math.round(wStats.dmg * 1.9), true, ent);
                 }
               });
             });
           } else {
-            // Vanguard Seismic Slam / Berserker Whirlwind
             const impactPos = ent.pos.clone().add(forward.clone().multiplyScalar(2.0));
             this.spawnVFXFlipbook('bighit', impactPos, 4.2, 0.5, cls.color);
             this.spawnSlashArc(ent.pos, ent.yaw, 4.2, 0xff5533);
@@ -2386,8 +2655,6 @@
             this.damageEnemiesInRadius(impactPos, 4.4, Math.round(wStats.dmg * 1.85), true, ent);
           }
         }
-
-        // SLOT 3: EVASIVE DASH / DODGE ROLL WITH I-FRAMES
         else if (slot === 3) {
           this.playEntityAnim(ent, ent.classId === 'vanguard' ? 'Shield_Dash' : 'Roll', true);
           ent.dodgeTimer = 0.36;
@@ -2395,8 +2662,6 @@
           this.spawnVFXFlipbook('charged', ent.pos, 2.5, 0.35, 0x38e8ff);
           ent.pos.add(forward.clone().multiplyScalar(4.2));
         }
-
-        // SLOT 4: SIGNATURE CLASS SPELL / CO-OP PARTY BUFF
         else if (slot === 4) {
           this.playEntityAnim(ent, 'Spell_Simple_Enter', true);
           this.audio.playSpell('arcane');
@@ -2409,7 +2674,6 @@
             this.spawnFloatingText(this.player.pos, `+${healAmt} PARTY AURA!`, '#2ee68a', 17);
             this.player.synergy = Math.min(100, this.player.synergy + 20);
           }
-          // Freeze or damage nearby enemies for Arcanist / Ranger
           this.monsters.forEach((m) => {
             if (!m.dead && m.pos.distanceTo(ent.pos) < 6.5) {
               m.stunTimer = 2.8;
@@ -2417,8 +2681,6 @@
             }
           });
         }
-
-        // SLOT 5: CO-OP RESONANCE CONVERGENCE ULTIMATE!
         else if (slot === 5) {
           if (ent === this.player) this.player.synergy = 0;
           this.playEntityAnim(ent, 'Shield_OneShot', true);
@@ -2434,11 +2696,10 @@
           this.spawnVFXFlipbook('explosion', ent.pos, 8.5, 0.85, 0x38e8ff);
           this.spawnVFXFlipbook('eldenring', ent.pos, 9.5, 0.95, 0xf3c86b);
 
-          // Full Party Heal + Massive AoE Damage
           this.player.hp = this.player.maxHp;
           this.aiAllies.forEach(a => { a.hp = a.maxHp; });
           this.damageEnemiesInRadius(ent.pos, 11.5, Math.round(wStats.dmg * 3.8), true, ent);
-          this.addChatMessage(ent.name, 'ðŸŒŒ Unleashed CO-OP AETHER CONVERGENCE!', 'sys-synergy');
+          this.addChatMessage(ent.name, '🌌 Unleashed CO-OP AETHER CONVERGENCE!', 'sys-synergy');
         }
       }
 
@@ -2489,7 +2750,6 @@
           }
         });
 
-        // Also check Destructible Barrels, Crates & Chests
         this.destructibles.forEach((d) => {
           if (!d.dead && d.pos.distanceTo(origin) <= radius + 0.5) {
             d.hp -= baseDmg;
@@ -2527,7 +2787,6 @@
         this.spawnVFXFlipbook(isCrit ? 'bighit' : 'impact', mob.pos, isCrit ? 3.0 : 2.1, 0.3, isCrit ? 0xffd56b : 0xffffff);
         this.spawnFloatingText(mob.pos, isCrit ? `${finalDmg} CRIT!` : `${finalDmg}`, isCrit ? '#ffd56b' : '#ffffff', isCrit ? 19 : 15);
 
-        // Micro Hit-Stop Freeze Frames & Directional Knockback (Pillar 2)
         if (isCrit || isHeavy) {
           this.hitStopTimer = 0.042;
           this.screenShake = Math.max(this.screenShake, 0.22);
@@ -2551,7 +2810,6 @@
         this.spawnVFXFlipbook('anima', mob.pos, mob.isBoss ? 6.0 : 3.2, 0.65, 0x38e8ff);
         this.spawnLootDrop(mob.pos, mob.isElite || mob.isBoss);
 
-        // Award XP, Gold & Shards
         this.player.xp += mob.xp;
         this.player.gold += mob.isBoss ? 250 : (mob.isElite ? 65 : 18);
         this.player.shards += mob.isBoss ? 12 : (mob.isElite ? 3 : 1);
@@ -2571,7 +2829,7 @@
 
         if (mob.isBoss) {
           this.audio.speakVoiceLine('Impossible! The Chrono Rift will consume all timelines!', 0.65, 0.92);
-          this.addChatMessage('Raid Victory', `ðŸ† ${this.player.name}'s Party vanquished ${mob.name} on Rift Wave ${this.riftWave}!`, 'sys-boss');
+          this.addChatMessage('Raid Victory', `🏆 ${this.player.name}'s Party vanquished ${mob.name} on Rift Wave ${this.riftWave}!`, 'sys-boss');
           this.recordLeaderboardVictory();
           this.riftWave++;
         }
@@ -2612,7 +2870,7 @@
       }
 
       // -----------------------------------------------------------------------
-      // INTERACTIVE STATIONS: SANCTUARY SHRINE, ASTRAL PORTAL, LORE & FORGE
+      // INTERACTIVE STATIONS & BIOME SKY / LIGHTING SWITCHER
       // -----------------------------------------------------------------------
       triggerInteract() {
         if (!this.activeInteractable) return;
@@ -2637,29 +2895,69 @@
         this.spawnZoneMonsters();
         this.audio.playSpell('ult');
         this.audio.speakVoiceLine(`Astral Rift Wave ${this.riftWave} awakened!`, 0.85, 1.0);
-        this.addChatMessage('Astral Gate', `ðŸŒ€ Rift Wave ${this.riftWave} opened! Fresh Bestiary & Xeno-Constructs spawned!`, 'sys-synergy');
+        this.addChatMessage('Astral Gate', `🌀 Rift Wave ${this.riftWave} opened! Fresh Bestiary & Xeno-Constructs spawned!`, 'sys-synergy');
         this.warpToZone('astral_breach');
       }
 
       readChronicleLore() {
         const msg = 'The Chrono-Rifts tore open above Ashenvale Bastion, fusing medieval stone with future Xeno-citadels. Forge Mythic weapons and strike down Archon Malakor!';
         this.audio.speakVoiceLine(msg, 1.0, 1.02);
-        this.addChatMessage('Chronicle Tome', `ðŸ“œ "${msg}"`, 'sys-loot');
+        this.addChatMessage('Chronicle Tome', `📜 "${msg}"`, 'sys-loot');
       }
 
       warpToZone(zoneId) {
         this.audio.init();
         this.currentZone = zoneId;
         const zoneTargets = {
-          ashenvale_bastion: { pos: new THREE.Vector3(0, 0, 10), label: 'ðŸ° ASHENVALE BASTION' },
-          bestiary_catacombs: { pos: new THREE.Vector3(-18, 0, -14), label: 'ðŸ’€ CATACOMBS OF THE BESTIARY' },
-          astral_breach: { pos: new THREE.Vector3(18, 0, -14), label: 'ðŸ›¸ THE ASTRAL SCI-FI BREACH' },
-          boss_citadel: { pos: new THREE.Vector3(0, 0, -38), label: 'âš”ï¸ ARCHON BOSS CITADEL' }
+          ashenvale_bastion: {
+            pos: new THREE.Vector3(0, 0, 10),
+            label: '🏰 ASHENVALE BASTION',
+            horizon: 0xd97d48,
+            zenith: 0x151e3f,
+            nebula: 0x4b9eff,
+            fog: 0x1b233b
+          },
+          bestiary_catacombs: {
+            pos: new THREE.Vector3(-18, 0, -18),
+            label: '💀 CATACOMBS OF THE BESTIARY',
+            horizon: 0x1d6b52,
+            zenith: 0x091418,
+            nebula: 0x2ee68a,
+            fog: 0x0c1c1a
+          },
+          astral_breach: {
+            pos: new THREE.Vector3(18, 0, -18),
+            label: '🛸 THE ASTRAL SCI-FI BREACH',
+            horizon: 0x5c248c,
+            zenith: 0x0b102c,
+            nebula: 0x38e8ff,
+            fog: 0x14122e
+          },
+          boss_citadel: {
+            pos: new THREE.Vector3(0, 0, -40),
+            label: '⚔️ ARCHON BOSS CITADEL',
+            horizon: 0x991f44,
+            zenith: 0x120824,
+            nebula: 0xc84bff,
+            fog: 0x1e0d26
+          }
         };
         const t = zoneTargets[zoneId] || zoneTargets.ashenvale_bastion;
         this.player.pos.copy(t.pos);
         this.aiAllies.forEach((a) => a.pos.copy(t.pos).add(a.offset));
         document.getElementById('hud-zone-title').textContent = t.label;
+
+        // Update active button state
+        ['ashenvale_bastion', 'bestiary_catacombs', 'astral_breach', 'boss_citadel'].forEach(id => {
+          document.getElementById('warp-btn-' + id)?.classList.toggle('active', id === zoneId);
+        });
+
+        // Morph Sky Dome & Atmospheric Fog to match Biome!
+        this.skyUniforms.uHorizonColor.value.setHex(t.horizon);
+        this.skyUniforms.uZenithColor.value.setHex(t.zenith);
+        this.skyUniforms.uNebulaColor.value.setHex(t.nebula);
+        this.scene.fog.color.setHex(t.fog);
+
         this.audio.playSpell('arcane');
         this.spawnVFXFlipbook('vortex', this.player.pos, 4.0, 0.5, 0x38e8ff);
       }
@@ -2727,7 +3025,6 @@
         document.getElementById('room-code-input').value = this.roomCode;
         document.getElementById('modal-room-indicator').textContent = 'ROOM: ' + this.roomCode;
 
-        // Clean up previous remote peers
         this.remotePeers.forEach(p => { if (p.meshRoot) this.scene.remove(p.meshRoot); });
         this.remotePeers.clear();
 
@@ -2771,7 +3068,6 @@
             }
           });
 
-        // Load recent room chat logs
         const { data: logs } = await this.supabase
           .from('arpg_chat_events')
           .select('*')
@@ -2885,10 +3181,10 @@
         const container = document.getElementById('rooms-list-container');
         if (!container || !data) return;
         container.innerHTML = data.map(r => `
-          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); padding:10px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.12);">
+          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.06); padding:10px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.14);">
             <div>
               <div style="font-weight:700; color:var(--gold-bright);">${r.room_name} <span class="room-badge">${r.room_code}</span></div>
-              <div style="font-size:11px; color:var(--text-muted);">Host: ${r.host_name} â€¢ Zone: ${r.current_zone} â€¢ Wave ${r.rift_wave}</div>
+              <div style="font-size:11px; color:var(--text-muted);">Host: ${r.host_name} • Zone: ${r.current_zone} • Wave ${r.rift_wave}</div>
             </div>
             <button class="mini-btn" onclick="window.game.joinRealtimeRoom('${r.room_code}'); window.game.closeModals();">Join Realm</button>
           </div>
@@ -2940,10 +3236,10 @@
         const container = document.getElementById('leaderboard-container');
         if (!container || !data) return;
         container.innerHTML = data.map((row, idx) => `
-          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); padding:10px 14px; border-radius:8px; border-left:3px solid var(--gold);">
+          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.06); padding:10px 14px; border-radius:8px; border-left:3px solid var(--gold);">
             <div>
-              <div style="font-weight:700; color:var(--gold-bright);">#${idx + 1} â€¢ ${(row.party_names || []).join(', ')} <span class="room-badge">${row.room_code}</span></div>
-              <div style="font-size:11px; color:var(--text-muted);">Rift Tier ${row.rift_tier} â€¢ ${row.boss_slain ? 'â˜ ï¸ Archon Slain' : 'Expedition'}</div>
+              <div style="font-weight:700; color:var(--gold-bright);">#${idx + 1} • ${(row.party_names || []).join(', ')} <span class="room-badge">${row.room_code}</span></div>
+              <div style="font-size:11px; color:var(--text-muted);">Rift Tier ${row.rift_tier} • ${row.boss_slain ? '☠️ Archon Slain' : 'Expedition'}</div>
             </div>
             <div style="font-family:'JetBrains Mono', monospace; font-weight:700; color:var(--cyan); font-size:14px;">${row.score.toLocaleString()} PTS</div>
           </div>
@@ -3016,7 +3312,7 @@
       toggleAudio() {
         this.audio.init();
         this.audio.muted = !this.audio.muted;
-        document.getElementById('btn-mute').textContent = this.audio.muted ? 'ðŸ”‡ Muted' : 'ðŸ”Š Audio';
+        document.getElementById('btn-mute').textContent = this.audio.muted ? '🔇 Muted' : '🔊 Audio';
       }
 
       renderForgeModal() {
@@ -3033,13 +3329,13 @@
                 <span style="color:var(--text-muted); font-size:10px;">${w.slot.toUpperCase()}</span>
               </div>
               <div style="font-family:'Cinzel', serif; font-weight:700; font-size:13.5px; color:var(--gold-bright);">${w.name}</div>
-              <div style="font-size:11px; color:var(--text-muted);">Base DMG: <b>${w.dmg}</b> â€¢ Crit: <b>${Math.round(w.crit * 100)}%</b> â€¢ ${w.element}</div>
+              <div style="font-size:11px; color:var(--text-main);">Base DMG: <b>${w.dmg}</b> • Crit: <b>${Math.round(w.crit * 100)}%</b> • ${w.element}</div>
               <div style="margin-top:auto; padding-top:6px;">
                 ${isEquipped
-                  ? `<span style="color:var(--emerald); font-size:11px; font-weight:700;">âœ“ EQUIPPED IN 3D HAND</span>`
+                  ? `<span style="color:var(--emerald); font-size:11px; font-weight:700;">✓ EQUIPPED IN 3D HAND</span>`
                   : unlocked
                     ? `<button class="mini-btn" style="width:100%;" onclick="window.game.equipWeapon('${w.id}')">Equip 3D Weapon</button>`
-                    : `<button class="mini-btn" style="width:100%; border-color:var(--gold);" onclick="window.game.craftWeapon('${w.id}')">Forge (${w.costGold} ðŸª™, ${w.costShards} ðŸ’ )</button>`
+                    : `<button class="mini-btn" style="width:100%; border-color:var(--gold);" onclick="window.game.craftWeapon('${w.id}')">Forge (${w.costGold} 🪙, ${w.costShards} 💠)</button>`
                 }
               </div>
             </div>
@@ -3145,7 +3441,6 @@
           this.cameraZoom = Math.max(10, Math.min(28, this.cameraZoom + e.deltaY * 0.01));
         }, { passive: true });
 
-        // Mobile Touch Virtual Joystick
         const joy = document.getElementById('touch-joystick');
         const knob = document.getElementById('touch-knob');
         let touching = false;
@@ -3171,13 +3466,12 @@
       }
 
       // -----------------------------------------------------------------------
-      // MAIN FRAME LOOP: LOCOMOTION, AI, MONSTERS, TETHERS, HUD & MINIMAP
+      // MAIN FRAME LOOP
       // -----------------------------------------------------------------------
       animate() {
         requestAnimationFrame(this.animate);
         let dt = Math.min(this.clock.getDelta(), 0.1);
 
-        // Hit-Stop Freeze Frames (Pillar 2)
         if (this.hitStopTimer > 0) {
           this.hitStopTimer -= dt;
           this.renderer.render(this.scene, this.camera);
@@ -3187,14 +3481,18 @@
         const elapsed = this.clock.getElapsedTime();
         this.groundUniforms.uTime.value = elapsed;
         this.groundUniforms.uPlayerPos.value.copy(this.player.pos);
+        this.skyUniforms.uTime.value = elapsed;
+        this.skyDome.position.copy(this.player.pos);
 
-        // 1. Update Player Movement & State Machine
+        // Animate Floating Astral Monoliths in the background sky
+        this.floatingMonoliths.forEach(fm => {
+          fm.mesh.position.y = fm.baseY + Math.sin(elapsed * 1.2 + fm.phase) * 1.4;
+          fm.mesh.rotation.y += dt * 0.25;
+        });
+
         this.updatePlayer(dt);
-
-        // 2. Update AI Co-Op Wingman Companions
         this.updateAICompanions(dt);
 
-        // 3. Interpolate Remote Co-Op Players
         this.remotePeers.forEach((peer) => {
           peer.pos.lerp(peer.targetPos, Math.min(1, dt * 10));
           if (peer.meshRoot) {
@@ -3204,20 +3502,20 @@
           if (peer.mixer) peer.mixer.update(dt);
         });
 
-        // 4. Update Monsters & Raid Boss AI
         this.updateMonsters(dt);
-
-        // 5. Update Projectiles, Telegraphs, Loot Drops & VFX Flipbooks
         this.updateProjectilesAndVFX(dt);
-
-        // 6. Update Co-Op Synergy Tethers
         this.updateSynergyTethers();
 
-        // 7. Update Smooth Damped Camera & Screen Shake
+        // While Hero Selection Modal is open, gently orbit the camera so the 3D Village & Sky Dome shine behind the UI!
+        const heroModalOpen = document.getElementById('hero-modal')?.classList.contains('active');
+        const activeYaw = heroModalOpen ? Math.sin(elapsed * 0.28) * 0.55 : this.cameraYaw;
+        const activePitch = heroModalOpen ? 0.52 : 0.78;
+        const activeZoom = heroModalOpen ? 14.5 : this.cameraZoom;
+
         const camOffset = new THREE.Vector3(
-          Math.sin(this.cameraYaw) * this.cameraZoom * 0.78,
-          this.cameraZoom * 0.86,
-          Math.cos(this.cameraYaw) * this.cameraZoom * 0.78
+          Math.sin(activeYaw) * activeZoom * 0.85,
+          activeZoom * activePitch,
+          Math.cos(activeYaw) * activeZoom * 0.85
         );
         const desiredCam = this.player.pos.clone().add(camOffset);
         if (this.screenShake > 0) {
@@ -3226,15 +3524,12 @@
           this.screenShake = Math.max(0, this.screenShake - dt * 2.2);
         }
         this.camera.position.lerp(desiredCam, Math.min(1, dt * 8.5));
-        this.camera.lookAt(this.player.pos.x, this.player.pos.y + 1.0, this.player.pos.z);
+        this.camera.lookAt(this.player.pos.x, this.player.pos.y + (heroModalOpen ? 2.2 : 1.3), this.player.pos.z - (heroModalOpen ? 4.0 : 0));
 
-        // Keep directional shadow frustum centered on player
-        this.sunLight.position.set(this.player.pos.x + 22, 36, this.player.pos.z + 18);
+        this.sunLight.position.set(this.player.pos.x + 24, 42, this.player.pos.z + 22);
         this.sunLight.target.position.copy(this.player.pos);
 
-        // 8. Update HUD & Minimap
         this.updateHUDAndMinimap(dt);
-
         this.renderer.render(this.scene, this.camera);
       }
 
@@ -3242,7 +3537,6 @@
         const p = this.player;
         const cls = HERO_CLASSES[p.classId];
 
-        // Cooldowns & Regen
         Object.keys(p.cooldowns).forEach(k => {
           if (p.cooldowns[k] > 0) p.cooldowns[k] = Math.max(0, p.cooldowns[k] - dt);
         });
@@ -3254,7 +3548,6 @@
         }
         p.mp = Math.min(p.maxMp, p.mp + dt * 6);
 
-        // Input Vector
         let mx = this.touchVec.x;
         let mz = this.touchVec.y;
         if (this.keys['w'] || this.keys['arrowup']) mz -= 1;
@@ -3280,7 +3573,6 @@
             this.audio.playFootstep(this.currentZone);
           }
         } else {
-          // Face mouse cursor when attacking or standing
           const toMouse = this.mouseWorld.clone().sub(p.pos);
           if (toMouse.lengthSq() > 0.25 && p.attackTimer > 0) {
             p.yaw = Math.atan2(toMouse.x, toMouse.z);
@@ -3296,12 +3588,10 @@
         }
         if (p.mixer) p.mixer.update(dt);
 
-        // Low-HP Acoustic Filter & Screen Pulse (Pillar 3)
         const isLow = p.hp < p.maxHp * 0.28;
         this.audio.setLowHpMuffle(isLow);
         document.getElementById('screen-fx').classList.toggle('low-hp', isLow);
 
-        // Check nearby Interactables
         this.activeInteractable = null;
         for (const inter of this.interactables) {
           if (p.pos.distanceTo(inter.pos) <= inter.radius) {
@@ -3317,7 +3607,6 @@
           promptEl.style.display = 'none';
         }
 
-        // Broadcast Player State via Supabase Realtime (12 Hz)
         const now = performance.now();
         if (this.channel && now - this.lastBroadcastTime > 85) {
           this.lastBroadcastTime = now;
@@ -3345,7 +3634,6 @@
           if (ally.mixer) ally.mixer.update(dt);
           ally.attackCd = Math.max(0, ally.attackCd - dt);
 
-          // Find nearest monster within 14m of player
           let nearestMob = null;
           let nearestDist = 14.0;
           this.monsters.forEach((m) => {
@@ -3373,7 +3661,6 @@
               this.playEntityAnim(ally, 'Idle_Loop');
             }
           } else {
-            // Follow player formation
             const goal = this.player.pos.clone().add(ally.offset);
             const toGoal = goal.sub(ally.pos);
             if (toGoal.length() > 0.6) {
@@ -3429,7 +3716,6 @@
               m.pos.addScaledVector(toPlayer, m.speed * dt);
               this.playEntityAnim(m, m.modelKey.includes('puglin') ? 'Zombie_Walk_Fwd_Loop' : 'Jog_Fwd_Loop');
             } else if (m.attackCd <= 0 && m.windupTimer <= 0) {
-              // Readable Telegraph Windup (Pillar 2)
               m.windupTimer = m.isBoss ? 0.85 : 0.55;
               m.attackCd = m.isBoss ? 2.4 : 2.1;
               this.playEntityAnim(m, m.isBoss ? 'Sword_Heavy_Combo' : 'Sword_Attack', true);
@@ -3486,12 +3772,11 @@
         this.spawnFloatingText(this.player.pos, `-${mitigated}`, '#ff3b5c', 17);
 
         if (this.player.hp <= 0) {
-          // Co-Op Soul Revival Mechanic!
           if (this.aiAllies.length > 0 || this.remotePeers.size > 0) {
             this.player.hp = Math.round(this.player.maxHp * 0.65);
             this.spawnVFXFlipbook('eldenring', this.player.pos, 4.5, 0.6, 0x2ee68a);
             this.spawnFloatingText(this.player.pos, 'CO-OP ALLY REVIVED YOU!', '#2ee68a', 20);
-            this.addChatMessage('Co-Op Revive', `âœ¨ An allied hero channeled Soul Revival to bring ${this.player.name} back into battle!`, 'sys-synergy');
+            this.addChatMessage('Co-Op Revive', `✨ An allied hero channeled Soul Revival to bring ${this.player.name} back into battle!`, 'sys-synergy');
           } else {
             this.player.hp = this.player.maxHp;
             this.warpToZone('ashenvale_bastion');
@@ -3501,7 +3786,6 @@
       }
 
       updateProjectilesAndVFX(dt) {
-        // Projectiles
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
           const pr = this.projectiles[i];
           pr.life -= dt;
@@ -3529,7 +3813,6 @@
           }
         }
 
-        // Ground Telegraphs
         for (let i = this.telegraphs.length - 1; i >= 0; i--) {
           const tg = this.telegraphs[i];
           tg.elapsed += dt;
@@ -3543,7 +3826,6 @@
           }
         }
 
-        // VFX Sprites & Slash Meshes
         for (let i = this.vfxSprites.length - 1; i >= 0; i--) {
           const v = this.vfxSprites[i];
           v.elapsed += dt;
@@ -3559,7 +3841,6 @@
           }
         }
 
-        // Loot Drops Magnetic Pickup
         for (let i = this.lootDrops.length - 1; i >= 0; i--) {
           const ld = this.lootDrops[i];
           ld.group.rotation.y += dt * 2.5;
@@ -3574,9 +3855,9 @@
             if (ld.isWeapon && ld.weapon) {
               this.player.unlockedWeapons.add(ld.weapon.id);
               this.spawnFloatingText(this.player.pos, `LOOTED ${ld.weapon.name.toUpperCase()}!`, '#b266ff', 17);
-              this.addChatMessage(this.player.name, `ðŸ—¡ï¸ Looted [${ld.weapon.name}] + ${ld.gold} Gold!`, 'sys-loot');
+              this.addChatMessage(this.player.name, `🗡️ Looted [${ld.weapon.name}] + ${ld.gold} Gold!`, 'sys-loot');
             } else {
-              this.spawnFloatingText(this.player.pos, `+${ld.gold} ðŸª™  +${ld.shards} ðŸ’ `, '#ffd56b', 15);
+              this.spawnFloatingText(this.player.pos, `+${ld.gold} 🪙  +${ld.shards} 💠`, '#ffd56b', 15);
             }
             this.scene.remove(ld.group);
             this.lootDrops.splice(i, 1);
@@ -3612,7 +3893,7 @@
           const pct = Math.max(0, Math.min(100, Math.round((a.hp / a.maxHp) * 100)));
           return `
             <div class="ally-row ${a.isAI ? 'ai-ally' : ''}">
-              <span>${a.isAI ? 'ðŸ¤–' : 'ðŸŸ¢'} <b>${a.name}</b></span>
+              <span>${a.isAI ? '🤖' : '🟢'} <b>${a.name}</b></span>
               <div class="ally-mini-hp"><div style="width:${pct}%"></div></div>
             </div>
           `;
@@ -3651,18 +3932,15 @@
           }
         });
 
-        // Render Minimap Radar
         const mm = document.getElementById('minimap-canvas');
         const ctx = mm.getContext('2d');
         ctx.clearRect(0, 0, 140, 140);
         const cx = 70, cy = 70, scale = 1.15;
 
-        // Radar rings
-        ctx.strokeStyle = 'rgba(243, 200, 107, 0.2)';
+        ctx.strokeStyle = 'rgba(243, 200, 107, 0.25)';
         ctx.beginPath(); ctx.arc(cx, cy, 32, 0, Math.PI * 2); ctx.stroke();
         ctx.beginPath(); ctx.arc(cx, cy, 62, 0, Math.PI * 2); ctx.stroke();
 
-        // Portal & Shrine icons
         const drawDot = (wx, wz, col, r = 3) => {
           const dx = (wx - p.pos.x) * scale;
           const dz = (wz - p.pos.z) * scale;
@@ -3674,9 +3952,9 @@
           }
         };
 
-        drawDot(0, 0, '#38e8ff', 4.5); // Astral Portal
-        drawDot(7.5, 8, '#2ee68a', 4); // Shrine
-        drawDot(-7.5, 8, '#f3c86b', 4); // Forge
+        drawDot(0, 0, '#38e8ff', 4.5);
+        drawDot(7.5, 8, '#2ee68a', 4);
+        drawDot(-7.5, 8, '#f3c86b', 4);
 
         this.aiAllies.forEach(a => drawDot(a.pos.x, a.pos.z, '#2ee68a', 3.5));
         this.remotePeers.forEach(peer => drawDot(peer.pos.x, peer.pos.z, '#38e8ff', 4));
@@ -3684,13 +3962,12 @@
           if (!m.dead) drawDot(m.pos.x, m.pos.z, m.isBoss ? '#ff0055' : '#ff3b5c', m.isBoss ? 5.5 : 3);
         });
 
-        // Player center arrow
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
         ctx.arc(cx, cy, 4, 0, Math.PI * 2);
         ctx.fill();
 
-        document.getElementById('minimap-coords').textContent = `WAVE ${this.riftWave} â€¢ (${Math.round(p.pos.x)}, ${Math.round(p.pos.z)})`;
+        document.getElementById('minimap-coords').textContent = `WAVE ${this.riftWave} • (${Math.round(p.pos.x)}, ${Math.round(p.pos.z)})`;
       }
     }
 
@@ -3700,4 +3977,3 @@
   </script>
 </body>
 </html>
-
