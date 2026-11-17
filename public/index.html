@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -892,7 +892,7 @@
       <div class="net-actions">
         <button class="mini-btn" onclick="window.game.openModal('lobby-modal')">🌐 Rooms (<span id="hud-online-count">1</span>)</button>
         <button class="mini-btn" onclick="window.game.copyInviteLink()">🔗 Invite Link</button>
-        <button class="mini-btn" onclick="window.game.toggleAICompanions()">🤝 AI Squad: <span id="hud-ai-count">2</span></button>
+        <button class="mini-btn" onclick="window.game.toggleAICompanions()">🤝 AI Squad: <span id="hud-ai-count">0</span></button>
       </div>
       <div class="net-actions">
         <button class="mini-btn" onclick="window.game.openModal('forge-modal')">⚒️ Relic Forge</button>
@@ -936,13 +936,13 @@
         <div class="skill-cd-overlay" id="cd-3"></div>
       </div>
       <div class="skill-slot" id="slot-4" onclick="window.game.useSkill(4)">
-        <span class="skill-key">E / 4</span>
+        <span class="skill-key">4 / V</span>
         <span class="skill-icon" id="icon-4">✨</span>
         <span class="skill-name" id="name-4">Phalanx Aura</span>
         <div class="skill-cd-overlay" id="cd-4"></div>
       </div>
       <div class="skill-slot" id="slot-potion" onclick="window.game.usePotion()">
-        <span class="skill-key">Q</span>
+        <span class="skill-key">H / C</span>
         <span class="skill-icon">🧪</span>
         <span class="skill-name">Elixir (<span id="potion-count">3</span>)</span>
         <div class="skill-cd-overlay" id="cd-potion"></div>
@@ -1021,7 +1021,7 @@
 
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.14);">
         <div style="font-size: 11.5px; color: var(--text-main); line-height: 1.5;">
-          <strong>Controls:</strong> <span class="key-cap">WASD</span> Move • <span class="key-cap">LMB</span> Combo Attack • <span class="key-cap">RMB</span> Heavy Skill • <span class="key-cap">Shift</span> Dodge Roll • <span class="key-cap">E</span> Class Spell • <span class="key-cap">R</span> Co-Op Convergence • <span class="key-cap">F</span> Interact
+          <strong>Controls:</strong> <span class="key-cap">WASD</span> Move • <span class="key-cap">Q/E</span> Orbit Camera • <span class="key-cap">LMB</span> Combo Attack • <span class="key-cap">RMB</span> Heavy Skill • <span class="key-cap">Shift</span> Dodge Roll • <span class="key-cap">4</span> Class Aura • <span class="key-cap">H</span> Elixir • <span class="key-cap">R</span> Convergence • <span class="key-cap">F</span> Interact
         </div>
         <button class="cta-btn" onclick="window.game.startOrResumeGame()">⚡ ENTER ASHENVALE REALM</button>
       </div>
@@ -1112,14 +1112,16 @@
       });
 
       clone.traverse((node) => {
+        node.frustumCulled = false;
         if (!node.isSkinnedMesh) return;
         const clonedMesh = node;
         const sourceMesh = sourceLookup.get(node);
         const sourceBones = sourceMesh.skeleton.bones;
 
-        clonedMesh.skeleton = sourceMesh.skeleton.clone();
+        const clonedBones = sourceBones.map((bone) => cloneLookup.get(bone) || bone);
+        const clonedInverses = sourceMesh.skeleton.boneInverses.map((inv) => inv.clone());
+        clonedMesh.skeleton = new THREE.Skeleton(clonedBones, clonedInverses);
         clonedMesh.bindMatrix.copy(sourceMesh.bindMatrix);
-        clonedMesh.skeleton.bones = sourceBones.map((bone) => cloneLookup.get(bone));
         clonedMesh.bind(clonedMesh.skeleton, clonedMesh.bindMatrix);
       });
 
@@ -1572,9 +1574,13 @@
         this.vfxSprites = [];
         this.destructibles = [];
         this.interactables = [];
+        this.worldObstacles = [];
         this.tetherLines = [];
         this.floatingMonoliths = [];
-        this.aiCompanionTargetCount = 2;
+        this.aiCompanionTargetCount = 0;
+        this.mouseDownLeft = false;
+        this.isOrbitDragging = false;
+        this.orbitDragStart = { x: 0, y: 0, moved: false };
 
         this.supabase = null;
         this.channel = null;
@@ -1586,7 +1592,7 @@
         this.initInputHandlers();
         this.loadAllAssets();
         this.initSupabaseCoOp();
-        this.spawnAICompanions(2);
+        this.spawnAICompanions(0);
         this.spawnZoneMonsters();
         this.renderForgeModal();
 
@@ -2002,6 +2008,15 @@
       // -----------------------------------------------------------------------
       // LOAD ALL BLENDER-ENHANCED GLB MODELS, BUILDINGS, ANIMATIONS & VFX
       // -----------------------------------------------------------------------
+      registerAnimClip(rawName, clip) {
+        if (!rawName || !clip) return;
+        this.animClips[rawName] = clip;
+        const afterPipe = rawName.includes('|') ? rawName.split('|').pop() : rawName;
+        this.animClips[afterPipe] = clip;
+        const stripped = afterPipe.replace(/\.\d+$/, '');
+        this.animClips[stripped] = clip;
+      }
+
       loadAllAssets() {
         const texLoader = new THREE.TextureLoader();
         const vfxList = {
@@ -2015,47 +2030,96 @@
           vortex: 'assets/vfx/effect_vortex.png'
         };
         Object.entries(vfxList).forEach(([k, url]) => {
-          texLoader.load(url, (t) => { this.vfxTextures[k] = t; });
+          texLoader.load(
+            url,
+            (t) => { this.vfxTextures[k] = t; },
+            undefined,
+            (err) => console.warn('[TextureLoader] Failed to load VFX texture:', url, err)
+          );
         });
 
         this.rebuildHeroMesh();
 
-        this.loader.load('assets/models/animations_arpg.glb', (gltf) => {
-          gltf.animations.forEach((clip) => {
-            this.animClips[clip.name] = clip;
-          });
-          this.bindAnimationsToEntity(this.player);
-          this.aiAllies.forEach(a => this.bindAnimationsToEntity(a));
-          this.monsters.forEach(m => this.bindAnimationsToEntity(m));
-        });
+        this.loader.load(
+          'assets/models/animations_arpg.glb',
+          (gltf) => {
+            gltf.animations.forEach((clip) => {
+              this.registerAnimClip(clip.name, clip);
+            });
+            this.bindAnimationsToEntity(this.player);
+            this.aiAllies.forEach(a => this.bindAnimationsToEntity(a));
+            this.monsters.forEach(m => this.bindAnimationsToEntity(m));
+            this.remotePeers.forEach(p => this.bindAnimationsToEntity(p));
+          },
+          undefined,
+          (err) => console.warn('[GLTFLoader] Failed to load animations_arpg.glb:', err)
+        );
 
         WEAPON_CATALOG.forEach((w) => {
-          this.loader.load(`assets/models/weapons/${w.id}.glb`, (gltf) => {
-            gltf.scene.traverse(c => { if (c.isMesh) { c.castShadow = true; } });
-            this.modelCache['weapon_' + w.id] = gltf.scene;
-            if (w.id === this.player.weaponId || w.id === this.player.offhandId) {
-              this.attachWeaponsToEntity(this.player);
-            }
-            this.aiAllies.forEach(a => this.attachWeaponsToEntity(a));
-          });
+          const wUrl = `assets/models/weapons/${w.id}.glb`;
+          this.loader.load(
+            wUrl,
+            (gltf) => {
+              gltf.scene.traverse(c => {
+                c.frustumCulled = false;
+                if (c.isMesh) {
+                  c.castShadow = true;
+                  c.receiveShadow = true;
+                }
+              });
+              const bbox = new THREE.Box3().setFromObject(gltf.scene);
+              const size = new THREE.Vector3();
+              bbox.getSize(size);
+              gltf.scene.userData.rawMaxDim = Math.max(size.x, size.y, size.z, 0.001);
+              this.modelCache['weapon_' + w.id] = gltf.scene;
+              if (w.id === this.player.weaponId || w.id === this.player.offhandId) {
+                this.attachWeaponsToEntity(this.player);
+              }
+              this.aiAllies.forEach(a => this.attachWeaponsToEntity(a));
+              this.monsters.forEach(m => {
+                if (m.weaponId === w.id || m.offhandId === w.id) this.attachWeaponsToEntity(m);
+              });
+              this.remotePeers.forEach(p => {
+                if (p.weaponId === w.id || p.offhandId === w.id) this.attachWeaponsToEntity(p);
+              });
+            },
+            undefined,
+            (err) => console.warn('[GLTFLoader] Failed to load weapon GLB:', wUrl, err)
+          );
         });
-        this.loader.load('assets/models/weapons/Arrow.glb', (gltf) => {
-          this.modelCache['weapon_Arrow'] = gltf.scene;
-        });
+        this.loader.load(
+          'assets/models/weapons/Arrow.glb',
+          (gltf) => {
+            gltf.scene.traverse(c => { c.frustumCulled = false; });
+            const bbox = new THREE.Box3().setFromObject(gltf.scene);
+            const size = new THREE.Vector3();
+            bbox.getSize(size);
+            gltf.scene.userData.rawMaxDim = Math.max(size.x, size.y, size.z, 0.001);
+            this.modelCache['weapon_Arrow'] = gltf.scene;
+          },
+          undefined,
+          (err) => console.warn('[GLTFLoader] Failed to load Arrow.glb:', err)
+        );
 
         Object.values(HERO_CLASSES).forEach((cls) => {
-          this.loader.load(cls.model, (gltf) => {
-            gltf.scene.traverse(c => {
-              if (c.isMesh) {
-                c.castShadow = true;
-                c.receiveShadow = true;
-              }
-            });
-            this.modelCache['hero_' + cls.id] = gltf.scene;
-            if (this.player.classId === cls.id) this.rebuildHeroMesh();
-            this.aiAllies.forEach(a => { if (a.classId === cls.id) this.upgradeEntityToGLB(a, 'hero_' + cls.id); });
-            this.remotePeers.forEach(p => { if (p.classId === cls.id) this.upgradeEntityToGLB(p, 'hero_' + cls.id); });
-          });
+          this.loader.load(
+            cls.model,
+            (gltf) => {
+              gltf.scene.traverse(c => {
+                c.frustumCulled = false;
+                if (c.isMesh) {
+                  c.castShadow = true;
+                  c.receiveShadow = true;
+                }
+              });
+              this.modelCache['hero_' + cls.id] = gltf.scene;
+              if (this.player.classId === cls.id) this.rebuildHeroMesh();
+              this.aiAllies.forEach(a => { if (a.classId === cls.id) this.upgradeEntityToGLB(a, 'hero_' + cls.id); });
+              this.remotePeers.forEach(p => { if (p.classId === cls.id) this.upgradeEntityToGLB(p, 'hero_' + cls.id); });
+            },
+            undefined,
+            (err) => console.warn('[GLTFLoader] Failed to load hero GLB:', cls.model, err)
+          );
         });
 
         const monsterModels = [
@@ -2063,21 +2127,31 @@
           'monster_alien_scolitex', 'monster_alien_oculichrysalis', 'monster_alien_cyclop', 'boss_chrono_archon'
         ];
         monsterModels.forEach((mKey) => {
-          this.loader.load(`assets/models/monsters/${mKey}.glb`, (gltf) => {
-            gltf.scene.traverse(c => {
-              if (c.isMesh) {
-                c.castShadow = true;
-                c.receiveShadow = true;
+          const mUrl = `assets/models/monsters/${mKey}.glb`;
+          this.loader.load(
+            mUrl,
+            (gltf) => {
+              gltf.scene.traverse(c => {
+                c.frustumCulled = false;
+                if (c.isMesh) {
+                  c.castShadow = true;
+                  c.receiveShadow = true;
+                }
+              });
+              this.modelCache[mKey] = gltf.scene;
+              if (gltf.animations && gltf.animations.length > 0) {
+                this.animClips[mKey + '_idle'] = gltf.animations[0];
+                gltf.animations.forEach((clip) => {
+                  this.registerAnimClip(`${mKey}_${clip.name}`, clip);
+                });
               }
-            });
-            this.modelCache[mKey] = gltf.scene;
-            if (gltf.animations && gltf.animations.length > 0) {
-              this.animClips[mKey + '_idle'] = gltf.animations[0];
-            }
-            this.monsters.forEach((m) => {
-              if (m.modelKey === mKey) this.upgradeEntityToGLB(m, mKey);
-            });
-          });
+              this.monsters.forEach((m) => {
+                if (m.modelKey === mKey) this.upgradeEntityToGLB(m, mKey, m.scale);
+              });
+            },
+            undefined,
+            (err) => console.warn('[GLTFLoader] Failed to load monster GLB:', mUrl, err)
+          );
         });
 
         this.placeWorldProps();
@@ -2146,14 +2220,37 @@
           { file: 'prop_column_astra.glb', x: 10, z: -56, scale: 1.4, yaw: 0 }
         ];
 
+        const obstacleRadiusByFile = {
+          'bg_medieval_house.glb': 3.8,
+          'bg_medieval_tower.glb': 2.3,
+          'bg_market_stall.glb': 1.8,
+          'bg_scifi_citadel_wall.glb': 2.4,
+          'prop_astral_portal.glb': 1.05,
+          'prop_revive_shrine.glb': 1.0,
+          'prop_anvil.glb': 0.95,
+          'prop_weaponstand.glb': 0.9,
+          'prop_cauldron.glb': 0.95,
+          'prop_bookstand.glb': 0.75,
+          'prop_wagon.glb': 1.35,
+          'prop_column_astra.glb': 1.05,
+          'prop_column_pipes.glb': 1.05,
+          'prop_access_point.glb': 1.0
+        };
+        this.worldObstacles = [];
+
         const loadedPropCache = {};
         placements.forEach((p) => {
+          const obsR = obstacleRadiusByFile[p.file];
+          if (obsR) {
+            this.worldObstacles.push({ x: p.x, z: p.z, r: obsR });
+          }
           const spawnInstance = (sceneTemplate) => {
             const obj = sceneTemplate.clone();
             obj.position.set(p.x, 0, p.z);
             obj.scale.setScalar(p.scale);
             obj.rotation.y = p.yaw;
             obj.traverse(c => {
+              c.frustumCulled = false;
               if (c.isMesh) {
                 c.castShadow = true;
                 c.receiveShadow = true;
@@ -2165,10 +2262,16 @@
           if (loadedPropCache[p.file]) {
             spawnInstance(loadedPropCache[p.file]);
           } else {
-            this.loader.load(`assets/models/props/${p.file}`, (gltf) => {
-              loadedPropCache[p.file] = gltf.scene;
-              spawnInstance(gltf.scene);
-            });
+            const pUrl = `assets/models/props/${p.file}`;
+            this.loader.load(
+              pUrl,
+              (gltf) => {
+                loadedPropCache[p.file] = gltf.scene;
+                spawnInstance(gltf.scene);
+              },
+              undefined,
+              (err) => console.warn('[GLTFLoader] Failed to load prop GLB:', pUrl, err)
+            );
           }
         });
 
@@ -2187,13 +2290,39 @@
           this.scene.add(group);
           const item = { id: 'dest_' + idx, pos: group.position, hp: d.hp, isChest: !!d.isChest, group, dead: false };
           this.destructibles.push(item);
-          this.loader.load(`assets/models/props/${d.type}`, (gltf) => {
-            const m = gltf.scene.clone();
-            m.scale.setScalar(1.3);
-            m.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
-            group.add(m);
-          });
+          const dUrl = `assets/models/props/${d.type}`;
+          this.loader.load(
+            dUrl,
+            (gltf) => {
+              const m = gltf.scene.clone();
+              m.scale.setScalar(1.3);
+              m.traverse(c => {
+                c.frustumCulled = false;
+                if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; }
+              });
+              group.add(m);
+            },
+            undefined,
+            (err) => console.warn('[GLTFLoader] Failed to load destructible GLB:', dUrl, err)
+          );
         });
+      }
+
+      resolveObstacleCollisions(pos, entityRadius = 0.55) {
+        if (!this.worldObstacles) return;
+        for (let i = 0; i < this.worldObstacles.length; i++) {
+          const obs = this.worldObstacles[i];
+          const dx = pos.x - obs.x;
+          const dz = pos.z - obs.z;
+          const minDist = obs.r + entityRadius;
+          const distSq = dx * dx + dz * dz;
+          if (distSq < minDist * minDist) {
+            const dist = Math.sqrt(distSq) || 0.001;
+            const push = (minDist - dist) / dist;
+            pos.x += dx * push;
+            pos.z += dz * push;
+          }
+        }
       }
 
       // -----------------------------------------------------------------------
@@ -2246,13 +2375,19 @@
         entity.handLeftBone = null;
 
         cloned.traverse((node) => {
+          node.frustumCulled = false;
           if (node.isBone) {
             if (node.name === 'hand_r') entity.handRightBone = node;
             if (node.name === 'hand_l') entity.handLeftBone = node;
           }
-          if (node.isMesh && node.material) {
-            node.material = node.material.clone();
-            entity.materials.push(node.material);
+          if (node.isMesh) {
+            node.castShadow = true;
+            node.receiveShadow = true;
+            if (node.material) {
+              node.material = node.material.clone();
+              if (node.isSkinnedMesh) node.material.skinning = true;
+              entity.materials.push(node.material);
+            }
           }
         });
 
@@ -2283,12 +2418,20 @@
         if (!entity.glbNode) return;
         entity.mixer = new THREE.AnimationMixer(entity.glbNode);
         entity.actions = {};
+        entity.activeAction = null;
+
+        const oneShotNames = new Set([
+          'Roll', 'Sword_Regular_A', 'Sword_Regular_B', 'Sword_Regular_C',
+          'Sword_Heavy_Combo', 'Sword_Attack', 'Sword_Dash', 'Shield_Dash',
+          'Shield_OneShot', 'Spell_Simple_Enter', 'Spell_Simple_Shoot',
+          'OverhandThrow', 'Melee_Hook', 'Hit_Chest', 'Hit_Knockback', 'Death01'
+        ]);
 
         Object.entries(this.animClips).forEach(([name, clip]) => {
           const act = entity.mixer.clipAction(clip);
-          if (['Roll', 'Sword_Regular_A', 'Sword_Regular_B', 'Sword_Regular_C', 'Sword_Heavy_Combo', 'Sword_Attack', 'Sword_Dash', 'Shield_OneShot', 'Spell_Simple_Shoot', 'OverhandThrow', 'Melee_Hook', 'Hit_Chest', 'Hit_Knockback', 'Death01'].includes(name)) {
+          if (oneShotNames.has(name)) {
             act.setLoop(THREE.LoopOnce, 1);
-            act.clampWhenFinished = (name === 'Death01');
+            act.clampWhenFinished = true;
           }
           entity.actions[name] = act;
         });
@@ -2296,50 +2439,105 @@
         const defaultIdle = entity.modelKey && this.animClips[entity.modelKey + '_idle']
           ? entity.modelKey + '_idle'
           : 'Idle_Loop';
+
+        entity.mixer.addEventListener('finished', () => {
+          if (entity.dead || entity.animState === 'Death01') return;
+          this.playEntityAnim(entity, defaultIdle, true);
+        });
+
         this.playEntityAnim(entity, defaultIdle, true);
       }
 
       playEntityAnim(entity, animName, force = false) {
         if (!entity.mixer || !entity.actions) return;
-        const target = entity.actions[animName] || entity.actions['Idle_Loop'];
+        const isAlien = entity.modelKey && entity.modelKey.includes('alien');
+        const alienIdle = isAlien ? entity.actions[entity.modelKey + '_idle'] : null;
+        const target = (isAlien && alienIdle)
+          ? alienIdle
+          : (entity.actions[animName] || entity.actions['Idle_Loop'] || alienIdle);
         if (!target) return;
         if (entity.activeAction === target && !force) return;
 
-        target.reset();
-        target.play();
-        if (entity.activeAction && entity.activeAction !== target) {
-          entity.activeAction.crossFadeTo(target, 0.14, false);
+        const prev = entity.activeAction;
+        if (prev && prev !== target) {
+          prev.fadeOut(0.14);
         }
+        target.reset();
+        target.setEffectiveTimeScale(1);
+        target.setEffectiveWeight(1);
+        if (prev && prev !== target) {
+          target.fadeIn(0.14);
+        }
+        target.play();
         entity.activeAction = target;
         entity.animState = animName;
       }
 
       attachWeaponsToEntity(entity) {
-        if (entity.handRightBone && entity.weaponId && this.modelCache['weapon_' + entity.weaponId]) {
-          for (let i = entity.handRightBone.children.length - 1; i >= 0; i--) {
-            if (entity.handRightBone.children[i].userData.isAttachedWeapon) {
-              entity.handRightBone.remove(entity.handRightBone.children[i]);
-            }
-          }
-          const wMesh = this.modelCache['weapon_' + entity.weaponId].clone();
-          wMesh.userData.isAttachedWeapon = true;
-          wMesh.scale.setScalar(0.85);
-          wMesh.rotation.set(Math.PI / 2, 0, 0);
-          entity.handRightBone.add(wMesh);
-        }
+        const WEAPON_ATTACH_SPECS = {
+          Sword_Golden:         { targetLen: 1.08, gripOffset: [0, 0.12, 0], isShield: false },
+          Claymore:             { targetLen: 1.26, gripOffset: [0, 0.35, 0], isShield: false },
+          Scythe:               { targetLen: 1.32, gripOffset: [0, 0.0, 0],  isShield: false },
+          Hammer_Double:        { targetLen: 1.12, gripOffset: [0, 0.0, 0],  isShield: false },
+          Axe_Double:           { targetLen: 1.15, gripOffset: [0, -0.25, 0],isShield: false },
+          Bow_Golden:           { targetLen: 1.15, gripOffset: [0.18, 0, 0], isShield: false },
+          Bow_Evil:             { targetLen: 1.18, gripOffset: [0.18, 0, 0], isShield: false },
+          Spear:                { targetLen: 1.35, gripOffset: [0, 0.45, 0], isShield: false },
+          Dagger_2:             { targetLen: 0.65, gripOffset: [0, 0.05, 0], isShield: false },
+          Shield_Celtic_Golden: { targetLen: 0.78, gripOffset: [0, -0.1, 0], isShield: true  },
+          Shield_Heater_2:      { targetLen: 0.74, gripOffset: [0, -0.1, 0], isShield: true  }
+        };
 
-        if (entity.handLeftBone && entity.offhandId && this.modelCache['weapon_' + entity.offhandId]) {
-          for (let i = entity.handLeftBone.children.length - 1; i >= 0; i--) {
-            if (entity.handLeftBone.children[i].userData.isAttachedWeapon) {
-              entity.handLeftBone.remove(entity.handLeftBone.children[i]);
+        const attachToBone = (bone, wId, isLeftHand) => {
+          if (!bone) return;
+          for (let i = bone.children.length - 1; i >= 0; i--) {
+            if (bone.children[i].userData.isAttachedWeapon) {
+              bone.remove(bone.children[i]);
             }
           }
-          const oMesh = this.modelCache['weapon_' + entity.offhandId].clone();
-          oMesh.userData.isAttachedWeapon = true;
-          oMesh.scale.setScalar(0.82);
-          oMesh.rotation.set(Math.PI / 2, 0, 0);
-          entity.handLeftBone.add(oMesh);
-        }
+          const template = wId ? this.modelCache['weapon_' + wId] : null;
+          if (!template) return;
+
+          const spec = WEAPON_ATTACH_SPECS[wId] || { targetLen: 1.08, gripOffset: [0, 0, 0], isShield: false };
+          let rawMaxDim = template.userData.rawMaxDim;
+          if (!rawMaxDim) {
+            const bbox = new THREE.Box3().setFromObject(template);
+            const sz = new THREE.Vector3();
+            bbox.getSize(sz);
+            rawMaxDim = Math.max(sz.x, sz.y, sz.z, 0.001);
+            template.userData.rawMaxDim = rawMaxDim;
+          }
+          const normScale = spec.targetLen / rawMaxDim;
+
+          const holder = new THREE.Group();
+          holder.userData.isAttachedWeapon = true;
+
+          const wMesh = template.clone();
+          wMesh.traverse(c => { c.frustumCulled = false; });
+          wMesh.scale.setScalar(normScale);
+          wMesh.position.set(
+            -spec.gripOffset[0] * normScale,
+            -spec.gripOffset[1] * normScale,
+            -spec.gripOffset[2] * normScale
+          );
+          holder.add(wMesh);
+
+          if (isLeftHand && spec.isShield) {
+            holder.position.set(-0.06, 0.06, 0.0);
+            holder.rotation.set(0, -Math.PI / 2, Math.PI / 2);
+          } else if (isLeftHand) {
+            holder.position.set(0.02, 0.08, 0.0);
+            holder.rotation.set(Math.PI / 2, -Math.PI / 2, 0);
+          } else {
+            holder.position.set(-0.02, 0.08, 0.0);
+            holder.rotation.set(Math.PI / 2, Math.PI / 2, 0);
+          }
+
+          bone.add(holder);
+        };
+
+        attachToBone(entity.handRightBone, entity.weaponId, false);
+        attachToBone(entity.handLeftBone, entity.offhandId, true);
       }
 
       triggerEntityHitFlash(entity) {
@@ -2382,12 +2580,12 @@
           { modelKey: 'monster_puglin', name: 'Catacomb Puglin', x: -24, z: -30, hp: 260, dmg: 26, speed: 5.0, scale: 1.2, xp: 60, ranged: false },
           { modelKey: 'monster_puglin_chieftain', name: '★ Gronk, Puglin Warlord', x: -22, z: -36, hp: 780, dmg: 42, speed: 4.9, scale: 1.55, xp: 180, isElite: true, weaponId: 'Axe_Double' },
 
-          { modelKey: 'monster_alien_scolitex', name: 'Xeno-Scolitex Swarmer', x: 18, z: -19, hp: 210, dmg: 24, speed: 6.8, scale: 1.15, xp: 55, ranged: false },
-          { modelKey: 'monster_alien_scolitex', name: 'Xeno-Scolitex Swarmer', x: 25, z: -21, hp: 210, dmg: 24, speed: 6.8, scale: 1.15, xp: 55, ranged: false },
-          { modelKey: 'monster_alien_oculichrysalis', name: 'Oculichrysalis Watcher', x: 22, z: -28, hp: 290, dmg: 30, speed: 5.2, scale: 1.25, xp: 75, ranged: true },
-          { modelKey: 'monster_alien_cyclop', name: 'Astral Cyclops Juggernaut', x: 26, z: -34, hp: 520, dmg: 38, speed: 4.6, scale: 1.45, xp: 130, ranged: false },
+          { modelKey: 'monster_alien_scolitex', name: 'Xeno-Scolitex Swarmer', x: 18, z: -19, hp: 210, dmg: 24, speed: 6.8, scale: 0.62, xp: 55, ranged: false },
+          { modelKey: 'monster_alien_scolitex', name: 'Xeno-Scolitex Swarmer', x: 25, z: -21, hp: 210, dmg: 24, speed: 6.8, scale: 0.62, xp: 55, ranged: false },
+          { modelKey: 'monster_alien_oculichrysalis', name: 'Oculichrysalis Watcher', x: 22, z: -28, hp: 290, dmg: 30, speed: 5.2, scale: 1.15, xp: 75, ranged: true },
+          { modelKey: 'monster_alien_cyclop', name: 'Astral Cyclops Juggernaut', x: 26, z: -34, hp: 520, dmg: 38, speed: 4.6, scale: 1.35, xp: 130, ranged: false },
 
-          { modelKey: 'boss_chrono_archon', name: '☠️ MALAKOR, THE CHRONO-FUSED ARCHON', x: 0, z: -50, hp: 3600, dmg: 58, speed: 5.2, scale: 1.78, xp: 800, isBoss: true, weaponId: 'Scythe', offhandId: 'Sword_Golden' }
+          { modelKey: 'boss_chrono_archon', name: '☠️ MALAKOR, THE CHRONO-FUSED ARCHON', x: 0, z: -50, hp: 3600, dmg: 58, speed: 5.2, scale: 1.65, xp: 800, isBoss: true, weaponId: 'Scythe', offhandId: 'Sword_Golden' }
         ];
 
         spawnDefs.forEach((d, idx) => {
@@ -2419,6 +2617,7 @@
             attackCd: 1.5 + Math.random(),
             windupTimer: 0,
             stunTimer: 0,
+            aggroTimer: 0,
             dead: false,
             deathTimer: 0
           };
@@ -2592,6 +2791,14 @@
             this.spawnFloatingText(this.player.pos, 'NEED 100% SYNERGY!', '#38e8ff', 14);
             return;
           }
+          if (ent === this.player && (slot === 1 || slot === 2 || slot === 3) && this.mouseWorld) {
+            const toCursor = this.mouseWorld.clone().sub(ent.pos);
+            toCursor.y = 0;
+            if (toCursor.lengthSq() > 0.04) {
+              ent.yaw = Math.atan2(toCursor.x, toCursor.z);
+              if (ent.meshRoot) ent.meshRoot.rotation.y = ent.yaw;
+            }
+          }
         }
 
         const cls = HERO_CLASSES[ent.classId] || HERO_CLASSES.vanguard;
@@ -2661,6 +2868,9 @@
           this.audio.playSwing(false);
           this.spawnVFXFlipbook('charged', ent.pos, 2.5, 0.35, 0x38e8ff);
           ent.pos.add(forward.clone().multiplyScalar(4.2));
+          ent.pos.x = Math.max(-75, Math.min(75, ent.pos.x));
+          ent.pos.z = Math.max(-75, Math.min(45, ent.pos.z));
+          this.resolveObstacleCollisions(ent.pos, 0.55);
         }
         else if (slot === 4) {
           this.playEntityAnim(ent, 'Spell_Simple_Enter', true);
@@ -2720,8 +2930,10 @@
       spawnProjectile(origin, dir, speed, dmg, colorHex, fromPlayer = true) {
         let mesh;
         if (fromPlayer && this.modelCache['weapon_Arrow']) {
-          mesh = this.modelCache['weapon_Arrow'].clone();
-          mesh.scale.setScalar(1.3);
+          const arrowTemplate = this.modelCache['weapon_Arrow'];
+          mesh = arrowTemplate.clone();
+          const rawDim = arrowTemplate.userData.rawMaxDim || 2.73;
+          mesh.scale.setScalar(0.95 / rawDim);
         } else {
           mesh = new THREE.Mesh(
             new THREE.SphereGeometry(0.22, 8, 8),
@@ -2782,6 +2994,7 @@
         const finalDmg = Math.round(baseDmg * (isCrit ? 1.65 : 1.0) * (0.92 + Math.random() * 0.16));
 
         mob.hp = Math.max(0, mob.hp - finalDmg);
+        mob.aggroTimer = 8.0;
         this.triggerEntityHitFlash(mob);
         this.audio.playHit(isCrit, isHeavy);
         this.spawnVFXFlipbook(isCrit ? 'bighit' : 'impact', mob.pos, isCrit ? 3.0 : 2.1, 0.3, isCrit ? 0xffd56b : 0xffffff);
@@ -2794,6 +3007,7 @@
         if (!mob.isBoss) {
           const kb = mob.pos.clone().sub(attacker ? attacker.pos : this.player.pos).setY(0).normalize().multiplyScalar(isHeavy ? 1.45 : 0.55);
           mob.pos.add(kb);
+          this.resolveObstacleCollisions(mob.pos, 0.55);
           this.playEntityAnim(mob, isHeavy ? 'Hit_Knockback' : 'Hit_Chest', true);
           mob.stunTimer = Math.max(mob.stunTimer, isHeavy ? 0.55 : 0.22);
         }
@@ -3411,9 +3625,9 @@
           if (k === '1' || k === ' ' || k === 'j') this.useSkill(1);
           if (k === '2' || k === 'k') this.useSkill(2);
           if (k === 'shift' || k === '3' || k === 'l') this.useSkill(3);
-          if (k === 'e' || k === '4') this.useSkill(4);
+          if (k === '4' || k === 'v') this.useSkill(4);
           if (k === 'r' || k === '5') this.useSkill(5);
-          if (k === 'q') this.usePotion();
+          if (k === 'h' || k === 'c') this.usePotion();
           if (k === 'f') this.triggerInteract();
           if (k === 'escape') this.closeModals();
         });
@@ -3427,15 +3641,50 @@
           this.mouseNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
           this.raycaster.setFromCamera(this.mouseNDC, this.camera);
           this.raycaster.ray.intersectPlane(this.groundPlane, this.mouseWorld);
+
+          if (this.isOrbitDragging) {
+            const dx = e.clientX - this.orbitDragStart.x;
+            const dy = e.clientY - this.orbitDragStart.y;
+            if (Math.hypot(dx, dy) > 6) {
+              this.orbitDragStart.moved = true;
+            }
+            if (this.orbitDragStart.moved) {
+              this.cameraYaw -= e.movementX * 0.0075;
+            }
+          }
         });
 
         this.canvas.addEventListener('mousedown', (e) => {
           if (document.querySelector('.modal-backdrop.active')) return;
-          if (e.button === 0) this.useSkill(1);
-          if (e.button === 2) this.useSkill(2);
+          this.mouseNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
+          this.mouseNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
+          this.raycaster.setFromCamera(this.mouseNDC, this.camera);
+          this.raycaster.ray.intersectPlane(this.groundPlane, this.mouseWorld);
+
+          if (e.button === 0) {
+            this.mouseDownLeft = true;
+            this.useSkill(1);
+          } else if (e.button === 2 || e.button === 1) {
+            this.isOrbitDragging = true;
+            this.orbitDragStart = { x: e.clientX, y: e.clientY, moved: false, button: e.button };
+          }
         });
 
-        this.canvas.addEventListener('contextmenu', e => e.preventDefault());
+        window.addEventListener('mouseup', (e) => {
+          if (e.button === 0) {
+            this.mouseDownLeft = false;
+          }
+          if (this.isOrbitDragging && (e.button === 2 || e.button === 1)) {
+            const wasMoved = this.orbitDragStart.moved;
+            const btn = this.orbitDragStart.button;
+            this.isOrbitDragging = false;
+            if (btn === 2 && !wasMoved && !document.querySelector('.modal-backdrop.active')) {
+              this.useSkill(2);
+            }
+          }
+        });
+
+        window.addEventListener('contextmenu', e => e.preventDefault());
 
         this.canvas.addEventListener('wheel', (e) => {
           this.cameraZoom = Math.max(10, Math.min(28, this.cameraZoom + e.deltaY * 0.01));
@@ -3504,7 +3753,7 @@
 
         this.updateMonsters(dt);
         this.updateProjectilesAndVFX(dt);
-        this.updateSynergyTethers();
+        this.updateSynergyTethers(dt);
 
         // While Hero Selection Modal is open, gently orbit the camera so the 3D Village & Sky Dome shine behind the UI!
         const heroModalOpen = document.getElementById('hero-modal')?.classList.contains('active');
@@ -3536,6 +3785,13 @@
       updatePlayer(dt) {
         const p = this.player;
         const cls = HERO_CLASSES[p.classId];
+        const elapsed = this.clock.getElapsedTime();
+
+        if (this.keys['q']) this.cameraYaw -= 1.85 * dt;
+        if (this.keys['e']) this.cameraYaw += 1.85 * dt;
+
+        this.raycaster.setFromCamera(this.mouseNDC, this.camera);
+        this.raycaster.ray.intersectPlane(this.groundPlane, this.mouseWorld);
 
         Object.keys(p.cooldowns).forEach(k => {
           if (p.cooldowns[k] > 0) p.cooldowns[k] = Math.max(0, p.cooldowns[k] - dt);
@@ -3548,20 +3804,32 @@
         }
         p.mp = Math.min(p.maxMp, p.mp + dt * 6);
 
-        let mx = this.touchVec.x;
-        let mz = this.touchVec.y;
-        if (this.keys['w'] || this.keys['arrowup']) mz -= 1;
-        if (this.keys['s'] || this.keys['arrowdown']) mz += 1;
-        if (this.keys['a'] || this.keys['arrowleft']) mx -= 1;
-        if (this.keys['d'] || this.keys['arrowright']) mx += 1;
+        if (this.mouseDownLeft && p.cooldowns[1] <= 0 && !document.querySelector('.modal-backdrop.active')) {
+          this.useSkill(1);
+        }
 
-        const moveLen = Math.hypot(mx, mz);
+        let ix = this.touchVec.x;
+        let iz = this.touchVec.y;
+        if (this.keys['w'] || this.keys['arrowup']) iz -= 1;
+        if (this.keys['s'] || this.keys['arrowdown']) iz += 1;
+        if (this.keys['a'] || this.keys['arrowleft']) ix -= 1;
+        if (this.keys['d'] || this.keys['arrowright']) ix += 1;
+
+        const moveLen = Math.hypot(ix, iz);
         const speedMult = p.buffTimer > 0 ? 1.28 : 1.0;
+        let isMoving = false;
         if (moveLen > 0.05 && p.attackTimer <= 0.08) {
-          mx /= moveLen;
-          mz /= moveLen;
+          isMoving = true;
+          ix /= moveLen;
+          iz /= moveLen;
+          const cosY = Math.cos(this.cameraYaw);
+          const sinY = Math.sin(this.cameraYaw);
+          const mx = ix * cosY + iz * sinY;
+          const mz = -ix * sinY + iz * cosY;
+
           p.pos.x = Math.max(-75, Math.min(75, p.pos.x + mx * cls.speed * speedMult * dt));
           p.pos.z = Math.max(-75, Math.min(45, p.pos.z + mz * cls.speed * speedMult * dt));
+          this.resolveObstacleCollisions(p.pos, 0.55);
           p.yaw = Math.atan2(mx, mz);
 
           if (p.dodgeTimer <= 0) {
@@ -3584,7 +3852,18 @@
 
         if (p.meshRoot) {
           p.meshRoot.position.copy(p.pos);
-          p.meshRoot.rotation.y = p.yaw;
+          p.meshRoot.rotation.set(0, p.yaw, 0);
+          // Procedural locomotion/combat fallback when skeletal clip has not loaded yet
+          if (!p.activeAction) {
+            if (p.attackTimer > 0) {
+              const swingPhase = Math.sin((p.attackTimer / 0.35) * Math.PI);
+              p.meshRoot.position.y += swingPhase * 0.16;
+              p.meshRoot.rotation.x = swingPhase * 0.28;
+            } else if (isMoving) {
+              p.meshRoot.position.y += Math.abs(Math.sin(elapsed * 11)) * 0.14;
+              p.meshRoot.rotation.z = Math.sin(elapsed * 11) * 0.05;
+            }
+          }
         }
         if (p.mixer) p.mixer.update(dt);
 
@@ -3630,7 +3909,7 @@
       }
 
       updateAICompanions(dt) {
-        this.aiAllies.forEach((ally) => {
+        this.aiAllies.forEach((ally, idx) => {
           if (ally.mixer) ally.mixer.update(dt);
           ally.attackCd = Math.max(0, ally.attackCd - dt);
 
@@ -3673,6 +3952,8 @@
             }
           }
 
+          this.resolveObstacleCollisions(ally.pos, 0.55);
+
           if (ally.meshRoot) {
             ally.meshRoot.position.copy(ally.pos);
             ally.meshRoot.rotation.y = ally.yaw;
@@ -3683,8 +3964,9 @@
       updateMonsters(dt) {
         let activeCombatCount = 0;
         let activeBoss = null;
+        const elapsed = this.clock.getElapsedTime();
 
-        this.monsters.forEach((m) => {
+        this.monsters.forEach((m, idx) => {
           if (m.mixer) m.mixer.update(dt);
 
           if (m.dead) {
@@ -3695,16 +3977,35 @@
             return;
           }
 
+          if (m.aggroTimer > 0) m.aggroTimer = Math.max(0, m.aggroTimer - dt);
+
           if (m.stunTimer > 0) {
             m.stunTimer -= dt;
             return;
           }
 
           const toPlayer = this.player.pos.clone().sub(m.pos);
+          toPlayer.y = 0;
           const dist = toPlayer.length();
+          const distFromHome = m.pos.distanceTo(m.homePos);
           const aggroRadius = m.isBoss ? 24.0 : 15.5;
+          const leashLimit = m.isBoss ? 36.0 : 30.0;
+          const inSanctuarySafeZone = !m.isBoss && m.homePos.z < -4 && this.player.pos.z > 4.5 && m.pos.z > 1.5;
 
-          if (dist < aggroRadius) {
+          let isMoving = false;
+          if ((distFromHome > leashLimit || inSanctuarySafeZone) && m.aggroTimer <= 0) {
+            const toHome = m.homePos.clone().sub(m.pos);
+            toHome.y = 0;
+            if (toHome.length() > 1.2) {
+              isMoving = true;
+              m.yaw = Math.atan2(toHome.x, toHome.z);
+              toHome.normalize();
+              m.pos.addScaledVector(toHome, m.speed * 1.15 * dt);
+              this.playEntityAnim(m, m.modelKey.includes('puglin') ? 'Zombie_Walk_Fwd_Loop' : 'Jog_Fwd_Loop');
+            } else {
+              this.playEntityAnim(m, 'Idle_Loop');
+            }
+          } else if (dist < aggroRadius || m.aggroTimer > 0) {
             activeCombatCount++;
             if (m.isBoss) activeBoss = m;
             m.yaw = Math.atan2(toPlayer.x, toPlayer.z);
@@ -3712,6 +4013,7 @@
 
             const stopRange = m.ranged ? 8.5 : (m.isBoss ? 3.2 : 2.1);
             if (dist > stopRange && m.windupTimer <= 0) {
+              isMoving = true;
               toPlayer.normalize();
               m.pos.addScaledVector(toPlayer, m.speed * dt);
               this.playEntityAnim(m, m.modelKey.includes('puglin') ? 'Zombie_Walk_Fwd_Loop' : 'Jog_Fwd_Loop');
@@ -3722,7 +4024,10 @@
 
               const targetSnap = this.player.pos.clone();
               const teleRadius = m.isBoss ? 4.4 : 2.4;
-              this.spawnTelegraphCircle(m.ranged ? targetSnap : m.pos.clone().add(toPlayer.normalize().multiplyScalar(1.6)), teleRadius, m.windupTimer, 0xff3b5c, () => {
+              const teleCenter = m.ranged
+                ? targetSnap
+                : m.pos.clone().add(new THREE.Vector3(Math.sin(m.yaw), 0, Math.cos(m.yaw)).multiplyScalar(1.6));
+              this.spawnTelegraphCircle(teleCenter, teleRadius, m.windupTimer, 0xff3b5c, () => {
                 if (m.dead) return;
                 if (m.ranged) {
                   const dir = targetSnap.clone().sub(m.pos).setY(0).normalize();
@@ -3735,6 +4040,8 @@
                   }
                 }
               });
+            } else if (m.windupTimer <= 0) {
+              this.playEntityAnim(m, 'Idle_Loop');
             }
 
             if (m.windupTimer > 0) m.windupTimer = Math.max(0, m.windupTimer - dt);
@@ -3742,10 +4049,61 @@
             this.playEntityAnim(m, 'Idle_Loop');
           }
 
-          if (m.meshRoot) {
-            m.meshRoot.position.x = m.pos.x;
-            m.meshRoot.position.z = m.pos.z;
-            m.meshRoot.rotation.y = m.yaw;
+          // Keep monster from overlapping exact player position
+          const dxP = m.pos.x - this.player.pos.x;
+          const dzP = m.pos.z - this.player.pos.z;
+          const minPlayerDist = m.isBoss ? 1.75 : 1.05;
+          const distPSq = dxP * dxP + dzP * dzP;
+          if (distPSq < minPlayerDist * minPlayerDist) {
+            const dP = Math.sqrt(distPSq) || 0.001;
+            const pushP = (minPlayerDist - dP) / dP;
+            m.pos.x += dxP * pushP;
+            m.pos.z += dzP * pushP;
+          }
+
+          this.resolveObstacleCollisions(m.pos, m.isBoss ? 1.1 : 0.55);
+          m.isMovingNow = isMoving;
+        });
+
+        // Monster-to-Monster collision separation so mobs surround player cleanly instead of stacking
+        for (let i = 0; i < this.monsters.length; i++) {
+          const m1 = this.monsters[i];
+          if (m1.dead) continue;
+          for (let j = i + 1; j < this.monsters.length; j++) {
+            const m2 = this.monsters[j];
+            if (m2.dead) continue;
+            const dx = m2.pos.x - m1.pos.x;
+            const dz = m2.pos.z - m1.pos.z;
+            const minSep = (m1.isBoss ? 1.8 : 0.95) + (m2.isBoss ? 1.8 : 0.95);
+            const dSq = dx * dx + dz * dz;
+            if (dSq < minSep * minSep) {
+              const d = Math.sqrt(dSq) || 0.01;
+              const overlap = (minSep - d) * 0.5;
+              const nx = dx / d;
+              const nz = dz / d;
+              if (!m1.isBoss) { m1.pos.x -= nx * overlap; m1.pos.z -= nz * overlap; }
+              if (!m2.isBoss) { m2.pos.x += nx * overlap; m2.pos.z += nz * overlap; }
+            }
+          }
+        }
+
+        this.monsters.forEach((m, idx) => {
+          if (m.dead || !m.meshRoot) return;
+          m.meshRoot.position.x = m.pos.x;
+          m.meshRoot.position.z = m.pos.z;
+          m.meshRoot.position.y = 0;
+          m.meshRoot.rotation.set(0, m.yaw, 0);
+
+          const needsProceduralMotion = !m.activeAction || (m.modelKey && m.modelKey.includes('alien'));
+          if (needsProceduralMotion) {
+            if (m.windupTimer > 0) {
+              const lunge = Math.sin(m.windupTimer * 6.0);
+              m.meshRoot.position.y = Math.abs(lunge) * 0.18;
+              m.meshRoot.rotation.x = lunge * 0.22;
+            } else if (m.isMovingNow) {
+              m.meshRoot.position.y = Math.abs(Math.sin(elapsed * 9.5 + idx)) * 0.14;
+              m.meshRoot.rotation.z = Math.sin(elapsed * 9.5 + idx) * 0.05;
+            }
           }
         });
 
@@ -3865,22 +4223,17 @@
         }
       }
 
-      updateSynergyTethers() {
-        this.tetherLines.forEach(l => this.scene.remove(l));
-        this.tetherLines = [];
+      updateSynergyTethers(dt = 0.016) {
+        if (this.tetherLines.length > 0) {
+          this.tetherLines.forEach(l => this.scene.remove(l));
+          this.tetherLines = [];
+        }
 
+        // Passive synergy charge when fighting near co-op allies (never draw tether lines tying characters together)
         const allies = [...this.aiAllies, ...Array.from(this.remotePeers.values())];
         allies.forEach((ally) => {
           if (ally.pos.distanceTo(this.player.pos) < 11.0) {
-            const pts = [
-              this.player.pos.clone().add(new THREE.Vector3(0, 1.0, 0)),
-              ally.pos.clone().add(new THREE.Vector3(0, 1.0, 0))
-            ];
-            const geo = new THREE.BufferGeometry().setFromPoints(pts);
-            const mat = new THREE.LineBasicMaterial({ color: 0x38e8ff, transparent: true, opacity: 0.45 });
-            const line = new THREE.Line(geo, mat);
-            this.scene.add(line);
-            this.tetherLines.push(line);
+            this.player.synergy = Math.min(100, this.player.synergy + dt * 1.2);
           }
         });
       }

@@ -1,4 +1,5 @@
 import bpy
+import bmesh
 import os
 import math
 
@@ -8,6 +9,23 @@ OUT_DIR = os.path.join(ROOT, "public", "assets", "models")
 for sub in ["", "heroes", "monsters", "weapons", "props"]:
     os.makedirs(os.path.join(OUT_DIR, sub), exist_ok=True)
 
+ALL_TEX_DIRS = [
+    os.path.join(ROOT, "Universal Base Characters[Standard]", "Universal Base Characters[Standard]", "Base Characters", "Textures"),
+    os.path.join(ROOT, "Universal Base Characters[Standard]", "Universal Base Characters[Standard]", "Base Characters", "Godot - UE"),
+    os.path.join(ROOT, "Universal Base Characters[Standard]", "Universal Base Characters[Standard]", "Hairstyles", "Textures"),
+    os.path.join(ROOT, "Modular Character Outfits - Fantasy[Standard]", "Modular Character Outfits - Fantasy[Standard]", "Textures", "Base"),
+    os.path.join(ROOT, "Modular Character Outfits - Fantasy[Standard]", "Modular Character Outfits - Fantasy[Standard]", "Textures", "Peasant"),
+    os.path.join(ROOT, "Modular Character Outfits - Fantasy[Standard]", "Modular Character Outfits - Fantasy[Standard]", "Textures", "Ranger"),
+    os.path.join(ROOT, "Modular Character Outfits - Fantasy[Standard]", "Modular Character Outfits - Fantasy[Standard]", "Textures", "Ranger", "Base Chars"),
+    os.path.join(ROOT, "Modular Character Outfits - Fantasy[Standard]", "Modular Character Outfits - Fantasy[Standard]", "Exports", "glTF (Godot-Unreal)", "Outfits"),
+    os.path.join(ROOT, "Bestiary - Dungeon Monsters Kit[Standard]", "Bestiary - Dungeon Monsters Kit[Standard]", "Textures"),
+    os.path.join(ROOT, "Fantasy Props MegaKit[Standard]", "Textures"),
+    os.path.join(ROOT, "Fantasy Props MegaKit[Standard]", "Exports", "glTF"),
+    os.path.join(ROOT, "Medieval Village MegaKit[Standard]", "Medieval Village MegaKit[Standard]", "Textures"),
+    os.path.join(ROOT, "Medieval Village MegaKit[Standard]", "Medieval Village MegaKit[Standard]", "glTF"),
+    os.path.join(ROOT, "Modular SciFi MegaKit[Standard]", "Modular SciFi MegaKit[Standard]", "Textures"),
+]
+
 def clear_scene():
     bpy.ops.wm.read_factory_settings(use_empty=True)
 
@@ -16,18 +34,30 @@ def remove_icospheres():
         if obj.name.startswith("Icosphere"):
             bpy.data.objects.remove(obj, do_unlink=True)
 
-def relink_missing_textures(search_dirs):
+def relink_missing_textures(search_dirs=None):
+    dirs = list(search_dirs or []) + [d for d in ALL_TEX_DIRS if d not in (search_dirs or [])]
     for img in bpy.data.images:
-        if img.filepath:
-            abs_p = bpy.path.abspath(img.filepath)
-            if not os.path.exists(abs_p):
-                base = os.path.basename(img.filepath.replace("\\", "/"))
-                for d in search_dirs:
-                    cand = os.path.join(d, base)
+        if img.packed_file is not None and img.size[0] > 0:
+            continue
+        abs_p = bpy.path.abspath(img.filepath) if img.filepath else ""
+        if img.size[0] == 0 or not abs_p or not os.path.exists(abs_p):
+            raw_base = os.path.basename(img.filepath.replace("\\", "/")) if img.filepath else img.name
+            stem = img.name.split(".")[0]
+            candidates = []
+            for c in [raw_base, raw_base.replace("_png.png", ".png"), f"{stem}.png", stem.replace("_png", "") + ".png"]:
+                if c and c not in candidates:
+                    candidates.append(c)
+            for d in dirs:
+                found = False
+                for cand_name in candidates:
+                    cand = os.path.join(d, cand_name)
                     if os.path.exists(cand):
                         img.filepath = cand
                         img.reload()
+                        found = True
                         break
+                if found:
+                    break
 
 def optimize_and_dedup_images(max_dim=512):
     # Remap duplicate images (.001, .002) to canonical image by filepath or base name
@@ -41,7 +71,7 @@ def optimize_and_dedup_images(max_dim=512):
             canonical[base] = img
 
     for mat in bpy.data.materials:
-        if mat.use_nodes and mat.node_tree:
+        if mat.node_tree:
             for node in mat.node_tree.nodes:
                 if node.type == 'TEX_IMAGE' and node.image in remap:
                     node.image = remap[node.image]
@@ -50,12 +80,14 @@ def optimize_and_dedup_images(max_dim=512):
         if dup_img.users == 0:
             bpy.data.images.remove(dup_img)
 
-    # Downscale oversized 4K textures to max_dim for fast WebGL & Vercel loading
+    # Downscale oversized 4K/2K textures to max_dim and pack so glTF AUTO exports the downscaled PNG
     for img in bpy.data.images:
-        if img.has_data and (img.size[0] > max_dim or img.size[1] > max_dim):
-            w = min(img.size[0], max_dim)
-            h = min(img.size[1], max_dim)
+        w0, h0 = img.size[0], img.size[1]
+        if w0 > max_dim or h0 > max_dim:
+            w = min(w0, max_dim)
+            h = min(h0, max_dim)
             img.scale(w, h)
+            img.pack()
 
 def create_emissive_mat(name, base_color=(0.1, 0.8, 1.0, 1.0), emit_color=(0.2, 0.9, 1.0, 1.0), emit_strength=4.5, metallic=0.8, roughness=0.2):
     mat = bpy.data.materials.new(name=name)
@@ -72,12 +104,12 @@ def create_emissive_mat(name, base_color=(0.1, 0.8, 1.0, 1.0), emit_color=(0.2, 
     return mat
 
 def export_glb(filepath, export_animations=False, max_tex=512):
+    relink_missing_textures()
     optimize_and_dedup_images(max_dim=max_tex)
     bpy.ops.export_scene.gltf(
         filepath=filepath,
         export_format='GLB',
-        export_image_format='WEBP',
-        export_image_quality=82,
+        export_image_format='AUTO',
         export_animations=export_animations,
         export_apply=False,
         export_yup=True,
@@ -161,39 +193,86 @@ def merge_armatures_to_primary():
     arms = [o for o in bpy.data.objects if o.type == 'ARMATURE']
     if not arms:
         return None
-    primary = arms[0]
+    primary = bpy.data.objects.get("Armature") or arms[0]
     primary.name = "Armature"
-    for extra in arms[1:]:
+    for extra in [a for a in arms if a != primary]:
         for child in list(extra.children):
+            mw = child.matrix_world.copy()
             child.parent = primary
+            child.matrix_world = mw
             for mod in child.modifiers:
                 if mod.type == 'ARMATURE':
                     mod.object = primary
         bpy.data.objects.remove(extra, do_unlink=True)
     remove_icospheres()
+    for child in primary.children:
+        if child.type == 'MESH' and child.data:
+            child.data.name = child.name
     return primary
+
+def prepare_base_character(is_male=True):
+    base_file = "Superhero_Male_FullBody.gltf" if is_male else "Superhero_Female_FullBody.gltf"
+    bpy.ops.import_scene.gltf(filepath=os.path.join(base_char_dir, base_file))
+    relink_missing_textures()
+    body_name = "SuperHero_Male" if is_male else "Superhero_Female"
+    body = bpy.data.objects.get(body_name)
+    if body and body.type == 'MESH':
+        skin_tex_dir = os.path.join(ROOT, "Modular Character Outfits - Fantasy[Standard]", "Modular Character Outfits - Fantasy[Standard]", "Textures", "Base")
+        bc_file = "T_Regular_Male_Dark_BaseColor.png" if is_male else "T_Regular_Female_Dark_BaseColor.png"
+        nrm_file = "T_Regular_Male_Normal.png" if is_male else "T_Regular_Female_Normal.png"
+        rgh_file = "T_Regular_Male_Roughness.png" if is_male else "T_Regular_Female_Roughness.png"
+        for mat in body.data.materials:
+            if mat and mat.node_tree:
+                for node in mat.node_tree.nodes:
+                    if node.type == 'TEX_IMAGE' and node.image:
+                        iname = node.image.name.lower()
+                        if "dark" in iname or "basecolor" in iname:
+                            node.image.filepath = os.path.join(skin_tex_dir, bc_file)
+                            node.image.name = bc_file.replace(".png", "")
+                            node.image.reload()
+                        elif "normal" in iname:
+                            node.image.filepath = os.path.join(skin_tex_dir, nrm_file)
+                            node.image.name = nrm_file.replace(".png", "")
+                            node.image.reload()
+                        elif "roughness" in iname:
+                            node.image.filepath = os.path.join(skin_tex_dir, rgh_file)
+                            node.image.name = rgh_file.replace(".png", "")
+                            node.image.reload()
+        keep_vgs = {body.vertex_groups[vg_name].index for vg_name in ("Head", "neck_01") if vg_name in body.vertex_groups}
+        verts_to_delete = [
+            v.index for v in body.data.vertices
+            if sum(g.weight for g in v.groups if g.group in keep_vgs) <= 0.05
+        ]
+        bm = bmesh.new()
+        bm.from_mesh(body.data)
+        bm.verts.ensure_lookup_table()
+        bmesh.ops.delete(bm, geom=[bm.verts[i] for i in verts_to_delete], context='VERTS')
+        bm.to_mesh(body.data)
+        bm.free()
+        body.data.update()
 
 # 2A. Vanguard Knight
 print("=== Building hero_vanguard.glb ===")
 clear_scene()
+prepare_base_character(is_male=True)
 bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Outfits", "Male_Ranger.gltf"))
 bpy.ops.import_scene.gltf(filepath=os.path.join(hair_dir, "Hair_Beard.gltf"))
-bpy.ops.import_scene.gltf(filepath=os.path.join(hair_dir, "Eyebrows_Regular.gltf"))
 arm = merge_armatures_to_primary()
 export_glb(os.path.join(OUT_DIR, "heroes", "hero_vanguard.glb"), export_animations=False)
 
 # 2B. Shadow Ranger
 print("=== Building hero_ranger.glb ===")
 clear_scene()
+prepare_base_character(is_male=False)
 bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Outfits", "Female_Ranger.gltf"))
 bpy.ops.import_scene.gltf(filepath=os.path.join(hair_dir, "Hair_Buns.gltf"))
-bpy.ops.import_scene.gltf(filepath=os.path.join(hair_dir, "Eyebrows_Female.gltf"))
 arm = merge_armatures_to_primary()
 export_glb(os.path.join(OUT_DIR, "heroes", "hero_ranger.glb"), export_animations=False)
 
 # 2C. Reaper Arcanist (Custom Blender Kitbash + Arcane Halo)
 print("=== Building hero_arcanist.glb ===")
 clear_scene()
+prepare_base_character(is_male=False)
 bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Outfits", "Female_Peasant.gltf"))
 bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Modular Parts", "Female_Ranger_Head_Hood.gltf"))
 bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Modular Parts", "Female_Ranger_Acc_Pauldrons.gltf"))
@@ -203,6 +282,7 @@ arm = merge_armatures_to_primary()
 bpy.ops.mesh.primitive_torus_add(major_radius=0.38, minor_radius=0.022, major_segments=32, minor_segments=12, location=(0, -0.22, 1.38), rotation=(math.radians(90), 0, 0))
 halo = bpy.context.active_object
 halo.name = "Arcanist_Halo"
+halo.data.name = "Arcanist_Halo"
 halo.data.materials.append(create_emissive_mat("M_Arcane_Halo", (0.4, 0.1, 0.9, 1.0), (0.55, 0.2, 1.0, 1.0), 5.0))
 halo.parent = arm
 vg = halo.vertex_groups.new(name="spine_03")
@@ -214,6 +294,7 @@ export_glb(os.path.join(OUT_DIR, "heroes", "hero_arcanist.glb"), export_animatio
 # 2D. Berserker Warlord (Custom Blender Kitbash)
 print("=== Building hero_berserker.glb ===")
 clear_scene()
+prepare_base_character(is_male=True)
 bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Outfits", "Male_Peasant.gltf"))
 bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Modular Parts", "Male_Ranger_Acc_Pauldron.gltf"))
 bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Modular Parts", "Male_Ranger_Feet_Boots.gltf"))

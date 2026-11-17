@@ -57,8 +57,10 @@ def optimize_and_dedup_images(max_dim=512):
             bpy.data.images.remove(dup_img)
 
     for img in bpy.data.images:
-        if img.has_data and (img.size[0] > max_dim or img.size[1] > max_dim):
-            img.scale(min(img.size[0], max_dim), min(img.size[1], max_dim))
+        w0, h0 = img.size[0], img.size[1]
+        if w0 > max_dim or h0 > max_dim:
+            img.scale(min(w0, max_dim), min(h0, max_dim))
+            img.pack()
 
 def import_piece(gltf_path, loc=(0,0,0), rot=(0,0,0), scale=(1,1,1)):
     if not os.path.exists(gltf_path):
@@ -83,8 +85,7 @@ def export_glb(filepath, tex_dirs):
     bpy.ops.export_scene.gltf(
         filepath=filepath,
         export_format='GLB',
-        export_image_format='WEBP',
-        export_image_quality=82,
+        export_image_format='AUTO',
         export_animations=False,
         export_apply=False,
         export_yup=True,
