@@ -56,6 +56,22 @@ def build(src, out_name):
     else:
         bpy.ops.import_scene.gltf(filepath=src)
 
+    # FBX imports come in with alpha 0 + alpha-clip, which exports as an invisible
+    # MASK material (only the shadow renders). Force every material opaque.
+    for mat in bpy.data.materials:
+        if mat.use_nodes:
+            for n in mat.node_tree.nodes:
+                if n.type == "BSDF_PRINCIPLED" and "Alpha" in n.inputs:
+                    for link in list(n.inputs["Alpha"].links):
+                        mat.node_tree.links.remove(link)
+                    n.inputs["Alpha"].default_value = 1.0
+        for attr, val in (("blend_method", "OPAQUE"), ("surface_render_method", "DITHERED")):
+            if hasattr(mat, attr):
+                try:
+                    setattr(mat, attr, val)
+                except Exception:
+                    pass
+
     seen = set()
     for act in list(bpy.data.actions):
         new = clip_name(act.name)

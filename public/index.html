@@ -10,6 +10,12 @@
   <!-- Three.js, GLTFLoader & Supabase JS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
@@ -7955,7 +7961,7 @@
 
         if (this.hitStopTimer > 0) {
           this.hitStopTimer -= dt;
-          this.renderer.render(this.scene, this.camera);
+          if (this.renderFrame) this.renderFrame(); else this.renderer.render(this.scene, this.camera);
           return;
         }
 
@@ -8137,7 +8143,7 @@
           this.updateHUDAndMinimap();
         }
 
-        this.renderer.render(this.scene, this.camera);
+        if (this.renderFrame) this.renderFrame(); else this.renderer.render(this.scene, this.camera);
       }
 
       jump() {
@@ -9714,8 +9720,11 @@
       window.game = new ChronoRiftCoOpGame();
     });
   </script>
-  <script src="assets/js/mmo_data.js?v=4"></script>
-  <script src="assets/js/mmo_world.js?v=4"></script>
-  <script src="assets/js/mmo_rpg.js?v=4"></script>
+  <script src="assets/js/mmo_data.js?v=5"></script>
+  <script src="assets/js/mmo_world.js?v=5"></script>
+  <script src="assets/js/mmo_rpg.js?v=5"></script>
+  <script src="assets/js/mmo_audio.js?v=5"></script>
+  <script src="assets/js/mmo_vfx.js?v=5"></script>
+  <script src="assets/js/mmo_mobile.js?v=5"></script>
 </body>
 </html>

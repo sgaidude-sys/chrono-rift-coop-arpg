@@ -142,6 +142,107 @@ for cls, barks in HERO_BARKS.items():
         LINES[f"hero_{cls}_{key}"] = (cls, text)
 
 # ---------------------------------------------------------------------------
+# MMO EXPANSION CAST — zone bosses, world bosses, quest givers, announcer
+# ---------------------------------------------------------------------------
+OCT = dict(layer_octave=True)
+CAST.update({
+    "mycelord":  dict(voice="am_onyx",    speed=0.9,  lang="en-us", pitch=0.78, fx="vibrato=f=5:d=0.25,bass=g=4,aecho=0.8:0.6:45|90:0.25|0.12"),
+    "grimtooth": dict(voice="am_puck",    speed=1.0,  lang="en-us", pitch=0.84, fx="acrusher=bits=10:mix=0.15,bass=g=4,aecho=0.8:0.5:30:0.18"),
+    "skullcrusher": dict(voice="am_fenrir", speed=0.92, lang="en-us", pitch=0.76, fx="acrusher=bits=9:mix=0.2,bass=g=6,aecho=0.8:0.6:50|100:0.25|0.12"),
+    "frostmaw":  dict(voice="am_onyx",    speed=0.86, lang="en-us", pitch=0.7,  fx="bass=g=5,aecho=0.8:0.8:90|180|320:0.3|0.18|0.08", **OCT),
+    "azhazel":   dict(voice="bm_lewis",   speed=0.9,  lang="en-gb", pitch=0.82, fx="bass=g=5,aecho=0.8:0.6:60|130:0.18|0.08", **OCT),
+    "ignaroth":  dict(voice="am_michael", speed=0.88, lang="en-us", pitch=0.74, fx="bass=g=5,aecho=0.8:0.7:110|230:0.2|0.1", **OCT),
+    "hywirl":    dict(voice="af_kore",    speed=0.92, lang="en-us", pitch=0.88, fx="flanger=delay=4:depth=6:speed=0.6,aecho=0.8:0.7:70|160:0.3|0.15"),
+    "leviathan": dict(voice="am_echo",    speed=0.86, lang="en-us", pitch=0.74, fx="lowpass=f=4200,bass=g=5,aecho=0.8:0.7:100|220:0.2|0.1", **OCT),
+    "elric":     dict(voice="bm_daniel",  speed=0.98, lang="en-gb", fx=ROOM),
+    "sylwen":    dict(voice="bf_alice",   speed=1.0,  lang="en-gb", fx=ROOM),
+    "moss":      dict(voice="bm_george",  speed=0.9,  lang="en-gb", pitch=0.92, fx="acrusher=bits=12:mix=0.06," + ROOM),
+    "rhaz":      dict(voice="am_eric",    speed=1.0,  lang="en-us", fx=ROOM),
+    "ylva":      dict(voice="bf_lily",    speed=0.95, lang="en-gb", fx="aecho=0.8:0.6:60|130:0.2|0.1"),
+    "ozen":      dict(voice="am_liam",    speed=0.98, lang="en-us", fx="flanger=delay=1:depth=1.5:speed=0.3," + ROOM),
+    "ashka":     dict(voice="af_river",   speed=1.0,  lang="en-us", fx="aecho=0.8:0.5:40:0.15"),
+})
+SPEAKER_LABEL.update({k: k.title() for k in ["mycelord", "grimtooth", "skullcrusher", "frostmaw", "azhazel", "ignaroth", "hywirl", "leviathan", "elric", "sylwen", "moss", "rhaz", "ylva", "ozen", "ashka"]})
+
+BOSS_LINES = {
+    "mycelord": ["Trespassers in my meadow! You will feed the spores!", "Spores... everywhere!", "", "My mycelium... withers..."],
+    "grimtooth": ["Who dares climb Grimtooth's canopy?", "The canopy trembles!", "", "The forest... falls silent..."],
+    "skullcrusher": ["More skulls for my throne! Charge!", "Beat the war drums!", "", "The dunes... take me..."],
+    "frostmaw": ["The mountain does not want you here.", "The mountain answers me!", "", "The thaw... comes..."],
+    "azhazel": ["Kneel in the flames, mortals. Kneel!", "Rise, children of the rift!", "Burn with me!", "Blue fire... fading..."],
+    "ignaroth": ["Little sparks. You come to the furnace of the sky?", "Burn beneath my wings!", "The sky itself ignites!", "My flame... eternal... no..."],
+    "hywirl": ["The storm has found you.", "Feel the gale!", "The storm is endless!", "The winds... are still..."],
+    "leviathan": ["The abyss... hungers for you, little ones.", "Sink with me into the dark.", "All rifts end in me!", "The deep... reclaims me..."],
+    "gronk": ["", "Puglins! To Gronk!", "Gronk smash!", ""],
+    "xeno": ["", "Escalating purge protocol.", "Critical. Overclocking.", ""],
+}
+for b, (eng, p2, p3, death) in BOSS_LINES.items():
+    for key, text in (("engage", eng), ("p2", p2), ("p3", p3), ("death", death)):
+        if text:
+            LINES[f"boss_{b}_{key}"] = (b, text)
+
+GIVER_LINES = {
+    "elric": ("Welcome, recruit. The meadows need a steady blade. Take a task from the board.", "Fine work. The Bastion sleeps easier tonight."),
+    "sylwen": ("Quiet steps, friend. Whisperwood bites the careless.", "The forest thanks you. So do I."),
+    "moss": ("Mind the graves... the dead here don't stay put.", "Good. The crypts are a little quieter."),
+    "rhaz": ("Water's scarce, coin's scarcer. Want work?", "Ha! The caravan owes you a drink."),
+    "ylva": ("The ice whispers your name, traveler. Will you listen?", "The frost recedes. Well done."),
+    "ozen": ("Readings off the charts. Help me stabilise this breach.", "Breach stabilising. Excellent work."),
+    "ashka": ("Stay out of the lava and you might live. Might.", "You walked through fire for us. Respect."),
+}
+for g, (greet, thanks) in GIVER_LINES.items():
+    LINES[f"qg_{g}_greet"] = (g, greet)
+    LINES[f"qg_{g}_thanks"] = (g, thanks)
+
+ANNOUNCER = {
+    "wb_ember_wyrm": "Ignaroth, the Ember Wyrm, has awakened in the Scorched Badlands! Gather your party!",
+    "wb_storm_sovereign": "Hywirl, the Storm Sovereign, stirs above Frostpeak! Heroes, to arms!",
+    "wb_leviathan": "The Abyssal Leviathan rises in the Infernal Rift! All heroes, answer the call!",
+    "ann_boss_slain": "A great foe has fallen! Glory to the party!",
+    "ann_quest_done": "Quest complete!",
+    "ann_new_zone": "New lands discovered.",
+}
+for k, text in ANNOUNCER.items():
+    LINES[k] = ("lyra", text)
+
+# Short hero effort grunts (attacks / taking a big hit)
+GRUNTS = {"attack": ["Hah!", "Hyah!", "Huah!"], "hurt": ["Agh!", "Ugh!"]}
+for cls in ("vanguard", "ranger", "arcanist", "berserker"):
+    for kind, texts in GRUNTS.items():
+        for i, t in enumerate(texts):
+            LINES[f"grunt_{cls}_{kind}_{i}"] = (cls, t)
+
+# Creature voices: Kokoro reads short pseudo-words, ffmpeg turns them into monster sounds
+CAST.update({
+    "cr_critter": dict(voice="af_sky",    speed=1.15, lang="en-us", pitch=1.55, fx="highpass=f=400,aecho=0.8:0.3:12:0.1", norm=-20),
+    "cr_slime":   dict(voice="am_puck",   speed=0.9,  lang="en-us", pitch=0.68, fx="vibrato=f=14:d=0.7,lowpass=f=1600,bass=g=6", norm=-20),
+    "cr_beast":   dict(voice="am_onyx",   speed=0.95, lang="en-us", pitch=0.58, fx="acrusher=bits=8:mix=0.25,bass=g=8,lowpass=f=3000,aecho=0.8:0.4:25:0.15", norm=-19),
+    "cr_insect":  dict(voice="af_nova",   speed=1.1,  lang="en-us", pitch=1.3,  fx="tremolo=f=55:d=0.85,flanger=delay=1:depth=2:speed=3,highpass=f=300", norm=-21),
+    "cr_undead":  dict(voice="af_nicole", speed=0.8,  lang="en-us", pitch=0.72, fx="vibrato=f=4:d=0.4,aecho=0.8:0.85:80|170|300:0.4|0.25|0.12,lowpass=f=4000", norm=-20),
+    "cr_brute":   dict(voice="am_fenrir", speed=1.0,  lang="en-us", pitch=0.7,  fx="acrusher=bits=9:mix=0.2,bass=g=6,aecho=0.8:0.4:20:0.12", norm=-19),
+    "cr_demon":   dict(voice="bm_lewis",  speed=0.9,  lang="en-gb", pitch=0.6,  fx="bass=g=7,aecho=0.8:0.6:50|110:0.25|0.12", layer_octave=True, norm=-19),
+    "cr_alien":   dict(voice="af_nova",   speed=1.05, lang="en-us", pitch=0.9,
+                       fx="afftfilt=real='hypot(re,im)*cos(0)':imag='hypot(re,im)*sin(0)':win_size=128:overlap=0.75,flanger=delay=1:depth=3:speed=2,highpass=f=250", norm=-21),
+    "cr_drake":   dict(voice="am_michael", speed=0.85, lang="en-us", pitch=0.5, fx="acrusher=bits=9:mix=0.15,bass=g=8,aecho=0.8:0.8:90|200:0.35|0.18", layer_octave=True, norm=-18),
+})
+CREATURES = {
+    "critter": {"aggro": ["Eek!", "Skree!"], "hurt": ["Eep!"], "death": ["Eeeeee."]},
+    "slime":   {"aggro": ["Blorp!", "Gloop!"], "hurt": ["Blup!"], "death": ["Glorrb."]},
+    "beast":   {"aggro": ["Grrah!", "Rawrr!"], "hurt": ["Rruf!"], "death": ["Awrooo."]},
+    "insect":  {"aggro": ["Bzzt!", "Hiss!"], "hurt": ["Tsst!"], "death": ["Bzz... tzz."]},
+    "undead":  {"aggro": ["Ooooh!", "Haaah!"], "hurt": ["Hah!"], "death": ["Nooooo."]},
+    "brute":   {"aggro": ["Raaah!", "Grah! Fresh meat!"], "hurt": ["Ugh!"], "death": ["Aaargh!"]},
+    "demon":   {"aggro": ["Ha ha ha!", "Burn!"], "hurt": ["Gah!"], "death": ["Nooo!"]},
+    "alien":   {"aggro": ["Target acquired.", "Kreet kreet!"], "hurt": ["Zzt!"], "death": ["System failure."]},
+    "drake":   {"aggro": ["Rooaar!", "Grraaah!"], "hurt": ["Rrah!"], "death": ["Rraaawr."]},
+}
+for fam, kinds in CREATURES.items():
+    for kind, texts in kinds.items():
+        for i, t in enumerate(texts):
+            LINES[f"cr_{fam}_{kind}_{i}"] = ("cr_" + fam, t)
+            SPEAKER_LABEL["cr_" + fam] = fam
+
+# ---------------------------------------------------------------------------
 # MUSIC / AMBIENCE / SFX sources (raw packs at repo root, gitignored)
 # ---------------------------------------------------------------------------
 GQ = os.path.join(ROOT, "Gregor Quendel - Designed Series - Free Downloads")
@@ -253,7 +354,7 @@ def build_voices():
         if pitch:
             chain.append(f"asetrate={int(sr * pitch)},aresample={sr},atempo={1 / pitch:.4f}")
         chain.append(c["fx"])
-        chain.append("loudnorm=I=-16:TP=-1.5:LRA=11")
+        chain.append(f"loudnorm=I={c.get('norm', -16)}:TP=-1.5:LRA=11")
         chain.append("areverse,silenceremove=start_periods=1:start_threshold=-55dB,apad=pad_dur=0.12,areverse")
 
         if c.get("layer_octave"):

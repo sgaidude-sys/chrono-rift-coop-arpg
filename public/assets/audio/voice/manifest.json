@@ -364,5 +364,653 @@
   "dur": 1.296,
   "speaker": "Berserker Warlord",
   "text": "Can't kill me that easy!"
+ },
+ "boss_mycelord_engage": {
+  "file": "assets/audio/voice/boss_mycelord_engage.mp3",
+  "dur": 3.72,
+  "speaker": "Mycelord",
+  "text": "Trespassers in my meadow! You will feed the spores!"
+ },
+ "boss_mycelord_p2": {
+  "file": "assets/audio/voice/boss_mycelord_p2.mp3",
+  "dur": 1.8,
+  "speaker": "Mycelord",
+  "text": "Spores... everywhere!"
+ },
+ "boss_mycelord_death": {
+  "file": "assets/audio/voice/boss_mycelord_death.mp3",
+  "dur": 2.592,
+  "speaker": "Mycelord",
+  "text": "My mycelium... withers..."
+ },
+ "boss_grimtooth_engage": {
+  "file": "assets/audio/voice/boss_grimtooth_engage.mp3",
+  "dur": 2.04,
+  "speaker": "Grimtooth",
+  "text": "Who dares climb Grimtooth's canopy?"
+ },
+ "boss_grimtooth_p2": {
+  "file": "assets/audio/voice/boss_grimtooth_p2.mp3",
+  "dur": 1.296,
+  "speaker": "Grimtooth",
+  "text": "The canopy trembles!"
+ },
+ "boss_grimtooth_death": {
+  "file": "assets/audio/voice/boss_grimtooth_death.mp3",
+  "dur": 1.728,
+  "speaker": "Grimtooth",
+  "text": "The forest... falls silent..."
+ },
+ "boss_skullcrusher_engage": {
+  "file": "assets/audio/voice/boss_skullcrusher_engage.mp3",
+  "dur": 2.088,
+  "speaker": "Skullcrusher",
+  "text": "More skulls for my throne! Charge!"
+ },
+ "boss_skullcrusher_p2": {
+  "file": "assets/audio/voice/boss_skullcrusher_p2.mp3",
+  "dur": 1.272,
+  "speaker": "Skullcrusher",
+  "text": "Beat the war drums!"
+ },
+ "boss_skullcrusher_death": {
+  "file": "assets/audio/voice/boss_skullcrusher_death.mp3",
+  "dur": 1.536,
+  "speaker": "Skullcrusher",
+  "text": "The dunes... take me..."
+ },
+ "boss_frostmaw_engage": {
+  "file": "assets/audio/voice/boss_frostmaw_engage.mp3",
+  "dur": 3.096,
+  "speaker": "Frostmaw",
+  "text": "The mountain does not want you here."
+ },
+ "boss_frostmaw_p2": {
+  "file": "assets/audio/voice/boss_frostmaw_p2.mp3",
+  "dur": 2.4,
+  "speaker": "Frostmaw",
+  "text": "The mountain answers me!"
+ },
+ "boss_frostmaw_death": {
+  "file": "assets/audio/voice/boss_frostmaw_death.mp3",
+  "dur": 1.8,
+  "speaker": "Frostmaw",
+  "text": "The thaw... comes..."
+ },
+ "boss_azhazel_engage": {
+  "file": "assets/audio/voice/boss_azhazel_engage.mp3",
+  "dur": 2.712,
+  "speaker": "Azhazel",
+  "text": "Kneel in the flames, mortals. Kneel!"
+ },
+ "boss_azhazel_p2": {
+  "file": "assets/audio/voice/boss_azhazel_p2.mp3",
+  "dur": 2.16,
+  "speaker": "Azhazel",
+  "text": "Rise, children of the rift!"
+ },
+ "boss_azhazel_p3": {
+  "file": "assets/audio/voice/boss_azhazel_p3.mp3",
+  "dur": 1.2,
+  "speaker": "Azhazel",
+  "text": "Burn with me!"
+ },
+ "boss_azhazel_death": {
+  "file": "assets/audio/voice/boss_azhazel_death.mp3",
+  "dur": 1.944,
+  "speaker": "Azhazel",
+  "text": "Blue fire... fading..."
+ },
+ "boss_ignaroth_engage": {
+  "file": "assets/audio/voice/boss_ignaroth_engage.mp3",
+  "dur": 3.648,
+  "speaker": "Ignaroth",
+  "text": "Little sparks. You come to the furnace of the sky?"
+ },
+ "boss_ignaroth_p2": {
+  "file": "assets/audio/voice/boss_ignaroth_p2.mp3",
+  "dur": 1.968,
+  "speaker": "Ignaroth",
+  "text": "Burn beneath my wings!"
+ },
+ "boss_ignaroth_p3": {
+  "file": "assets/audio/voice/boss_ignaroth_p3.mp3",
+  "dur": 2.016,
+  "speaker": "Ignaroth",
+  "text": "The sky itself ignites!"
+ },
+ "boss_ignaroth_death": {
+  "file": "assets/audio/voice/boss_ignaroth_death.mp3",
+  "dur": 2.688,
+  "speaker": "Ignaroth",
+  "text": "My flame... eternal... no..."
+ },
+ "boss_hywirl_engage": {
+  "file": "assets/audio/voice/boss_hywirl_engage.mp3",
+  "dur": 1.488,
+  "speaker": "Hywirl",
+  "text": "The storm has found you."
+ },
+ "boss_hywirl_p2": {
+  "file": "assets/audio/voice/boss_hywirl_p2.mp3",
+  "dur": 1.128,
+  "speaker": "Hywirl",
+  "text": "Feel the gale!"
+ },
+ "boss_hywirl_p3": {
+  "file": "assets/audio/voice/boss_hywirl_p3.mp3",
+  "dur": 1.512,
+  "speaker": "Hywirl",
+  "text": "The storm is endless!"
+ },
+ "boss_hywirl_death": {
+  "file": "assets/audio/voice/boss_hywirl_death.mp3",
+  "dur": 1.512,
+  "speaker": "Hywirl",
+  "text": "The winds... are still..."
+ },
+ "boss_leviathan_engage": {
+  "file": "assets/audio/voice/boss_leviathan_engage.mp3",
+  "dur": 3.072,
+  "speaker": "Leviathan",
+  "text": "The abyss... hungers for you, little ones."
+ },
+ "boss_leviathan_p2": {
+  "file": "assets/audio/voice/boss_leviathan_p2.mp3",
+  "dur": 2.352,
+  "speaker": "Leviathan",
+  "text": "Sink with me into the dark."
+ },
+ "boss_leviathan_p3": {
+  "file": "assets/audio/voice/boss_leviathan_p3.mp3",
+  "dur": 2.208,
+  "speaker": "Leviathan",
+  "text": "All rifts end in me!"
+ },
+ "boss_leviathan_death": {
+  "file": "assets/audio/voice/boss_leviathan_death.mp3",
+  "dur": 2.184,
+  "speaker": "Leviathan",
+  "text": "The deep... reclaims me..."
+ },
+ "boss_gronk_p2": {
+  "file": "assets/audio/voice/boss_gronk_p2.mp3",
+  "dur": 1.248,
+  "speaker": "Gronk, Puglin Warlord",
+  "text": "Puglins! To Gronk!"
+ },
+ "boss_gronk_p3": {
+  "file": "assets/audio/voice/boss_gronk_p3.mp3",
+  "dur": 1.032,
+  "speaker": "Gronk, Puglin Warlord",
+  "text": "Gronk smash!"
+ },
+ "boss_xeno_p2": {
+  "file": "assets/audio/voice/boss_xeno_p2.mp3",
+  "dur": 2.088,
+  "speaker": "Xeno-Harbinger",
+  "text": "Escalating purge protocol."
+ },
+ "boss_xeno_p3": {
+  "file": "assets/audio/voice/boss_xeno_p3.mp3",
+  "dur": 1.824,
+  "speaker": "Xeno-Harbinger",
+  "text": "Critical. Overclocking."
+ },
+ "qg_elric_greet": {
+  "file": "assets/audio/voice/qg_elric_greet.mp3",
+  "dur": 4.32,
+  "speaker": "Elric",
+  "text": "Welcome, recruit. The meadows need a steady blade. Take a task from the board."
+ },
+ "qg_elric_thanks": {
+  "file": "assets/audio/voice/qg_elric_thanks.mp3",
+  "dur": 2.784,
+  "speaker": "Elric",
+  "text": "Fine work. The Bastion sleeps easier tonight."
+ },
+ "qg_sylwen_greet": {
+  "file": "assets/audio/voice/qg_sylwen_greet.mp3",
+  "dur": 2.952,
+  "speaker": "Sylwen",
+  "text": "Quiet steps, friend. Whisperwood bites the careless."
+ },
+ "qg_sylwen_thanks": {
+  "file": "assets/audio/voice/qg_sylwen_thanks.mp3",
+  "dur": 2.184,
+  "speaker": "Sylwen",
+  "text": "The forest thanks you. So do I."
+ },
+ "qg_moss_greet": {
+  "file": "assets/audio/voice/qg_moss_greet.mp3",
+  "dur": 3.336,
+  "speaker": "Moss",
+  "text": "Mind the graves... the dead here don't stay put."
+ },
+ "qg_moss_thanks": {
+  "file": "assets/audio/voice/qg_moss_thanks.mp3",
+  "dur": 2.664,
+  "speaker": "Moss",
+  "text": "Good. The crypts are a little quieter."
+ },
+ "qg_rhaz_greet": {
+  "file": "assets/audio/voice/qg_rhaz_greet.mp3",
+  "dur": 2.352,
+  "speaker": "Rhaz",
+  "text": "Water's scarce, coin's scarcer. Want work?"
+ },
+ "qg_rhaz_thanks": {
+  "file": "assets/audio/voice/qg_rhaz_thanks.mp3",
+  "dur": 1.944,
+  "speaker": "Rhaz",
+  "text": "Ha! The caravan owes you a drink."
+ },
+ "qg_ylva_greet": {
+  "file": "assets/audio/voice/qg_ylva_greet.mp3",
+  "dur": 3.216,
+  "speaker": "Ylva",
+  "text": "The ice whispers your name, traveler. Will you listen?"
+ },
+ "qg_ylva_thanks": {
+  "file": "assets/audio/voice/qg_ylva_thanks.mp3",
+  "dur": 2.328,
+  "speaker": "Ylva",
+  "text": "The frost recedes. Well done."
+ },
+ "qg_ozen_greet": {
+  "file": "assets/audio/voice/qg_ozen_greet.mp3",
+  "dur": 3.36,
+  "speaker": "Ozen",
+  "text": "Readings off the charts. Help me stabilise this breach."
+ },
+ "qg_ozen_thanks": {
+  "file": "assets/audio/voice/qg_ozen_thanks.mp3",
+  "dur": 2.28,
+  "speaker": "Ozen",
+  "text": "Breach stabilising. Excellent work."
+ },
+ "qg_ashka_greet": {
+  "file": "assets/audio/voice/qg_ashka_greet.mp3",
+  "dur": 2.688,
+  "speaker": "Ashka",
+  "text": "Stay out of the lava and you might live. Might."
+ },
+ "qg_ashka_thanks": {
+  "file": "assets/audio/voice/qg_ashka_thanks.mp3",
+  "dur": 2.256,
+  "speaker": "Ashka",
+  "text": "You walked through fire for us. Respect."
+ },
+ "wb_ember_wyrm": {
+  "file": "assets/audio/voice/wb_ember_wyrm.mp3",
+  "dur": 4.896,
+  "speaker": "Rift Gatekeeper Lyra",
+  "text": "Ignaroth, the Ember Wyrm, has awakened in the Scorched Badlands! Gather your party!"
+ },
+ "wb_storm_sovereign": {
+  "file": "assets/audio/voice/wb_storm_sovereign.mp3",
+  "dur": 4.416,
+  "speaker": "Rift Gatekeeper Lyra",
+  "text": "Hywirl, the Storm Sovereign, stirs above Frostpeak! Heroes, to arms!"
+ },
+ "wb_leviathan": {
+  "file": "assets/audio/voice/wb_leviathan.mp3",
+  "dur": 5.208,
+  "speaker": "Rift Gatekeeper Lyra",
+  "text": "The Abyssal Leviathan rises in the Infernal Rift! All heroes, answer the call!"
+ },
+ "ann_boss_slain": {
+  "file": "assets/audio/voice/ann_boss_slain.mp3",
+  "dur": 2.688,
+  "speaker": "Rift Gatekeeper Lyra",
+  "text": "A great foe has fallen! Glory to the party!"
+ },
+ "ann_quest_done": {
+  "file": "assets/audio/voice/ann_quest_done.mp3",
+  "dur": 1.056,
+  "speaker": "Rift Gatekeeper Lyra",
+  "text": "Quest complete!"
+ },
+ "ann_new_zone": {
+  "file": "assets/audio/voice/ann_new_zone.mp3",
+  "dur": 1.368,
+  "speaker": "Rift Gatekeeper Lyra",
+  "text": "New lands discovered."
+ },
+ "grunt_vanguard_attack_0": {
+  "file": "assets/audio/voice/grunt_vanguard_attack_0.mp3",
+  "dur": 0.648,
+  "speaker": "Vanguard Knight",
+  "text": "Hah!"
+ },
+ "grunt_vanguard_attack_1": {
+  "file": "assets/audio/voice/grunt_vanguard_attack_1.mp3",
+  "dur": 0.696,
+  "speaker": "Vanguard Knight",
+  "text": "Hyah!"
+ },
+ "grunt_vanguard_attack_2": {
+  "file": "assets/audio/voice/grunt_vanguard_attack_2.mp3",
+  "dur": 0.744,
+  "speaker": "Vanguard Knight",
+  "text": "Huah!"
+ },
+ "grunt_vanguard_hurt_0": {
+  "file": "assets/audio/voice/grunt_vanguard_hurt_0.mp3",
+  "dur": 0.648,
+  "speaker": "Vanguard Knight",
+  "text": "Agh!"
+ },
+ "grunt_vanguard_hurt_1": {
+  "file": "assets/audio/voice/grunt_vanguard_hurt_1.mp3",
+  "dur": 0.6,
+  "speaker": "Vanguard Knight",
+  "text": "Ugh!"
+ },
+ "grunt_ranger_attack_0": {
+  "file": "assets/audio/voice/grunt_ranger_attack_0.mp3",
+  "dur": 0.744,
+  "speaker": "Shadow Ranger",
+  "text": "Hah!"
+ },
+ "grunt_ranger_attack_1": {
+  "file": "assets/audio/voice/grunt_ranger_attack_1.mp3",
+  "dur": 0.792,
+  "speaker": "Shadow Ranger",
+  "text": "Hyah!"
+ },
+ "grunt_ranger_attack_2": {
+  "file": "assets/audio/voice/grunt_ranger_attack_2.mp3",
+  "dur": 0.768,
+  "speaker": "Shadow Ranger",
+  "text": "Huah!"
+ },
+ "grunt_ranger_hurt_0": {
+  "file": "assets/audio/voice/grunt_ranger_hurt_0.mp3",
+  "dur": 0.744,
+  "speaker": "Shadow Ranger",
+  "text": "Agh!"
+ },
+ "grunt_ranger_hurt_1": {
+  "file": "assets/audio/voice/grunt_ranger_hurt_1.mp3",
+  "dur": 0.744,
+  "speaker": "Shadow Ranger",
+  "text": "Ugh!"
+ },
+ "grunt_arcanist_attack_0": {
+  "file": "assets/audio/voice/grunt_arcanist_attack_0.mp3",
+  "dur": 0.84,
+  "speaker": "Reaper Arcanist",
+  "text": "Hah!"
+ },
+ "grunt_arcanist_attack_1": {
+  "file": "assets/audio/voice/grunt_arcanist_attack_1.mp3",
+  "dur": 1.2,
+  "speaker": "Reaper Arcanist",
+  "text": "Hyah!"
+ },
+ "grunt_arcanist_attack_2": {
+  "file": "assets/audio/voice/grunt_arcanist_attack_2.mp3",
+  "dur": 0.912,
+  "speaker": "Reaper Arcanist",
+  "text": "Huah!"
+ },
+ "grunt_arcanist_hurt_0": {
+  "file": "assets/audio/voice/grunt_arcanist_hurt_0.mp3",
+  "dur": 0.96,
+  "speaker": "Reaper Arcanist",
+  "text": "Agh!"
+ },
+ "grunt_arcanist_hurt_1": {
+  "file": "assets/audio/voice/grunt_arcanist_hurt_1.mp3",
+  "dur": 1.08,
+  "speaker": "Reaper Arcanist",
+  "text": "Ugh!"
+ },
+ "grunt_berserker_attack_0": {
+  "file": "assets/audio/voice/grunt_berserker_attack_0.mp3",
+  "dur": 0.576,
+  "speaker": "Berserker Warlord",
+  "text": "Hah!"
+ },
+ "grunt_berserker_attack_1": {
+  "file": "assets/audio/voice/grunt_berserker_attack_1.mp3",
+  "dur": 0.6,
+  "speaker": "Berserker Warlord",
+  "text": "Hyah!"
+ },
+ "grunt_berserker_attack_2": {
+  "file": "assets/audio/voice/grunt_berserker_attack_2.mp3",
+  "dur": 0.648,
+  "speaker": "Berserker Warlord",
+  "text": "Huah!"
+ },
+ "grunt_berserker_hurt_0": {
+  "file": "assets/audio/voice/grunt_berserker_hurt_0.mp3",
+  "dur": 0.624,
+  "speaker": "Berserker Warlord",
+  "text": "Agh!"
+ },
+ "grunt_berserker_hurt_1": {
+  "file": "assets/audio/voice/grunt_berserker_hurt_1.mp3",
+  "dur": 0.576,
+  "speaker": "Berserker Warlord",
+  "text": "Ugh!"
+ },
+ "cr_critter_aggro_0": {
+  "file": "assets/audio/voice/cr_critter_aggro_0.mp3",
+  "dur": 0.672,
+  "speaker": "critter",
+  "text": "Eek!"
+ },
+ "cr_critter_aggro_1": {
+  "file": "assets/audio/voice/cr_critter_aggro_1.mp3",
+  "dur": 0.744,
+  "speaker": "critter",
+  "text": "Skree!"
+ },
+ "cr_critter_hurt_0": {
+  "file": "assets/audio/voice/cr_critter_hurt_0.mp3",
+  "dur": 0.744,
+  "speaker": "critter",
+  "text": "Eep!"
+ },
+ "cr_critter_death_0": {
+  "file": "assets/audio/voice/cr_critter_death_0.mp3",
+  "dur": 0.768,
+  "speaker": "critter",
+  "text": "Eeeeee."
+ },
+ "cr_slime_aggro_0": {
+  "file": "assets/audio/voice/cr_slime_aggro_0.mp3",
+  "dur": 0.744,
+  "speaker": "slime",
+  "text": "Blorp!"
+ },
+ "cr_slime_aggro_1": {
+  "file": "assets/audio/voice/cr_slime_aggro_1.mp3",
+  "dur": 0.744,
+  "speaker": "slime",
+  "text": "Gloop!"
+ },
+ "cr_slime_hurt_0": {
+  "file": "assets/audio/voice/cr_slime_hurt_0.mp3",
+  "dur": 0.72,
+  "speaker": "slime",
+  "text": "Blup!"
+ },
+ "cr_slime_death_0": {
+  "file": "assets/audio/voice/cr_slime_death_0.mp3",
+  "dur": 0.792,
+  "speaker": "slime",
+  "text": "Glorrb."
+ },
+ "cr_beast_aggro_0": {
+  "file": "assets/audio/voice/cr_beast_aggro_0.mp3",
+  "dur": 1.176,
+  "speaker": "beast",
+  "text": "Grrah!"
+ },
+ "cr_beast_aggro_1": {
+  "file": "assets/audio/voice/cr_beast_aggro_1.mp3",
+  "dur": 0.864,
+  "speaker": "beast",
+  "text": "Rawrr!"
+ },
+ "cr_beast_hurt_0": {
+  "file": "assets/audio/voice/cr_beast_hurt_0.mp3",
+  "dur": 1.032,
+  "speaker": "beast",
+  "text": "Rruf!"
+ },
+ "cr_beast_death_0": {
+  "file": "assets/audio/voice/cr_beast_death_0.mp3",
+  "dur": 0.96,
+  "speaker": "beast",
+  "text": "Awrooo."
+ },
+ "cr_insect_aggro_0": {
+  "file": "assets/audio/voice/cr_insect_aggro_0.mp3",
+  "dur": 1.368,
+  "speaker": "insect",
+  "text": "Bzzt!"
+ },
+ "cr_insect_aggro_1": {
+  "file": "assets/audio/voice/cr_insect_aggro_1.mp3",
+  "dur": 0.744,
+  "speaker": "insect",
+  "text": "Hiss!"
+ },
+ "cr_insect_hurt_0": {
+  "file": "assets/audio/voice/cr_insect_hurt_0.mp3",
+  "dur": 1.248,
+  "speaker": "insect",
+  "text": "Tsst!"
+ },
+ "cr_insect_death_0": {
+  "file": "assets/audio/voice/cr_insect_death_0.mp3",
+  "dur": 1.704,
+  "speaker": "insect",
+  "text": "Bzz... tzz."
+ },
+ "cr_undead_aggro_0": {
+  "file": "assets/audio/voice/cr_undead_aggro_0.mp3",
+  "dur": 1.248,
+  "speaker": "undead",
+  "text": "Ooooh!"
+ },
+ "cr_undead_aggro_1": {
+  "file": "assets/audio/voice/cr_undead_aggro_1.mp3",
+  "dur": 1.176,
+  "speaker": "undead",
+  "text": "Haaah!"
+ },
+ "cr_undead_hurt_0": {
+  "file": "assets/audio/voice/cr_undead_hurt_0.mp3",
+  "dur": 1.056,
+  "speaker": "undead",
+  "text": "Hah!"
+ },
+ "cr_undead_death_0": {
+  "file": "assets/audio/voice/cr_undead_death_0.mp3",
+  "dur": 1.32,
+  "speaker": "undead",
+  "text": "Nooooo."
+ },
+ "cr_brute_aggro_0": {
+  "file": "assets/audio/voice/cr_brute_aggro_0.mp3",
+  "dur": 0.696,
+  "speaker": "brute",
+  "text": "Raaah!"
+ },
+ "cr_brute_aggro_1": {
+  "file": "assets/audio/voice/cr_brute_aggro_1.mp3",
+  "dur": 1.104,
+  "speaker": "brute",
+  "text": "Grah! Fresh meat!"
+ },
+ "cr_brute_hurt_0": {
+  "file": "assets/audio/voice/cr_brute_hurt_0.mp3",
+  "dur": 0.576,
+  "speaker": "brute",
+  "text": "Ugh!"
+ },
+ "cr_brute_death_0": {
+  "file": "assets/audio/voice/cr_brute_death_0.mp3",
+  "dur": 0.744,
+  "speaker": "brute",
+  "text": "Aaargh!"
+ },
+ "cr_demon_aggro_0": {
+  "file": "assets/audio/voice/cr_demon_aggro_0.mp3",
+  "dur": 1.176,
+  "speaker": "demon",
+  "text": "Ha ha ha!"
+ },
+ "cr_demon_aggro_1": {
+  "file": "assets/audio/voice/cr_demon_aggro_1.mp3",
+  "dur": 0.864,
+  "speaker": "demon",
+  "text": "Burn!"
+ },
+ "cr_demon_hurt_0": {
+  "file": "assets/audio/voice/cr_demon_hurt_0.mp3",
+  "dur": 0.816,
+  "speaker": "demon",
+  "text": "Gah!"
+ },
+ "cr_demon_death_0": {
+  "file": "assets/audio/voice/cr_demon_death_0.mp3",
+  "dur": 0.84,
+  "speaker": "demon",
+  "text": "Nooo!"
+ },
+ "cr_alien_aggro_0": {
+  "file": "assets/audio/voice/cr_alien_aggro_0.mp3",
+  "dur": 1.416,
+  "speaker": "alien",
+  "text": "Target acquired."
+ },
+ "cr_alien_aggro_1": {
+  "file": "assets/audio/voice/cr_alien_aggro_1.mp3",
+  "dur": 1.176,
+  "speaker": "alien",
+  "text": "Kreet kreet!"
+ },
+ "cr_alien_hurt_0": {
+  "file": "assets/audio/voice/cr_alien_hurt_0.mp3",
+  "dur": 1.272,
+  "speaker": "alien",
+  "text": "Zzt!"
+ },
+ "cr_alien_death_0": {
+  "file": "assets/audio/voice/cr_alien_death_0.mp3",
+  "dur": 1.44,
+  "speaker": "alien",
+  "text": "System failure."
+ },
+ "cr_drake_aggro_0": {
+  "file": "assets/audio/voice/cr_drake_aggro_0.mp3",
+  "dur": 1.128,
+  "speaker": "drake",
+  "text": "Rooaar!"
+ },
+ "cr_drake_aggro_1": {
+  "file": "assets/audio/voice/cr_drake_aggro_1.mp3",
+  "dur": 1.392,
+  "speaker": "drake",
+  "text": "Grraaah!"
+ },
+ "cr_drake_hurt_0": {
+  "file": "assets/audio/voice/cr_drake_hurt_0.mp3",
+  "dur": 1.128,
+  "speaker": "drake",
+  "text": "Rrah!"
+ },
+ "cr_drake_death_0": {
+  "file": "assets/audio/voice/cr_drake_death_0.mp3",
+  "dur": 1.32,
+  "speaker": "drake",
+  "text": "Rraaawr."
  }
 }

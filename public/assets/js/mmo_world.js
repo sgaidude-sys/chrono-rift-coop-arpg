@@ -1378,10 +1378,19 @@
         return;
       }
       this._mobModelWaiters[key] = [cb];
-      this.loader.load(ASSET + 'models/monsters/' + key + '.glb', (gltf) => {
+      this.loader.load(ASSET + 'models/monsters/' + key + '.glb?v=2', (gltf) => {
         gltf.scene.traverse((c) => {
           c.frustumCulled = false;
-          if (c.isMesh) { c.castShadow = true; c.receiveShadow = false; }
+          if (c.isMesh) {
+            c.castShadow = true; c.receiveShadow = false;
+            // safety net: never let a cut-out / zero-alpha material hide a monster
+            (Array.isArray(c.material) ? c.material : [c.material]).forEach((mt) => {
+              if (!mt) return;
+              if (mt.alphaTest > 0 || mt.opacity < 0.05 || (mt.transparent && !mt.map)) {
+                mt.alphaTest = 0; mt.opacity = 1; mt.transparent = false; mt.needsUpdate = true;
+              }
+            });
+          }
         });
         const box = new THREE.Box3().setFromObject(gltf.scene);
         const size = new THREE.Vector3();
