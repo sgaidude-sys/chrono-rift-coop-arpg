@@ -884,11 +884,15 @@
     <!-- Right: Supabase Co-Op Room, Relic Forge & Audio Controls -->
     <div id="network-panel" class="hud-card">
       <div class="net-status-row">
-        <span><span id="net-dot" class="status-dot"></span><span id="net-status-text">Supabase Live Co-Op</span></span>
+        <span><span id="net-dot" class="status-dot"></span><span id="net-status-text">Connecting Co-Op...</span></span>
         <span style="display: inline-flex; gap: 5px; align-items: center;">
           <span id="hud-fps" class="room-badge" style="color: var(--emerald); border-color: rgba(46, 230, 138, 0.45); background: rgba(46, 230, 138, 0.14);">60 FPS</span>
           <span id="hud-room-code" class="room-badge">ASHEN-1</span>
         </span>
+      </div>
+      <div id="coop-diag-line" style="font-size: 10.5px; font-family: 'JetBrains Mono', monospace; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.32); padding: 3px 7px; border-radius: 5px;">
+        <span id="coop-diag-peers">Peers: 0 (Solo)</span>
+        <span id="coop-diag-state" style="color: var(--gold);">WS: init</span>
       </div>
       <div class="net-actions">
         <button class="mini-btn" onclick="window.game.openModal('lobby-modal')">🌐 Rooms (<span id="hud-online-count">1</span>)</button>
@@ -1499,8 +1503,16 @@
         this.audio = new ChronoAudioEngine();
         this.loader = new THREE.GLTFLoader();
 
-        this.playerToken = localStorage.getItem('arpg_player_token') || ('hero_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36));
-        localStorage.setItem('arpg_player_token', this.playerToken);
+        this.heroSaveToken = localStorage.getItem('arpg_player_token') || ('hero_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36));
+        localStorage.setItem('arpg_player_token', this.heroSaveToken);
+
+        // Unique per-tab session peer ID so two tabs/browsers NEVER collide on Presence/Broadcast
+        let sessionPeerId = sessionStorage.getItem('arpg_session_peer_id');
+        if (!sessionPeerId) {
+          sessionPeerId = 'peer_' + Math.random().toString(36).slice(2, 10) + '_' + Date.now().toString(36);
+          sessionStorage.setItem('arpg_session_peer_id', sessionPeerId);
+        }
+        this.playerToken = sessionPeerId;
 
         const urlParams = new URLSearchParams(window.location.search);
         this.roomCode = (urlParams.get('room') || localStorage.getItem('arpg_room_code') || 'ASHEN-1').toUpperCase();
@@ -1512,6 +1524,8 @@
         document.getElementById('hero-name-input').value = savedName;
 
         this.animClips = {};
+        this.modelAnimClips = {};
+        this.sanitizedClipCache = new Map();
         this.modelCache = {};
         this.vfxTextures = {};
 
@@ -1644,8 +1658,16 @@
         this.supabase = null;
         this.channel = null;
         this.channelSubscribed = false;
+        this.netStatus = 'connecting';
+        this.reconnectTimer = null;
+        this.reconnectAttempts = 0;
         this.lastBroadcastTime = 0;
         this.lastPresenceTrackTime = 0;
+        this._lastPresenceSig = '';
+        this._lastSentPos = new THREE.Vector3(9999, 0, 9999);
+        this._lastSentYaw = 999;
+        this._lastSentAnim = '';
+        this.sparkParticles = [];
         this.isAnyModalOpen = true;
 
         this.initThreeScene();
@@ -1706,18 +1728,46 @@
         this.scene.add(this.sunLight);
         this.scene.add(this.sunLight.target);
 
-        // Load Real Kit Textures for Multi-Biome Ground Shader
+        // Load Real Kit Textures with Max Anisotropy + Trilinear Mipmapping
         const texLoader = new THREE.TextureLoader();
+        const maxAniso = Math.min(8, this.renderer.capabilities.getMaxAnisotropy() || 1);
         const loadTiledTex = (url) => {
           const t = texLoader.load(url);
           t.wrapS = THREE.RepeatWrapping;
           t.wrapT = THREE.RepeatWrapping;
+          t.anisotropy = maxAniso;
+          t.minFilter = THREE.LinearMipmapLinearFilter;
+          t.magFilter = THREE.LinearFilter;
+          t.generateMipmaps = true;
           return t;
         };
         const texCobble = loadTiledTex('assets/vfx/tex_cobble.png');
         const texRedBrick = loadTiledTex('assets/vfx/tex_redbrick.png');
         const texDungeon = loadTiledTex('assets/vfx/tex_dungeon.png');
         const texScifi = loadTiledTex('assets/vfx/tex_scifi.png');
+
+        // Shared soft radial contact shadow decal texture for grounded entities & props
+        const aoCanvas = document.createElement('canvas');
+        aoCanvas.width = 64;
+        aoCanvas.height = 64;
+        const aoCtx = aoCanvas.getContext('2d');
+        const aoGrad = aoCtx.createRadialGradient(32, 32, 4, 32, 32, 30);
+        aoGrad.addColorStop(0, 'rgba(5, 8, 16, 0.56)');
+        aoGrad.addColorStop(0.55, 'rgba(5, 8, 16, 0.28)');
+        aoGrad.addColorStop(1, 'rgba(5, 8, 16, 0.0)');
+        aoCtx.fillStyle = aoGrad;
+        aoCtx.fillRect(0, 0, 64, 64);
+        this.contactShadowTex = new THREE.CanvasTexture(aoCanvas);
+        this.contactShadowGeo = new THREE.PlaneGeometry(1, 1);
+        this.contactShadowGeo.rotateX(-Math.PI / 2);
+        this.contactShadowMat = new THREE.MeshBasicMaterial({
+          map: this.contactShadowTex,
+          transparent: true,
+          depthWrite: false,
+          polygonOffset: true,
+          polygonOffsetFactor: -1,
+          polygonOffsetUnits: -1
+        });
 
         const groundGeo = new THREE.PlaneGeometry(260, 260, 1, 1);
         groundGeo.rotateX(-Math.PI / 2);
@@ -1729,73 +1779,108 @@
           uTexDungeon: { value: texDungeon },
           uTexScifi: { value: texScifi }
         };
-        const groundMat = new THREE.ShaderMaterial({
-          uniforms: this.groundUniforms,
-          vertexShader: `
-            varying vec3 vWorldPos;
-            void main() {
-              vec4 wp = modelMatrix * vec4(position, 1.0);
-              vWorldPos = wp.xyz;
-              gl_Position = projectionMatrix * viewMatrix * wp;
-            }
-          `,
-          fragmentShader: `
-            uniform float uTime;
-            uniform vec3 uPlayerPos;
-            uniform sampler2D uTexCobble;
-            uniform sampler2D uTexBrick;
-            uniform sampler2D uTexDungeon;
-            uniform sampler2D uTexScifi;
-            varying vec3 vWorldPos;
+        const groundMat = new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          roughness: 0.85,
+          metalness: 0.06
+        });
+        groundMat.onBeforeCompile = (shader) => {
+          Object.assign(shader.uniforms, this.groundUniforms);
+          shader.vertexShader = shader.vertexShader
+            .replace(
+              '#include <common>',
+              `#include <common>\nvarying vec3 vGroundWorldPos;`
+            )
+            .replace(
+              '#include <project_vertex>',
+              `#include <project_vertex>\nvGroundWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;`
+            );
+          shader.fragmentShader = shader.fragmentShader
+            .replace(
+              '#include <common>',
+              `#include <common>
+              uniform float uTime;
+              uniform vec3 uPlayerPos;
+              uniform sampler2D uTexCobble;
+              uniform sampler2D uTexBrick;
+              uniform sampler2D uTexDungeon;
+              uniform sampler2D uTexScifi;
+              varying vec3 vGroundWorldPos;
+              float groundSoftNoise(vec2 p) {
+                return sin(p.x * 0.37 + sin(p.y * 0.29)) * 0.5 + cos(p.y * 0.41 - sin(p.x * 0.23)) * 0.5;
+              }`
+            )
+            .replace(
+              '#include <map_fragment>',
+              `#include <map_fragment>
+              vec2 gUv = vGroundWorldPos.xz;
+              // Crisp human-scale UV tiling (~2.2m per tile) with subtle macro variation
+              vec3 smpCobble = texture2D(uTexCobble, gUv * 0.45).rgb;
+              vec3 smpBrick  = texture2D(uTexBrick,  gUv * 0.48).rgb;
+              vec3 smpDung   = texture2D(uTexDungeon, gUv * 0.42).rgb;
+              vec3 smpScifi  = texture2D(uTexScifi,   gUv * 0.46).rgb;
 
-            void main() {
-              vec2 uv = vWorldPos.xz;
+              // Macro organic patch variation (breaks up tiling repetition without any brick pattern on grass)
+              float macroN = groundSoftNoise(gUv * 0.32) * 0.5 + 0.5;
+              float microN = groundSoftNoise(gUv * 2.15) * 0.5 + 0.5;
+              float fineDetail = dot(texture2D(uTexCobble, gUv * 1.4).rgb, vec3(0.333));
 
-              // Hardware-filtered kit textures (zero procedural noise/hash per pixel)
-              vec3 smpCobble = texture2D(uTexCobble, uv * 0.22).rgb;
-              vec3 smpBrick  = texture2D(uTexBrick,  uv * 0.25).rgb;
-              vec3 smpDung   = texture2D(uTexDungeon, uv * 0.20).rgb;
-              vec3 smpScifi  = texture2D(uTexScifi,   uv * 0.22).rgb;
+              // Softened Sanctuary Brick Plaza & Village Roads
+              float dPlaza = length(gUv - vec2(0.0, 10.0));
+              float roadNS = smoothstep(4.0, 2.1, abs(gUv.x)) * smoothstep(-54.0, -44.0, gUv.y) * smoothstep(42.0, 34.0, gUv.y);
+              float roadEW = smoothstep(3.6, 1.9, abs(gUv.y - 10.0)) * smoothstep(-28.0, -21.0, gUv.x) * smoothstep(28.0, 21.0, gUv.x);
+              float plazaCore = smoothstep(14.5, 9.5, dPlaza);
+              float roadMask = clamp(plazaCore + roadNS + roadEW, 0.0, 1.0);
 
-              // Sanctuary Brick Plaza & Village Roads + Lush Grass Outskirts
-              float dPlaza = length(uv - vec2(0.0, 10.0));
-              float roadMask = smoothstep(3.8, 2.2, abs(uv.x)) * step(-50.0, uv.y) * step(uv.y, 40.0)
-                             + smoothstep(3.4, 1.8, abs(uv.y - 10.0)) * step(-25.0, uv.x) * step(uv.x, 25.0);
-              float plazaMask = clamp(smoothstep(16.0, 11.0, dPlaza) + roadMask, 0.0, 1.0);
+              // Natural mossy meadow grass (no giant cobble bricks)
+              vec3 grassDark = vec3(0.09, 0.16, 0.08);
+              vec3 grassMid  = vec3(0.16, 0.25, 0.12);
+              vec3 grassWarm = vec3(0.21, 0.26, 0.13);
+              vec3 grassCol  = mix(grassDark, grassMid, clamp(macroN * 0.75 + microN * 0.25, 0.0, 1.0));
+              grassCol = mix(grassCol, grassWarm, smoothstep(0.62, 0.92, macroN) * 0.45);
+              grassCol *= (0.86 + fineDetail * 0.28);
 
-              vec3 grassCol = mix(vec3(0.16, 0.29, 0.14), vec3(0.24, 0.36, 0.18), smpCobble.g);
-              vec3 villageCol = mix(grassCol, mix(smpCobble * 0.95, smpBrick * 1.05, smoothstep(10.0, 5.0, dPlaza)), plazaMask);
+              // Stone/Cobble road border & brick center plaza with crisp crevice contrast
+              vec3 stoneRoad = pow(smpCobble, vec3(1.12)) * vec3(0.68, 0.66, 0.63);
+              vec3 warmBrick = pow(smpBrick,  vec3(1.08)) * vec3(0.76, 0.66, 0.58);
+              vec3 pavedCol  = mix(stoneRoad, warmBrick, smoothstep(11.5, 5.5, dPlaza));
+              // Soft dirt shoulder along road edges
+              float shoulderMask = smoothstep(0.05, 0.45, roadMask) * (1.0 - smoothstep(0.45, 0.85, roadMask));
+              vec3 villageCol = mix(grassCol, vec3(0.22, 0.18, 0.13), shoulderMask * 0.6);
+              villageCol = mix(villageCol, pavedCol, smoothstep(0.25, 0.78, roadMask));
 
-              // Biome weights
-              float wBastion = smoothstep(-12.0, 6.0, vWorldPos.z);
-              float wCatacomb = (1.0 - wBastion) * smoothstep(4.0, -12.0, vWorldPos.x);
-              float wAstral = (1.0 - wBastion) * (1.0 - wCatacomb);
+              // Smooth organic Biome Weights (no harsh lines)
+              float biomeWarp = (macroN - 0.5) * 4.5;
+              float wBastion  = smoothstep(-14.0, 6.0, vGroundWorldPos.z + biomeWarp);
+              float wCatacomb = (1.0 - wBastion) * smoothstep(6.0, -12.0, vGroundWorldPos.x + biomeWarp);
+              float wAstral   = (1.0 - wBastion) * (1.0 - wCatacomb);
 
-              // Catacomb stone + Astral deck with fast grid highlights
-              vec2 tile = abs(fract(uv * 0.4) - 0.5);
-              float crack = smoothstep(0.46, 0.495, max(tile.x, tile.y));
-              vec3 catacombCol = smpDung * vec3(0.55, 0.68, 0.62) + vec3(0.1, 0.75, 0.45) * crack * 0.45;
-              vec3 astralCol = smpScifi * vec3(0.65, 0.75, 0.95) + vec3(0.15, 0.75, 1.0) * crack * 0.55;
+              // Catacomb damp stone & Astral metallic sci-fi deck (using real kit textures, NO misaligned wireframe grid)
+              vec3 catacombCol = pow(smpDung, vec3(1.15)) * vec3(0.42, 0.52, 0.48) * (0.85 + macroN * 0.3);
+              vec3 astralCol   = pow(smpScifi, vec3(1.10)) * vec3(0.46, 0.54, 0.70) * (0.88 + microN * 0.24);
 
               vec3 baseCol = villageCol * wBastion + catacombCol * wCatacomb + astralCol * wAstral;
-
-              // Golden Sanctuary Rune Circle at (0, 8)
-              float dSanctuary = length(uv - vec2(0.0, 8.0));
-              float ring = smoothstep(0.22, 0.0, abs(dSanctuary - 7.5)) + smoothstep(0.14, 0.0, abs(dSanctuary - 4.2));
-              baseCol += vec3(1.0, 0.78, 0.28) * ring * 0.55;
-
-              // Warm player torchlight & horizon fog using fast algebraic attenuation
-              float dPlayer = length(vWorldPos.xz - uPlayerPos.xz);
-              float torch = max(0.0, 1.0 - dPlayer * 0.065);
-              baseCol += vec3(0.16, 0.11, 0.05) * (torch * torch);
-
-              float fogF = smoothstep(24.0, 115.0, dPlayer);
-              baseCol = mix(baseCol, vec3(0.14, 0.18, 0.30), fogF);
-
-              gl_FragColor = vec4(baseCol, 1.0);
-            }
-          `
-        });
+              diffuseColor.rgb *= baseCol;`
+            )
+            .replace(
+              '#include <roughnessmap_fragment>',
+              `#include <roughnessmap_fragment>
+              float biomeRough = 0.88 * wBastion - 0.08 * roadMask * wBastion + 0.76 * wCatacomb + 0.48 * wAstral;
+              roughnessFactor = clamp(biomeRough, 0.35, 0.96);`
+            )
+            .replace(
+              '#include <emissivemap_fragment>',
+              `#include <emissivemap_fragment>
+              // Subtle Golden Sanctuary Rune Circle at (0, 8) + Warm Player Torchlight
+              float dSanctuary = length(gUv - vec2(0.0, 8.0));
+              float runeRing = smoothstep(0.20, 0.0, abs(dSanctuary - 7.5)) + smoothstep(0.13, 0.0, abs(dSanctuary - 4.2));
+              totalEmissiveRadiance += vec3(0.85, 0.62, 0.18) * runeRing * 0.45;
+              float dPlr = length(gUv - uPlayerPos.xz);
+              float torchGlow = max(0.0, 1.0 - dPlr * 0.075);
+              totalEmissiveRadiance += vec3(0.11, 0.075, 0.03) * (torchGlow * torchGlow);`
+            );
+        };
+        this.groundMat = groundMat;
         this.groundMesh = new THREE.Mesh(groundGeo, groundMat);
         this.groundMesh.receiveShadow = true;
         this.scene.add(this.groundMesh);
@@ -2034,13 +2119,13 @@
       // -----------------------------------------------------------------------
       // LOAD ALL BLENDER-ENHANCED GLB MODELS, BUILDINGS, ANIMATIONS & VFX
       // -----------------------------------------------------------------------
-      registerAnimClip(rawName, clip) {
+      registerAnimClip(rawName, clip, targetDict = this.animClips) {
         if (!rawName || !clip) return;
-        this.animClips[rawName] = clip;
+        targetDict[rawName] = clip;
         const afterPipe = rawName.includes('|') ? rawName.split('|').pop() : rawName;
-        this.animClips[afterPipe] = clip;
+        targetDict[afterPipe] = clip;
         const stripped = afterPipe.replace(/\.\d+$/, '');
-        this.animClips[stripped] = clip;
+        targetDict[stripped] = clip;
       }
 
       loadAllAssets() {
@@ -2166,10 +2251,15 @@
               });
               this.modelCache[mKey] = gltf.scene;
               if (gltf.animations && gltf.animations.length > 0) {
-                this.animClips[mKey + '_idle'] = gltf.animations[0];
+                const mClips = {};
                 gltf.animations.forEach((clip) => {
-                  this.registerAnimClip(`${mKey}_${clip.name}`, clip);
+                  this.registerAnimClip(clip.name, clip, mClips);
+                  this.animClips[`${mKey}_${clip.name}`] = clip;
                 });
+                const idleClip = gltf.animations.find(c => /idle/i.test(c.name)) || gltf.animations[0];
+                mClips.idle = idleClip;
+                this.modelAnimClips[mKey] = mClips;
+                this.animClips[mKey + '_idle'] = idleClip;
               }
               this.monsters.forEach((m) => {
                 if (m.modelKey === mKey) this.upgradeEntityToGLB(m, mKey, m.scale);
@@ -2338,6 +2428,14 @@
               obj.position.set(p.x, 0, p.z);
               obj.scale.setScalar(p.scale);
               obj.rotation.y = p.yaw;
+              const obsR = obstacleRadiusByFile[p.file];
+              if (obsR && this.contactShadowMat) {
+                const ao = new THREE.Mesh(this.contactShadowGeo, this.contactShadowMat);
+                const aoSize = (obsR * 2.5) / p.scale;
+                ao.scale.set(aoSize, 1, aoSize);
+                ao.position.y = 0.02 / p.scale;
+                obj.add(ao);
+              }
               const dx = p.x - this.player.pos.x;
               const dz = p.z - this.player.pos.z;
               obj.visible = (dx * dx + dz * dz) <= 3025; // 55m distance cull
@@ -2432,6 +2530,7 @@
         const template = this.modelCache[modelKey];
         if (!template || !entity.meshRoot) return;
 
+        entity.modelKey = modelKey;
         entity.meshRoot.clear();
         const cloned = cloneSkinnedModel(template);
         cloned.scale.setScalar(entity.scale || scale);
@@ -2463,6 +2562,14 @@
           entity.meshRoot.add(entity.nameplateSprite);
         }
 
+        if (this.contactShadowMat) {
+          const ao = new THREE.Mesh(this.contactShadowGeo, this.contactShadowMat);
+          const aoScale = entity.isBoss ? 3.2 : (modelKey.includes('alien') ? 1.9 : 1.45);
+          ao.scale.set(aoScale, 1, aoScale);
+          ao.position.y = 0.015;
+          entity.meshRoot.add(ao);
+        }
+
         if (entity === this.player || entity.isAlly) {
           const ringGeo = new THREE.RingGeometry(0.52, 0.64, 24);
           ringGeo.rotateX(-Math.PI / 2);
@@ -2483,6 +2590,31 @@
         }
       }
 
+      getSanitizedClip(clip, nodeNames, stripNonPelvisPos, cacheKey) {
+        if (!clip) return null;
+        if (this.sanitizedClipCache.has(cacheKey)) {
+          return this.sanitizedClipCache.get(cacheKey);
+        }
+        const filteredTracks = [];
+        for (let i = 0; i < clip.tracks.length; i++) {
+          const tr = clip.tracks[i];
+          const dotIdx = tr.name.indexOf('.');
+          const nodeName = dotIdx >= 0 ? tr.name.slice(0, dotIdx) : tr.name;
+          const prop = dotIdx >= 0 ? tr.name.slice(dotIdx) : '';
+          if (nodeNames && nodeNames.size > 0 && !nodeNames.has(nodeName)) continue;
+          if (stripNonPelvisPos) {
+            if (prop === '.scale') continue;
+            if (prop === '.position' && nodeName !== 'pelvis' && nodeName !== 'Root') continue;
+          }
+          filteredTracks.push(tr);
+        }
+        const out = filteredTracks.length === clip.tracks.length
+          ? clip
+          : new THREE.AnimationClip(clip.name, clip.duration, filteredTracks);
+        this.sanitizedClipCache.set(cacheKey, out);
+        return out;
+      }
+
       bindAnimationsToEntity(entity) {
         if (!entity.glbNode) return;
         entity.mixer = new THREE.AnimationMixer(entity.glbNode);
@@ -2496,18 +2628,50 @@
           'OverhandThrow', 'Melee_Hook', 'Hit_Chest', 'Hit_Knockback', 'Death01'
         ]);
 
-        Object.entries(this.animClips).forEach(([name, clip]) => {
-          const act = entity.mixer.clipAction(clip);
-          if (oneShotNames.has(name)) {
+        const nodeNames = new Set();
+        entity.glbNode.traverse((n) => { if (n.name) nodeNames.add(n.name); });
+
+        const mk = entity.modelKey || '';
+        const isHero = !mk || mk.startsWith('hero_');
+        const isAlien = mk.includes('alien');
+        const ownClips = mk ? this.modelAnimClips[mk] : null;
+
+        const bindClip = (actionKey, clip, stripNonPelvisPos) => {
+          if (!clip) return;
+          const baseName = actionKey.startsWith(mk + '_') ? actionKey.slice(mk.length + 1) : actionKey;
+          const cleanBase = baseName.replace(/\.\d+$/, '');
+          const cacheKey = `${mk || 'hero'}:${clip.uuid}:${stripNonPelvisPos ? 1 : 0}`;
+          const sanitized = this.getSanitizedClip(clip, nodeNames, stripNonPelvisPos, cacheKey);
+          if (!sanitized || sanitized.tracks.length === 0) return;
+          const act = entity.mixer.clipAction(sanitized);
+          if (oneShotNames.has(cleanBase)) {
             act.setLoop(THREE.LoopOnce, 1);
             act.clampWhenFinished = true;
           }
-          entity.actions[name] = act;
-        });
+          entity.actions[actionKey] = act;
+        };
 
-        const defaultIdle = entity.modelKey && this.animClips[entity.modelKey + '_idle']
-          ? entity.modelKey + '_idle'
-          : 'Idle_Loop';
+        // 1. Prefer entity's own baked/retargeted model clips first (monsters & aliens)
+        if (ownClips) {
+          Object.entries(ownClips).forEach(([name, clip]) => {
+            bindClip(name, clip, false);
+            bindClip(`${mk}_${name}`, clip, false);
+          });
+        }
+
+        // 2. Bind shared animations_arpg.glb clips (heroes, or fallback for non-alien monsters missing a clip)
+        if (!isAlien) {
+          Object.entries(this.animClips).forEach(([name, clip]) => {
+            if (name.startsWith('monster_') || name.startsWith('boss_')) return;
+            if (!entity.actions[name]) {
+              bindClip(name, clip, !isHero);
+            }
+          });
+        }
+
+        const defaultIdle = (mk && entity.actions[mk + '_Idle_Loop'])
+          ? 'Idle_Loop'
+          : (mk && entity.actions[mk + '_idle'] ? mk + '_idle' : 'Idle_Loop');
 
         entity.mixer.addEventListener('finished', () => {
           if (entity.dead || entity.animState === 'Death01') return;
@@ -2519,12 +2683,29 @@
 
       playEntityAnim(entity, animName, force = false) {
         if (!entity.mixer || !entity.actions) return;
-        const isAlien = entity.modelKey && entity.modelKey.includes('alien');
-        const alienIdle = isAlien ? entity.actions[entity.modelKey + '_idle'] : null;
-        const target = (isAlien && alienIdle)
-          ? alienIdle
-          : (entity.actions[animName] || entity.actions['Idle_Loop'] || alienIdle);
-        if (!target) return;
+        const mk = entity.modelKey || '';
+        const isAlien = mk.includes('alien');
+        const aliasMap = {
+          Zombie_Walk_Fwd_Loop: 'Jog_Fwd_Loop',
+          Sword_Heavy_Combo: 'Sword_Attack',
+          Spell_Simple_Shoot: 'Sword_Attack',
+          Hit_Knockback: 'Hit_Chest'
+        };
+        const fallbackAnim = aliasMap[animName];
+        const target =
+          (mk && entity.actions[mk + '_' + animName]) ||
+          entity.actions[animName] ||
+          (fallbackAnim && ((mk && entity.actions[mk + '_' + fallbackAnim]) || entity.actions[fallbackAnim])) ||
+          (mk && entity.actions[mk + '_Idle_Loop']) ||
+          entity.actions['Idle_Loop'] ||
+          (mk && entity.actions[mk + '_idle']);
+
+        if (!target) {
+          if (entity.dead && isAlien && entity.activeAction) {
+            entity.activeAction.paused = true;
+          }
+          return;
+        }
         if (entity.activeAction === target && !force) return;
 
         const prev = entity.activeAction;
@@ -2532,6 +2713,7 @@
           prev.fadeOut(0.14);
         }
         target.reset();
+        target.paused = false;
         target.setEffectiveTimeScale(1);
         target.setEffectiveWeight(1);
         if (prev && prev !== target) {
@@ -2611,19 +2793,26 @@
 
       triggerEntityHitFlash(entity) {
         if (!entity.materials) return;
+        if (entity._hitFlashTimeout) {
+          clearTimeout(entity._hitFlashTimeout);
+        }
         entity.materials.forEach((m) => {
           if (m.emissive) {
-            m.userData.origEmissive = m.userData.origEmissive || m.emissive.clone();
+            if (!m.userData.origEmissive) {
+              m.userData.origEmissive = m.emissive.clone();
+              m.userData.origEmissiveIntensity = typeof m.emissiveIntensity === 'number' ? m.emissiveIntensity : 1.0;
+            }
             m.emissive.setHex(0xffffff);
-            m.emissiveIntensity = 1.8;
+            m.emissiveIntensity = 2.0;
           }
         });
-        setTimeout(() => {
+        entity._hitFlashTimeout = setTimeout(() => {
+          entity._hitFlashTimeout = null;
           if (!entity.materials) return;
           entity.materials.forEach((m) => {
             if (m.emissive && m.userData.origEmissive) {
               m.emissive.copy(m.userData.origEmissive);
-              m.emissiveIntensity = 1.0;
+              m.emissiveIntensity = m.userData.origEmissiveIntensity ?? 1.0;
             }
           });
         }, 115);
@@ -2685,8 +2874,12 @@
             state: 'idle',
             attackCd: 1.5 + Math.random(),
             windupTimer: 0,
+            attackAnimTimer: 0,
             stunTimer: 0,
             aggroTimer: 0,
+            kbVel: new THREE.Vector3(),
+            procBobY: 0,
+            procTiltX: 0,
             dead: false,
             deathTimer: 0
           };
@@ -2759,55 +2952,240 @@
       // -----------------------------------------------------------------------
       // VFX SPRITE FLIPBOOK & 3D SLASH / TELEGRAPH EFFECTS
       // -----------------------------------------------------------------------
-      spawnVFXFlipbook(vfxKey, pos, scale = 2.6, duration = 0.42, colorHex = 0xffffff) {
+      spawnVFXFlipbook(vfxKey, pos, scale = 2.6, duration = 0.42, colorHex = 0xffffff, groundFlat = false) {
         const tex = this.vfxTextures[vfxKey];
-        const mat = new THREE.SpriteMaterial({
-          map: tex || null,
-          color: colorHex,
+        if (!tex) {
+          this.spawnHitSparks(pos, new THREE.Vector3(0, 1, 0), colorHex, 6);
+          return;
+        }
+        const VFX_META = {
+          anima:     { cols: 6, rows: 5, frames: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29] },
+          bighit:    { cols: 6, rows: 5, frames: [1,2,3,4,5,6,7,8,9,10,11] },
+          charged:   { cols: 7, rows: 6, frames: [0,1,2,3,4,5,6,7,8,9,10,11,26,27,28,29,30,31,32,33,34,35,36,37,38,39] },
+          eldenring: { cols: 6, rows: 5, frames: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29] },
+          explosion: { cols: 6, rows: 5, frames: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26] },
+          impact:    { cols: 6, rows: 5, frames: [1,2,3,4,5,6,7,8,9,10,11,12,13,14] },
+          smallhit:  { cols: 6, rows: 5, frames: [1,2,3,4,5,6,7,8,9,10,11,12,13,14] },
+          vortex:    { cols: 6, rows: 5, frames: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24] }
+        };
+        const meta = VFX_META[vfxKey] || { cols: 6, rows: 5, frames: [1,2,3,4,5,6,7,8,9,10] };
+        if (!this._vfxPlaneGeo) {
+          this._vfxPlaneGeo = new THREE.PlaneGeometry(1, 1);
+        }
+        const f0 = meta.frames[0];
+        const col0 = f0 % meta.cols;
+        const row0 = Math.floor(f0 / meta.cols);
+        const mat = new THREE.ShaderMaterial({
+          uniforms: {
+            uMap: { value: tex },
+            uUvRect: { value: new THREE.Vector4(col0 / meta.cols, 1 - (row0 + 1) / meta.rows, 1 / meta.cols, 1 / meta.rows) },
+            uColor: { value: new THREE.Color(colorHex) },
+            uOpacity: { value: 1.0 }
+          },
+          vertexShader: `
+            varying vec2 vUv;
+            void main() {
+              vUv = uv;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+          `,
+          fragmentShader: `
+            uniform sampler2D uMap;
+            uniform vec4 uUvRect;
+            uniform vec3 uColor;
+            uniform float uOpacity;
+            varying vec2 vUv;
+            void main() {
+              vec2 uv = uUvRect.xy + vUv * uUvRect.zw;
+              vec4 smp = texture2D(uMap, uv);
+              float lum = max(smp.r, max(smp.g, smp.b));
+              float alpha = max(smp.a, lum) * uOpacity;
+              if (alpha < 0.01) discard;
+              gl_FragColor = vec4(smp.rgb * uColor * 1.35, alpha);
+            }
+          `,
           transparent: true,
-          opacity: 0.95,
+          depthWrite: false,
+          side: THREE.DoubleSide,
           blending: THREE.AdditiveBlending
         });
-        const sprite = new THREE.Sprite(mat);
-        sprite.position.copy(pos);
-        sprite.position.y += 1.1;
-        sprite.scale.setScalar(scale * 0.4);
-        this.scene.add(sprite);
-        this.vfxSprites.push({ sprite, maxScale: scale, elapsed: 0, duration });
+
+        const mesh = new THREE.Mesh(this._vfxPlaneGeo, mat);
+        mesh.position.copy(pos);
+        const isGroundRune = groundFlat || vfxKey === 'eldenring' || vfxKey === 'vortex';
+        if (isGroundRune) {
+          mesh.position.y = 0.08;
+          mesh.rotation.x = -Math.PI / 2;
+        } else {
+          mesh.position.y += 1.05;
+          mesh.quaternion.copy(this.camera.quaternion);
+        }
+        mesh.scale.setScalar(scale * 0.72);
+        this.scene.add(mesh);
+        this.vfxSprites.push({
+          mesh,
+          isFlipbook: true,
+          isGroundRune,
+          meta,
+          maxScale: scale,
+          elapsed: 0,
+          duration
+        });
       }
 
-      spawnSlashArc(origin, yaw, radius = 2.8, colorHex = 0xf3c86b) {
-        const geo = new THREE.RingGeometry(radius * 0.45, radius, 20, 1, -Math.PI * 0.42, Math.PI * 0.84);
-        geo.rotateX(-Math.PI / 2);
-        const mat = new THREE.MeshBasicMaterial({
+      spawnSlashArc(origin, yaw, radius = 2.8, colorHex = 0xf3c86b, comboIdx = 0, isHeavy = false) {
+        const segments = 24;
+        const arcHalf = isHeavy ? Math.PI * 0.65 : Math.PI * 0.45;
+        const positions = new Float32Array((segments + 1) * 2 * 3);
+        const uvs = new Float32Array((segments + 1) * 2 * 2);
+        const indices = [];
+
+        for (let i = 0; i <= segments; i++) {
+          const frac = i / segments;
+          const theta = -arcHalf + frac * arcHalf * 2;
+          const taper = Math.sin(frac * Math.PI);
+          const width = radius * (isHeavy ? 0.48 : 0.38) * Math.pow(taper, 0.68);
+          const rOut = radius;
+          const rIn = Math.max(0.1, radius - width);
+          const c = Math.cos(theta);
+          const s = Math.sin(theta);
+
+          const base = i * 2;
+          positions[base * 3] = rIn * s;
+          positions[base * 3 + 1] = 0;
+          positions[base * 3 + 2] = rIn * c;
+
+          positions[(base + 1) * 3] = rOut * s;
+          positions[(base + 1) * 3 + 1] = 0;
+          positions[(base + 1) * 3 + 2] = rOut * c;
+
+          uvs[base * 2] = frac;
+          uvs[base * 2 + 1] = 0;
+          uvs[(base + 1) * 2] = frac;
+          uvs[(base + 1) * 2 + 1] = 1;
+
+          if (i < segments) {
+            indices.push(base, base + 1, base + 2);
+            indices.push(base + 1, base + 3, base + 2);
+          }
+        }
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+        geo.setIndex(indices);
+
+        const mat = new THREE.ShaderMaterial({
+          uniforms: {
+            uColor: { value: new THREE.Color(colorHex) },
+            uProgress: { value: 0 },
+            uOpacity: { value: 1.0 }
+          },
+          vertexShader: `
+            varying vec2 vUv;
+            void main() {
+              vUv = uv;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+          `,
+          fragmentShader: `
+            uniform vec3 uColor;
+            uniform float uProgress;
+            uniform float uOpacity;
+            varying vec2 vUv;
+            void main() {
+              float edge = smoothstep(0.0, 0.55, vUv.y);
+              float core = smoothstep(0.68, 0.96, vUv.y);
+              float arcMask = sin(vUv.x * 3.14159265);
+              float sweep = smoothstep(uProgress - 0.55, uProgress + 0.15, vUv.x);
+              float alpha = edge * arcMask * (0.35 + 0.65 * sweep) * uOpacity;
+              vec3 col = mix(uColor * 1.4, vec3(1.0, 0.98, 0.92), core * 0.78);
+              gl_FragColor = vec4(col, alpha);
+            }
+          `,
+          side: THREE.DoubleSide,
+          transparent: true,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending
+        });
+
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.copy(origin);
+        mesh.position.y = 1.08;
+        mesh.rotation.order = 'YXZ';
+        const comboTilts = [0.34, -0.36, 0.06];
+        const tiltZ = isHeavy ? 0.12 : comboTilts[comboIdx % 3];
+        const sweepDir = (comboIdx % 2 === 0) ? 1 : -1;
+        mesh.rotation.y = yaw - sweepDir * 0.35;
+        mesh.rotation.z = tiltZ;
+        this.scene.add(mesh);
+        this.vfxSprites.push({
+          mesh,
+          isMesh: true,
+          isSlash: true,
+          sweepDir,
+          elapsed: 0,
+          duration: isHeavy ? 0.28 : 0.20
+        });
+      }
+
+      spawnHitSparks(pos, dir, colorHex = 0xffd56b, count = 8) {
+        const baseDir = dir ? dir.clone().normalize() : new THREE.Vector3(0, 1, 0);
+        if (!this._sparkGeo) {
+          this._sparkGeo = new THREE.BoxGeometry(0.06, 0.06, 0.34);
+        }
+        for (let i = 0; i < count; i++) {
+          const mat = new THREE.MeshBasicMaterial({
+            color: i % 3 === 0 ? 0xffffff : colorHex,
+            transparent: true,
+            opacity: 0.95,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+          });
+          const m = new THREE.Mesh(this._sparkGeo, mat);
+          m.position.copy(pos);
+          m.position.y += 0.95 + (Math.random() - 0.5) * 0.4;
+          const vel = baseDir.clone().multiplyScalar(5.5 + Math.random() * 6.5);
+          vel.x += (Math.random() - 0.5) * 6.0;
+          vel.y += 1.5 + Math.random() * 4.5;
+          vel.z += (Math.random() - 0.5) * 6.0;
+          m.lookAt(m.position.clone().add(vel));
+          this.scene.add(m);
+          this.sparkParticles.push({ mesh: m, vel, life: 0.22 + Math.random() * 0.14, maxLife: 0.32 });
+        }
+      }
+
+      spawnTelegraphCircle(pos, radius, duration, colorHex = 0xff3b5c, onComplete = null) {
+        const group = new THREE.Group();
+        group.position.copy(pos);
+        group.position.y = 0.05;
+
+        const ringGeo = new THREE.RingGeometry(radius * 0.90, radius, 36);
+        ringGeo.rotateX(-Math.PI / 2);
+        const ringMat = new THREE.MeshBasicMaterial({
           color: colorHex,
           side: THREE.DoubleSide,
           transparent: true,
           opacity: 0.85,
-          blending: THREE.AdditiveBlending
+          depthWrite: false
         });
-        const mesh = new THREE.Mesh(geo, mat);
-        mesh.position.copy(origin);
-        mesh.position.y = 1.05;
-        mesh.rotation.y = yaw - Math.PI / 2;
-        this.scene.add(mesh);
-        this.vfxSprites.push({ mesh, isMesh: true, elapsed: 0, duration: 0.22 });
-      }
+        group.add(new THREE.Mesh(ringGeo, ringMat));
 
-      spawnTelegraphCircle(pos, radius, duration, colorHex = 0xff3b5c, onComplete = null) {
-        const geo = new THREE.RingGeometry(0.1, radius, 32);
-        geo.rotateX(-Math.PI / 2);
-        const mat = new THREE.MeshBasicMaterial({
+        const fillGeo = new THREE.CircleGeometry(radius, 36);
+        fillGeo.rotateX(-Math.PI / 2);
+        const fillMat = new THREE.MeshBasicMaterial({
           color: colorHex,
           side: THREE.DoubleSide,
           transparent: true,
-          opacity: 0.48
+          opacity: 0.28,
+          depthWrite: false
         });
-        const mesh = new THREE.Mesh(geo, mat);
-        mesh.position.copy(pos);
-        mesh.position.y = 0.05;
-        this.scene.add(mesh);
-        this.telegraphs.push({ mesh, elapsed: 0, duration, onComplete });
+        const fillMesh = new THREE.Mesh(fillGeo, fillMat);
+        fillMesh.scale.setScalar(0.05);
+        group.add(fillMesh);
+
+        this.scene.add(group);
+        this.telegraphs.push({ mesh: group, fillMesh, ringMat, fillMat, elapsed: 0, duration, onComplete });
       }
 
       spawnFloatingText(worldPos, text, color = '#ffe599', size = 16) {
@@ -2892,9 +3270,10 @@
         }
 
         if (slot === 1) {
+          const comboIdx = (ent.attackCombo || 0) % 3;
           const comboAnims = ['Sword_Regular_A', 'Sword_Regular_B', 'Sword_Regular_C'];
-          const anim = ent.classId === 'ranger' ? 'Spell_Simple_Shoot' : comboAnims[(ent.attackCombo || 0) % 3];
-          ent.attackCombo = ((ent.attackCombo || 0) + 1) % 3;
+          const anim = ent.classId === 'ranger' ? 'Spell_Simple_Shoot' : comboAnims[comboIdx];
+          ent.attackCombo = (comboIdx + 1) % 3;
           this.playEntityAnim(ent, anim, true);
           ent.attackTimer = 0.34;
           this.audio.playSwing(false);
@@ -2902,7 +3281,7 @@
           if (ent.classId === 'ranger') {
             this.spawnProjectile(ent.pos.clone().add(new THREE.Vector3(0, 1.1, 0)), forward, 28, wStats.dmg, 0x2ee68a, true);
           } else {
-            this.spawnSlashArc(ent.pos, ent.yaw, 3.1, cls.color);
+            this.spawnSlashArc(ent.pos, ent.yaw, 3.1, cls.color, comboIdx, false);
             this.damageEnemiesInCone(ent.pos, forward, 3.6, 0.45, wStats.dmg, false, ent);
           }
         }
@@ -2919,7 +3298,7 @@
           } else if (ent.classId === 'arcanist') {
             const targetPos = ent.pos.clone().add(forward.clone().multiplyScalar(5.5));
             this.audio.playSpell('arcane');
-            this.spawnVFXFlipbook('vortex', targetPos, 4.8, 0.85, 0xb266ff);
+            this.spawnVFXFlipbook('vortex', targetPos, 5.4, 0.85, 0xb266ff, true);
             this.spawnTelegraphCircle(targetPos, 4.5, 0.35, 0xb266ff, () => {
               this.monsters.forEach((m) => {
                 if (!m.dead && m.pos.distanceTo(targetPos) < 4.8) {
@@ -2932,7 +3311,7 @@
           } else {
             const impactPos = ent.pos.clone().add(forward.clone().multiplyScalar(2.0));
             this.spawnVFXFlipbook('bighit', impactPos, 4.2, 0.5, cls.color);
-            this.spawnSlashArc(ent.pos, ent.yaw, 4.2, 0xff5533);
+            this.spawnSlashArc(ent.pos, ent.yaw, 4.2, 0xff5533, 2, true);
             this.screenShake = Math.max(this.screenShake, 0.35);
             this.damageEnemiesInRadius(impactPos, 4.4, Math.round(wStats.dmg * 1.85), true, ent);
           }
@@ -3072,7 +3451,9 @@
         mob.aggroTimer = 8.0;
         this.triggerEntityHitFlash(mob);
         this.audio.playHit(isCrit, isHeavy);
-        this.spawnVFXFlipbook(isCrit ? 'bighit' : 'impact', mob.pos, isCrit ? 3.0 : 2.1, 0.3, isCrit ? 0xffd56b : 0xffffff);
+        const hitDir = mob.pos.clone().sub(attacker ? attacker.pos : this.player.pos).setY(0).normalize();
+        this.spawnVFXFlipbook(isCrit ? 'bighit' : 'impact', mob.pos, isCrit ? 3.2 : 2.3, 0.34, isCrit ? 0xffd56b : 0xffffff);
+        this.spawnHitSparks(mob.pos, hitDir, isCrit ? 0xffd56b : 0x38e8ff, isCrit ? 11 : 6);
         this.spawnFloatingText(mob.pos, isCrit ? `${finalDmg} CRIT!` : `${finalDmg}`, isCrit ? '#ffd56b' : '#ffffff', isCrit ? 19 : 15);
 
         if (isCrit || isHeavy) {
@@ -3080,9 +3461,11 @@
           this.screenShake = Math.max(this.screenShake, 0.22);
         }
         if (!mob.isBoss) {
-          const kb = mob.pos.clone().sub(attacker ? attacker.pos : this.player.pos).setY(0).normalize().multiplyScalar(isHeavy ? 1.45 : 0.55);
-          mob.pos.add(kb);
-          this.resolveObstacleCollisions(mob.pos, 0.55);
+          if (mob.kbVel) {
+            mob.kbVel.copy(hitDir).multiplyScalar(isHeavy ? 9.5 : 4.5);
+          } else {
+            mob.pos.addScaledVector(hitDir, isHeavy ? 1.1 : 0.45);
+          }
           this.playEntityAnim(mob, isHeavy ? 'Hit_Knockback' : 'Hit_Chest', true);
           mob.stunTimer = Math.max(mob.stunTimer, isHeavy ? 0.55 : 0.22);
         }
@@ -3094,7 +3477,7 @@
 
       handleMonsterDeath(mob) {
         mob.dead = true;
-        mob.deathTimer = 1.6;
+        mob.deathTimer = 2.6;
         this.playEntityAnim(mob, 'Death01', true);
         this.spawnVFXFlipbook('anima', mob.pos, mob.isBoss ? 6.0 : 3.2, 0.65, 0x38e8ff);
         this.spawnLootDrop(mob.pos, mob.isElite || mob.isBoss);
@@ -3284,7 +3667,7 @@
         const { data } = await this.supabase
           .from('arpg_heroes')
           .select('*')
-          .eq('player_token', this.playerToken)
+          .eq('player_token', this.heroSaveToken)
           .maybeSingle();
 
         if (data) {
@@ -3306,7 +3689,7 @@
       async saveHeroToSupabase() {
         if (!this.supabase) return;
         await this.supabase.from('arpg_heroes').upsert({
-          player_token: this.playerToken,
+          player_token: this.heroSaveToken,
           hero_name: this.player.name,
           hero_class: this.player.classId,
           level: this.player.level,
@@ -3339,19 +3722,68 @@
         };
       }
 
+      updateNetDiagnosticsUI() {
+        const dot = document.getElementById('net-dot');
+        const statusEl = document.getElementById('net-status-text');
+        const peersEl = document.getElementById('coop-diag-peers');
+        const stateEl = document.getElementById('coop-diag-state');
+        const onlineEl = document.getElementById('hud-online-count');
+
+        const peerCount = this.remotePeers ? this.remotePeers.size : 0;
+        const chState = this.channel ? this.channel.state : 'none';
+        const isLive = this.channelSubscribed && chState === 'joined';
+
+        if (dot) {
+          const col = isLive ? '#2ee68a' : (this.netStatus === 'error' ? '#ff3b5c' : '#f3c86b');
+          dot.style.background = col;
+          dot.style.boxShadow = `0 0 8px ${col}`;
+        }
+        if (statusEl) {
+          statusEl.textContent = isLive
+            ? 'Supabase Live Co-Op'
+            : (this.netStatus === 'reconnecting' ? 'Reconnecting Co-Op...' : 'Connecting Co-Op...');
+        }
+        if (peersEl) {
+          peersEl.textContent = peerCount > 0 ? `Peers: ${peerCount} Live` : 'Peers: 0 (Solo)';
+          peersEl.style.color = peerCount > 0 ? '#2ee68a' : '#b0b9ce';
+        }
+        if (stateEl) {
+          stateEl.textContent = `WS: ${chState}`;
+          stateEl.style.color = isLive ? '#38e8ff' : '#f3c86b';
+        }
+        if (onlineEl) {
+          const count = Math.max(1 + peerCount, this._presenceCount || 1);
+          onlineEl.textContent = String(count);
+        }
+      }
+
+      trackPresence(force = false) {
+        if (!this.channel || !this.channelSubscribed || this.channel.state !== 'joined') return;
+        const now = performance.now();
+        if (this._hasTrackedOnce && now - this.lastPresenceTrackTime < (force ? 3500 : 15000)) {
+          return;
+        }
+        this._hasTrackedOnce = true;
+        this.lastPresenceTrackTime = now;
+        const payload = this.buildPlayerStatePayload();
+        this.channel.track(payload).catch(() => {});
+      }
+
       broadcastPlayerState(forceTrack = false) {
-        if (!this.channel || !this.channelSubscribed) return;
+        if (!this.channel || !this.channelSubscribed || this.channel.state !== 'joined') return;
         const now = performance.now();
         const payload = this.buildPlayerStatePayload();
         this.lastBroadcastTime = now;
+        this._lastSentPos.copy(this.player.pos);
+        this._lastSentYaw = this.player.yaw;
+        this._lastSentAnim = this.player.animState;
         this.channel.send({
           type: 'broadcast',
           event: 'player_state',
           payload
         });
-        if (forceTrack || now - this.lastPresenceTrackTime > 1500) {
-          this.lastPresenceTrackTime = now;
-          this.channel.track(payload).catch(() => {});
+        if (forceTrack) {
+          this.trackPresence(true);
         }
       }
 
@@ -3389,29 +3821,44 @@
         sprite.userData.tex.needsUpdate = true;
       }
 
-      async joinRealtimeRoom(newCode) {
+      async joinRealtimeRoom(newCode, isReconnect = false) {
         if (!this.supabase) return;
-        this.roomCode = newCode.trim().toUpperCase() || 'ASHEN-1';
+        if (this.reconnectTimer) {
+          clearTimeout(this.reconnectTimer);
+          this.reconnectTimer = null;
+        }
+        const targetRoom = (newCode || 'ASHEN-1').trim().toUpperCase() || 'ASHEN-1';
+        this.roomCode = targetRoom;
         localStorage.setItem('arpg_room_code', this.roomCode);
         document.getElementById('hud-room-code').textContent = this.roomCode;
         document.getElementById('room-code-input').value = this.roomCode;
         document.getElementById('modal-room-indicator').textContent = 'ROOM: ' + this.roomCode;
 
-        this.remotePeers.forEach(p => { if (p.meshRoot) this.scene.remove(p.meshRoot); });
-        this.remotePeers.clear();
+        if (!isReconnect) {
+          this.remotePeers.forEach(p => { if (p.meshRoot) this.scene.remove(p.meshRoot); });
+          this.remotePeers.clear();
+          this.reconnectAttempts = 0;
+        }
         this.channelSubscribed = false;
+        this._hasTrackedOnce = false;
+        this._presenceCount = 1;
+        this.netStatus = isReconnect ? 'reconnecting' : 'connecting';
+        this.updateNetDiagnosticsUI();
 
         if (this.channel) {
-          await this.supabase.removeChannel(this.channel);
+          try { await this.supabase.removeChannel(this.channel); } catch (e) {}
+          this.channel = null;
         }
 
-        this.channel = this.supabase.channel(`coop-room-${this.roomCode}`, {
+        const ch = this.supabase.channel(`coop-room-${this.roomCode}`, {
           config: { presence: { key: this.playerToken }, broadcast: { self: false } }
         });
+        this.channel = ch;
 
-        this.channel
+        ch
           .on('presence', { event: 'sync' }, () => {
-            const state = this.channel.presenceState();
+            if (this.channel !== ch) return;
+            const state = ch.presenceState();
             const activeIds = new Set();
             Object.values(state).forEach((presences) => {
               if (!Array.isArray(presences)) return;
@@ -3419,35 +3866,48 @@
                 if (!entry || !entry.id) return;
                 activeIds.add(entry.id);
                 if (entry.id !== this.playerToken) {
-                  this.handleRemotePlayerState(entry);
+                  this.handleRemotePlayerState(entry, true);
                 }
               });
             });
             const now = performance.now();
             this.remotePeers.forEach((peer, id) => {
-              if (!activeIds.has(id) && now - peer.lastSeen > 5000) {
+              if (!activeIds.has(id) && now - peer.lastSeen > 12000) {
                 if (peer.meshRoot) this.scene.remove(peer.meshRoot);
                 this.remotePeers.delete(id);
               }
             });
-            const count = Math.max(1, activeIds.size || Object.keys(state).length);
-            document.getElementById('hud-online-count').textContent = count;
+            this._presenceCount = Math.max(1, activeIds.size || Object.keys(state).length);
+            this.updateNetDiagnosticsUI();
             this.updatePartyRosterUI();
           })
           .on('presence', { event: 'join' }, ({ newPresences }) => {
+            if (this.channel !== ch) return;
             if (Array.isArray(newPresences)) {
               newPresences.forEach((entry) => {
                 if (entry && entry.id && entry.id !== this.playerToken) {
-                  this.handleRemotePlayerState(entry);
+                  this.handleRemotePlayerState(entry, true);
                 }
               });
             }
-            this.broadcastPlayerState(true);
+            setTimeout(() => {
+              if (this.channel === ch && this.channelSubscribed) {
+                this.broadcastPlayerState(false);
+              }
+            }, 120);
+            this.updateNetDiagnosticsUI();
             this.updatePartyRosterUI();
+          })
+          .on('broadcast', { event: 'hello_sync' }, ({ payload }) => {
+            if (!payload || payload.id === this.playerToken) return;
+            if (!this.remotePeers.has(payload.id)) {
+              this.handleRemotePlayerState(payload, false);
+            }
+            this.broadcastPlayerState(false);
           })
           .on('broadcast', { event: 'player_state' }, ({ payload }) => {
             if (!payload || payload.id === this.playerToken) return;
-            this.handleRemotePlayerState(payload);
+            this.handleRemotePlayerState(payload, false);
           })
           .on('broadcast', { event: 'combat_action' }, ({ payload }) => {
             if (!payload || payload.id === this.playerToken) return;
@@ -3459,32 +3919,64 @@
             this.addChatMessage(payload.sender, payload.message, payload.type || '');
           })
           .subscribe(async (status) => {
+            if (this.channel !== ch) return;
             if (status === 'SUBSCRIBED') {
               this.channelSubscribed = true;
-              this.broadcastPlayerState(true);
-              this.addChatMessage('Supabase Realtime', `Connected to Co-Op Realm [${this.roomCode}]. Share the invite link so friends can drop in live!`, 'sys-synergy');
+              this.reconnectAttempts = 0;
+              this.netStatus = 'connected';
+              this.trackPresence(true);
+              this.broadcastPlayerState(false);
+              ch.send({
+                type: 'broadcast',
+                event: 'hello_sync',
+                payload: this.buildPlayerStatePayload()
+              });
+              this.updateNetDiagnosticsUI();
+              this.updatePartyRosterUI();
+              if (!isReconnect) {
+                this.addChatMessage('Supabase Realtime', `Connected to Co-Op Realm [${this.roomCode}]. Share the invite link so friends can drop in live!`, 'sys-synergy');
+              }
+            } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              this.channelSubscribed = false;
+              this.netStatus = 'reconnecting';
+              this.updateNetDiagnosticsUI();
+              if (!this.reconnectTimer && this.roomCode === targetRoom) {
+                const delay = Math.min(6000, 1200 * Math.pow(1.5, this.reconnectAttempts++));
+                this.reconnectTimer = setTimeout(() => {
+                  this.reconnectTimer = null;
+                  if (this.roomCode === targetRoom) {
+                    this.joinRealtimeRoom(targetRoom, true);
+                  }
+                }, delay);
+              }
             }
           });
 
-        const { data: logs } = await this.supabase
-          .from('arpg_chat_events')
-          .select('*')
-          .eq('room_code', this.roomCode)
-          .order('created_at', { ascending: false })
-          .limit(8);
-        if (logs) {
-          logs.reverse().forEach(l => this.addChatMessage(l.sender_name, l.message, l.event_type === 'boss' ? 'sys-boss' : ''));
+        if (!isReconnect) {
+          const { data: logs } = await this.supabase
+            .from('arpg_chat_events')
+            .select('*')
+            .eq('room_code', this.roomCode)
+            .order('created_at', { ascending: false })
+            .limit(8);
+          if (logs) {
+            logs.reverse().forEach(l => this.addChatMessage(l.sender_name, l.message, l.event_type === 'boss' ? 'sys-boss' : ''));
+          }
         }
       }
 
-      handleRemotePlayerState(p) {
+      handleRemotePlayerState(p, fromPresence = false) {
         if (!p || !p.id || p.id === this.playerToken) return;
+        const now = performance.now();
         const px = typeof p.x === 'number' ? p.x : 0;
         const pz = typeof p.z === 'number' ? p.z : 12;
         let peer = this.remotePeers.get(p.id);
+        let isNew = false;
         if (!peer) {
+          isNew = true;
           const root = new THREE.Group();
           root.position.set(px, 0, pz);
+          root.visible = true;
           this.scene.add(root);
           const nameplate = this.createPeerNameplateSprite(p.name || 'Co-Op Ally');
           root.add(nameplate);
@@ -3504,12 +3996,14 @@
             yaw: typeof p.yaw === 'number' ? p.yaw : 0,
             meshRoot: root,
             nameplateSprite: nameplate,
-            lastSeen: performance.now()
+            lastSeen: now,
+            lastBroadcastSeen: fromPresence ? 0 : now
           };
           this.remotePeers.set(p.id, peer);
           const mKey = 'hero_' + peer.classId;
           if (this.modelCache[mKey]) this.upgradeEntityToGLB(peer, mKey, 1.05);
           else root.add(this.createArticulatedFallback(0x38e8ff, 1.0));
+          this.updateNetDiagnosticsUI();
           this.updatePartyRosterUI();
         }
 
@@ -3520,32 +4014,48 @@
         }
         peer.hp = p.hp ?? peer.hp;
         peer.maxHp = p.maxHp ?? peer.maxHp;
-        if (typeof p.x === 'number' && typeof p.z === 'number') {
-          peer.targetPos.set(p.x, 0, p.z);
-          if (peer.pos.distanceToSquared(peer.targetPos) > 625) {
-            peer.pos.copy(peer.targetPos);
+        peer.lastSeen = now;
+        if (peer.meshRoot) peer.meshRoot.visible = true;
+
+        const ignoreStalePresencePos = fromPresence && !isNew && (now - (peer.lastBroadcastSeen || 0) < 3500);
+        if (!fromPresence) {
+          peer.lastBroadcastSeen = now;
+        }
+
+        if (!ignoreStalePresencePos) {
+          if (typeof p.x === 'number' && typeof p.z === 'number') {
+            peer.targetPos.set(p.x, 0, p.z);
+            if (peer.pos.distanceToSquared(peer.targetPos) > 625) {
+              peer.pos.copy(peer.targetPos);
+            }
+          }
+          peer.vx = typeof p.vx === 'number' ? p.vx : 0;
+          peer.vz = typeof p.vz === 'number' ? p.vz : 0;
+          if (typeof p.yaw === 'number') peer.yaw = p.yaw;
+          if (p.animState && p.animState !== peer.animState) {
+            this.playEntityAnim(peer, p.animState);
           }
         }
-        peer.vx = typeof p.vx === 'number' ? p.vx : 0;
-        peer.vz = typeof p.vz === 'number' ? p.vz : 0;
-        if (typeof p.yaw === 'number') peer.yaw = p.yaw;
-        peer.lastSeen = performance.now();
+
+        const nextWeapon = p.weaponId !== undefined ? p.weaponId : peer.weaponId;
+        const nextOffhand = p.offhandId !== undefined ? p.offhandId : peer.offhandId;
+        const weaponChanged = nextWeapon !== peer.weaponId || nextOffhand !== peer.offhandId;
+        peer.weaponId = nextWeapon;
+        peer.offhandId = nextOffhand;
 
         if (p.classId && p.classId !== peer.classId) {
           peer.classId = p.classId;
-          this.upgradeEntityToGLB(peer, 'hero_' + peer.classId, 1.05);
-        }
-        if (p.weaponId && p.weaponId !== peer.weaponId) {
-          peer.weaponId = p.weaponId;
+          const mKey = 'hero_' + peer.classId;
+          if (this.modelCache[mKey]) {
+            this.upgradeEntityToGLB(peer, mKey, 1.05);
+          }
+        } else if (weaponChanged) {
           this.attachWeaponsToEntity(peer);
-        }
-        if (p.animState && p.animState !== peer.animState) {
-          this.playEntityAnim(peer, p.animState);
         }
       }
 
       broadcastCombatAction(slot) {
-        if (!this.channel) return;
+        if (!this.channel || !this.channelSubscribed || this.channel.state !== 'joined') return;
         this.channel.send({
           type: 'broadcast',
           event: 'combat_action',
@@ -3695,7 +4205,10 @@
 
         this.rebuildHeroMesh();
         this.renderForgeModal();
-        if (!silent) this.audio.playLootChime();
+        if (!silent) {
+          this.audio.playLootChime();
+          this.broadcastPlayerState(true);
+        }
       }
 
       startOrResumeGame() {
@@ -4169,8 +4682,18 @@
         }
 
         const now = performance.now();
-        if (this.channel && this.channelSubscribed && now - this.lastBroadcastTime > 85) {
-          this.broadcastPlayerState(false);
+        if (this.channel && this.channelSubscribed && this.channel.state === 'joined') {
+          const movedOrChanged =
+            this.player.pos.distanceToSquared(this._lastSentPos) > 0.0025 ||
+            Math.abs(this.player.yaw - this._lastSentYaw) > 0.04 ||
+            this.player.animState !== this._lastSentAnim;
+          const interval = movedOrChanged ? 95 : 1200;
+          if (now - this.lastBroadcastTime >= interval) {
+            this.broadcastPlayerState(false);
+          }
+          if (now - this.lastPresenceTrackTime >= 15000) {
+            this.trackPresence(false);
+          }
         }
       }
 
@@ -4242,8 +4765,8 @@
             if (m.meshRoot && m.meshRoot.visible) {
               if (m.mixer) m.mixer.update(dt);
               m.deathTimer -= dt;
-              if (m.deathTimer < 0.6) {
-                m.meshRoot.position.y -= dt * 1.4;
+              if (m.deathTimer < 0.4) {
+                m.meshRoot.position.y -= dt * 1.1;
               }
               if (m.deathTimer <= -0.5) {
                 m.meshRoot.visible = false;
@@ -4265,7 +4788,14 @@
 
           if (m.mixer) m.mixer.update(dt);
 
+          if (m.kbVel && m.kbVel.lengthSq() > 0.01) {
+            m.pos.addScaledVector(m.kbVel, dt);
+            m.kbVel.multiplyScalar(Math.max(0, 1 - dt * 10));
+            this.resolveObstacleCollisions(m.pos, m.isBoss ? 1.1 : 0.55);
+          }
+
           if (m.aggroTimer > 0) m.aggroTimer = Math.max(0, m.aggroTimer - dt);
+          if (m.attackAnimTimer > 0) m.attackAnimTimer = Math.max(0, m.attackAnimTimer - dt);
 
           if (m.stunTimer > 0) {
             m.stunTimer -= dt;
@@ -4287,8 +4817,10 @@
               m.yaw = Math.atan2(this._v1.x, this._v1.z);
               this._v1.normalize();
               m.pos.addScaledVector(this._v1, m.speed * 1.15 * dt);
-              this.playEntityAnim(m, m.modelKey.includes('puglin') ? 'Zombie_Walk_Fwd_Loop' : 'Jog_Fwd_Loop');
-            } else {
+              if (m.attackAnimTimer <= 0) {
+                this.playEntityAnim(m, m.modelKey.includes('puglin') ? 'Zombie_Walk_Fwd_Loop' : 'Jog_Fwd_Loop');
+              }
+            } else if (m.attackAnimTimer <= 0) {
               this.playEntityAnim(m, 'Idle_Loop');
             }
           } else if (dist < aggroRadius || m.aggroTimer > 0) {
@@ -4298,7 +4830,7 @@
             m.attackCd = Math.max(0, m.attackCd - dt);
 
             const stopRange = m.ranged ? 8.5 : (m.isBoss ? 3.2 : 2.1);
-            if (dist > stopRange && m.windupTimer <= 0) {
+            if (dist > stopRange && m.windupTimer <= 0 && m.attackAnimTimer <= 0.15) {
               isMoving = true;
               const invDist = 1 / (dist || 1);
               m.pos.x += toPlayerX * invDist * m.speed * dt;
@@ -4306,8 +4838,12 @@
               this.playEntityAnim(m, m.modelKey.includes('puglin') ? 'Zombie_Walk_Fwd_Loop' : 'Jog_Fwd_Loop');
             } else if (m.attackCd <= 0 && m.windupTimer <= 0) {
               m.windupTimer = m.isBoss ? 0.85 : 0.55;
+              m.attackAnimTimer = m.isBoss ? 1.35 : 0.95;
               m.attackCd = m.isBoss ? 2.4 : 2.1;
-              this.playEntityAnim(m, m.isBoss ? 'Sword_Heavy_Combo' : 'Sword_Attack', true);
+              const atkClip = m.isBoss
+                ? 'Sword_Heavy_Combo'
+                : (m.ranged ? 'Spell_Simple_Shoot' : 'Sword_Attack');
+              this.playEntityAnim(m, atkClip, true);
 
               const targetSnap = this.player.pos.clone();
               const teleRadius = m.isBoss ? 4.4 : 2.4;
@@ -4322,17 +4858,18 @@
                 } else {
                   const hitCenter = m.pos.clone().add(new THREE.Vector3(Math.sin(m.yaw), 0, Math.cos(m.yaw)).multiplyScalar(1.6));
                   this.spawnVFXFlipbook('smallhit', hitCenter, teleRadius, 0.3, 0xff3b5c);
+                  this.spawnSlashArc(m.pos, m.yaw, teleRadius * 0.95, 0xff3b5c, 0, m.isBoss);
                   if (this.player.pos.distanceTo(hitCenter) <= teleRadius && this.player.dodgeTimer <= 0) {
                     this.damagePlayer(m.dmg, m.name);
                   }
                 }
               });
-            } else if (m.windupTimer <= 0) {
+            } else if (m.windupTimer <= 0 && m.attackAnimTimer <= 0) {
               this.playEntityAnim(m, 'Idle_Loop');
             }
 
             if (m.windupTimer > 0) m.windupTimer = Math.max(0, m.windupTimer - dt);
-          } else {
+          } else if (m.attackAnimTimer <= 0) {
             this.playEntityAnim(m, 'Idle_Loop');
           }
 
@@ -4382,16 +4919,15 @@
           m.meshRoot.position.y = 0;
           m.meshRoot.rotation.set(0, m.yaw, 0);
 
-          const needsProceduralMotion = !m.activeAction || (m.modelKey && m.modelKey.includes('alien'));
-          if (needsProceduralMotion) {
-            if (m.windupTimer > 0) {
-              const lunge = Math.sin(m.windupTimer * 6.0);
-              m.meshRoot.position.y = Math.abs(lunge) * 0.18;
-              m.meshRoot.rotation.x = lunge * 0.22;
-            } else if (m.isMovingNow) {
-              m.meshRoot.position.y = Math.abs(Math.sin(elapsed * 9.5 + idx)) * 0.14;
-              m.meshRoot.rotation.z = Math.sin(elapsed * 9.5 + idx) * 0.05;
-            }
+          if (!m.activeAction) {
+            const targetBob = m.windupTimer > 0
+              ? Math.abs(Math.sin(m.windupTimer * 6.0)) * 0.16
+              : (m.isMovingNow ? Math.abs(Math.sin(elapsed * 9.5 + idx)) * 0.12 : 0);
+            const targetTilt = m.windupTimer > 0 ? Math.sin(m.windupTimer * 6.0) * 0.2 : 0;
+            m.procBobY += (targetBob - (m.procBobY || 0)) * Math.min(1, dt * 14);
+            m.procTiltX += (targetTilt - (m.procTiltX || 0)) * Math.min(1, dt * 14);
+            m.meshRoot.position.y = m.procBobY;
+            m.meshRoot.rotation.x = m.procTiltX;
           }
         }
 
@@ -4472,8 +5008,14 @@
           const tg = this.telegraphs[i];
           tg.elapsed += dt;
           const p = Math.min(1, tg.elapsed / tg.duration);
-          tg.mesh.scale.setScalar(0.3 + p * 0.7);
-          tg.mesh.material.opacity = 0.25 + p * 0.45;
+          if (tg.fillMesh) {
+            tg.fillMesh.scale.setScalar(0.05 + p * 0.95);
+            tg.fillMat.opacity = 0.16 + p * 0.34;
+            tg.ringMat.opacity = 0.65 + Math.sin(p * Math.PI) * 0.3;
+          } else {
+            tg.mesh.scale.setScalar(0.3 + p * 0.7);
+            if (tg.mesh.material) tg.mesh.material.opacity = 0.25 + p * 0.45;
+          }
           if (tg.elapsed >= tg.duration) {
             this.scene.remove(tg.mesh);
             if (tg.onComplete) tg.onComplete();
@@ -4485,14 +5027,63 @@
           const v = this.vfxSprites[i];
           v.elapsed += dt;
           const t = Math.min(1, v.elapsed / v.duration);
-          if (v.isMesh) {
+          if (v.isFlipbook) {
+            const frames = v.meta.frames;
+            const idx = Math.min(frames.length - 1, Math.floor(t * frames.length));
+            const frameNum = frames[idx];
+            const col = frameNum % v.meta.cols;
+            const row = Math.floor(frameNum / v.meta.cols);
+            v.mesh.material.uniforms.uUvRect.value.set(
+              col / v.meta.cols,
+              1 - (row + 1) / v.meta.rows,
+              1 / v.meta.cols,
+              1 / v.meta.rows
+            );
+            v.mesh.material.uniforms.uOpacity.value = t > 0.75 ? (1 - (t - 0.75) / 0.25) : 1.0;
+            if (!v.isGroundRune) {
+              v.mesh.quaternion.copy(this.camera.quaternion);
+            } else {
+              v.mesh.rotation.z += dt * 1.4;
+            }
+            v.mesh.scale.setScalar(v.maxScale * (0.72 + Math.sin(t * Math.PI * 0.85) * 0.35));
+            if (t >= 1) {
+              this.scene.remove(v.mesh);
+              v.mesh.material.dispose();
+              this.vfxSprites.splice(i, 1);
+            }
+          } else if (v.isSlash) {
+            v.mesh.material.uniforms.uProgress.value = t;
+            v.mesh.material.uniforms.uOpacity.value = (1 - t * t);
+            v.mesh.rotation.y += v.sweepDir * dt * 5.2;
+            v.mesh.scale.setScalar(1 + t * 0.22);
+            if (t >= 1) {
+              this.scene.remove(v.mesh);
+              v.mesh.geometry.dispose();
+              v.mesh.material.dispose();
+              this.vfxSprites.splice(i, 1);
+            }
+          } else if (v.isMesh) {
             v.mesh.material.opacity = 1 - t;
             v.mesh.scale.setScalar(1 + t * 0.35);
             if (t >= 1) { this.scene.remove(v.mesh); this.vfxSprites.splice(i, 1); }
-          } else {
+          } else if (v.sprite) {
             v.sprite.scale.setScalar(v.maxScale * (0.4 + Math.sin(t * Math.PI) * 0.7));
             v.sprite.material.opacity = 1 - t * 0.85;
             if (t >= 1) { this.scene.remove(v.sprite); this.vfxSprites.splice(i, 1); }
+          }
+        }
+
+        for (let i = this.sparkParticles.length - 1; i >= 0; i--) {
+          const sp = this.sparkParticles[i];
+          sp.life -= dt;
+          sp.vel.y -= 14.0 * dt;
+          sp.vel.multiplyScalar(Math.max(0, 1 - dt * 3.5));
+          sp.mesh.position.addScaledVector(sp.vel, dt);
+          sp.mesh.material.opacity = Math.max(0, sp.life / sp.maxLife);
+          if (sp.life <= 0 || sp.mesh.position.y < 0.02) {
+            this.scene.remove(sp.mesh);
+            sp.mesh.material.dispose();
+            this.sparkParticles.splice(i, 1);
           }
         }
 
@@ -4543,12 +5134,17 @@
         const roster = document.getElementById('coop-roster');
         if (!roster) return;
         const allies = [...Array.from(this.remotePeers.values()), ...this.aiAllies];
+        if (allies.length === 0) {
+          roster.innerHTML = `<div style="font-size:11px; color:var(--text-muted); padding:3px 4px;">Waiting for allies in <b style="color:var(--cyan);">[${this.roomCode}]</b> — share Invite Link!</div>`;
+          return;
+        }
         roster.innerHTML = allies.map((a) => {
           const pct = Math.max(0, Math.min(100, Math.round((a.hp / a.maxHp) * 100)));
           const coords = `(${Math.round(a.pos.x)}, ${Math.round(a.pos.z)})`;
+          const clsTitle = HERO_CLASSES[a.classId]?.badge || '?';
           return `
             <div class="ally-row ${a.isAI ? 'ai-ally' : ''}" style="cursor:pointer;" title="Click to warp to ${a.name}" onclick="window.game.warpToPeer('${a.id}')">
-              <span>${a.isAI ? '🤖' : '🟢'} <b>${a.name}</b> <small style="color:var(--text-muted); font-family:'JetBrains Mono',monospace;">${coords}</small></span>
+              <span>${a.isAI ? '🤖' : '🟢'} <b style="color:${a.isAI ? '#fff' : 'var(--gold-bright)'};">[${clsTitle}] ${a.name}</b> <small style="color:var(--text-muted); font-family:'JetBrains Mono',monospace;">${coords}</small></span>
               <div class="ally-mini-hp"><div style="width:${pct}%"></div></div>
             </div>
           `;

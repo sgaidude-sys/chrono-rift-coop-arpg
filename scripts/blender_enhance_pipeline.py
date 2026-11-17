@@ -2,6 +2,9 @@ import bpy
 import bmesh
 import os
 import math
+import json
+import struct
+import mathutils
 
 ROOT = r"c:\Users\Desmond\Documents\Co Op ARPG"
 OUT_DIR = os.path.join(ROOT, "public", "assets", "models")
@@ -103,7 +106,57 @@ def create_emissive_mat(name, base_color=(0.1, 0.8, 1.0, 1.0), emit_color=(0.2, 
             bsdf.inputs["Emission Strength"].default_value = emit_strength
     return mat
 
-def export_glb(filepath, export_animations=False, max_tex=512):
+def strip_glb_channels(glb_path, keep_loc_bones=("pelvis",), keep_scale=False):
+    """Strip bone translation (except keep_loc_bones) and scale channels from a GLB so animations never warp target bone lengths."""
+    with open(glb_path, "rb") as f:
+        magic, version, total_len = struct.unpack("<III", f.read(12))
+        if magic != 0x46546C67:
+            return
+        chunks = []
+        while f.tell() < total_len:
+            clen, ctype = struct.unpack("<II", f.read(8))
+            cdata = f.read(clen)
+            chunks.append((ctype, cdata))
+
+    if not chunks or chunks[0][0] != 0x4E4F534A:
+        return
+    gltf = json.loads(chunks[0][1].decode("utf-8"))
+    nodes = gltf.get("nodes", [])
+    keep_loc_set = set(keep_loc_bones or ())
+
+    for anim in gltf.get("animations", []):
+        kept_channels = []
+        for ch in anim.get("channels", []):
+            tgt = ch.get("target", {})
+            path = tgt.get("path")
+            ni = tgt.get("node")
+            nname = nodes[ni].get("name", "") if ni is not None and ni < len(nodes) else ""
+            if path == "scale" and not keep_scale:
+                continue
+            if path == "translation" and nname not in keep_loc_set:
+                continue
+            kept_channels.append(ch)
+        if len(kept_channels) != len(anim.get("channels", [])):
+            # Prune unused samplers and remap channel sampler indices
+            used_samplers = sorted({ch["sampler"] for ch in kept_channels})
+            remap = {old_i: new_i for new_i, old_i in enumerate(used_samplers)}
+            old_samplers = anim.get("samplers", [])
+            anim["samplers"] = [old_samplers[i] for i in used_samplers]
+            for ch in kept_channels:
+                ch["sampler"] = remap[ch["sampler"]]
+            anim["channels"] = kept_channels
+
+    new_json = json.dumps(gltf, separators=(",", ":")).encode("utf-8")
+    pad = (4 - (len(new_json) % 4)) % 4
+    new_json += b" " * pad
+    chunks[0] = (0x4E4F534A, new_json)
+
+    body = b"".join(struct.pack("<II", len(d), t) + d for t, d in chunks)
+    with open(glb_path, "wb") as f:
+        f.write(struct.pack("<III", magic, version, 12 + len(body)))
+        f.write(body)
+
+def export_glb(filepath, export_animations=False, max_tex=512, strip_loc_except=("pelvis",)):
     relink_missing_textures()
     optimize_and_dedup_images(max_dim=max_tex)
     bpy.ops.export_scene.gltf(
@@ -117,8 +170,85 @@ def export_glb(filepath, export_animations=False, max_tex=512):
         export_normals=True,
         export_materials='EXPORT'
     )
+    if export_animations and strip_loc_except is not None:
+        strip_glb_channels(filepath, keep_loc_bones=strip_loc_except, keep_scale=False)
     size_kb = os.path.getsize(filepath) / 1024.0
     print(f"[EXPORTED] {os.path.basename(filepath)} ({size_kb:.1f} KB)")
+
+def topo_bone_names(arm):
+    ordered = []
+    def visit(b):
+        ordered.append(b.name)
+        for ch in b.children:
+            visit(ch)
+    for b in arm.data.bones:
+        if b.parent is None:
+            visit(b)
+    return ordered
+
+def retarget_action_to_armature(src_arm, src_act, dst_arm, new_name, zero_xy_pelvis=True, min_pelvis_z_ratio=0.0):
+    """Retarget src_act from src_arm onto dst_arm preserving dst_arm rest orientations, bone lengths, and proportional pelvis motion."""
+    f0 = int(round(src_act.frame_range[0]))
+    f1 = int(round(src_act.frame_range[1]))
+    if not src_arm.animation_data:
+        src_arm.animation_data_create()
+    src_arm.animation_data.action = src_act
+
+    if not dst_arm.animation_data:
+        dst_arm.animation_data_create()
+    dst_act = bpy.data.actions.new(name=new_name)
+    dst_arm.animation_data.action = dst_act
+
+    src_rest = {b.name: b.matrix_local.to_3x3().copy() for b in src_arm.data.bones}
+    dst_rest = {b.name: b.matrix_local.to_3x3().copy() for b in dst_arm.data.bones}
+    src_pelvis_rest = src_arm.data.bones["pelvis"].head_local.copy()
+    dst_pelvis_rest = dst_arm.data.bones["pelvis"].head_local.copy()
+    h_ratio = dst_pelvis_rest.z / max(src_pelvis_rest.z, 0.001)
+
+    order = topo_bone_names(dst_arm)
+    for pb in dst_arm.pose.bones:
+        pb.rotation_mode = 'QUATERNION'
+        pb.location = (0, 0, 0)
+        pb.rotation_quaternion = (1, 0, 0, 0)
+        pb.scale = (1, 1, 1)
+
+    for f in range(f0, f1 + 1):
+        bpy.context.scene.frame_set(f)
+        src_p_head = src_arm.pose.bones["pelvis"].head.copy()
+        dp = (src_p_head - src_pelvis_rest) * h_ratio
+        if zero_xy_pelvis:
+            dp.x = 0.0
+            dp.y = 0.0
+        target_pelvis_head = dst_pelvis_rest + dp
+        if min_pelvis_z_ratio > 0.0:
+            target_pelvis_head.z = max(target_pelvis_head.z, dst_pelvis_rest.z * min_pelvis_z_ratio)
+
+        pb_dst_pelvis = dst_arm.pose.bones["pelvis"]
+        pb_src_pelvis = src_arm.pose.bones["pelvis"]
+        delta_p = pb_src_pelvis.matrix.to_3x3() @ src_rest["pelvis"].inverted()
+        rot_p = (delta_p @ dst_rest["pelvis"]).to_4x4()
+        rot_p.translation = target_pelvis_head
+        pb_dst_pelvis.matrix = rot_p
+        bpy.context.view_layer.update()
+        pb_dst_pelvis.keyframe_insert(data_path="location", frame=f)
+        pb_dst_pelvis.keyframe_insert(data_path="rotation_quaternion", frame=f)
+
+        for bname in order:
+            if bname in ("root", "pelvis"):
+                continue
+            if bname not in src_arm.pose.bones:
+                continue
+            pb_src = src_arm.pose.bones[bname]
+            pb_dst = dst_arm.pose.bones[bname]
+            delta = pb_src.matrix.to_3x3() @ src_rest[bname].inverted()
+            target_r3 = delta @ dst_rest[bname]
+            m4 = target_r3.to_4x4()
+            m4.translation = pb_dst.matrix.translation.copy()
+            pb_dst.matrix = m4
+            bpy.context.view_layer.update()
+            pb_dst.keyframe_insert(data_path="rotation_quaternion", frame=f)
+
+    return dst_act
 
 # ==============================================================================
 # 1. EXPORT CURATED ARPG SKELETAL ANIMATION PACK (animations_arpg.glb)
@@ -155,7 +285,7 @@ wanted_actions = {
     'Sword_Regular_A', 'Sword_Regular_B', 'Sword_Regular_C', 'Sword_Regular_Combo',
     'Sword_Heavy_Combo', 'Sword_Attack', 'Sword_Dash', 'Sword_Block',
     'Shield_Dash', 'Shield_OneShot', 'Spell_Simple_Enter', 'Spell_Simple_Shoot',
-    'OverhandThrow', 'Melee_Hook', 'Hit_Chest', 'Hit_Knockback',
+    'OverhandThrow', 'Melee_Hook', 'Hit_Chest', 'Idle_Shield_Break',
     'Death01', 'LayToIdle', 'Interact', 'Chest_Open', 'Dance_Loop',
     'Zombie_Idle_Loop', 'Zombie_Walk_Fwd_Loop', 'Zombie_Scratch'
 }
@@ -168,19 +298,52 @@ for act in list(bpy.data.actions):
         else:
             bpy.data.actions.remove(act)
 
+# Replace flat-on-floor Hit_Knockback with upright Idle_Shield_Break stagger
+if 'Idle_Shield_Break' in bpy.data.actions:
+    bpy.data.actions['Idle_Shield_Break'].name = 'Hit_Knockback'
+
+# Bake clean in-place pelvis (zero horizontal X/Y drift on locomotion/attacks)
 if not main_arm.animation_data:
     main_arm.animation_data_create()
+
+pelvis_rest = main_arm.data.bones["pelvis"].head_local.copy()
+keep_xy_actions = {'Death01', 'LayToIdle'}
+cleaned_actions = []
+for act in list(bpy.data.actions):
+    if act.name in keep_xy_actions:
+        cleaned_actions.append(act)
+        continue
+    # Sample pelvis Z first, then re-bake with zeroed horizontal X/Y drift in armature space
+    f0 = int(round(act.frame_range[0]))
+    f1 = int(round(act.frame_range[1]))
+    main_arm.animation_data.action = act
+    pb_pelvis = main_arm.pose.bones["pelvis"]
+    samples = []
+    for f in range(f0, f1 + 1):
+        bpy.context.scene.frame_set(f)
+        m = pb_pelvis.matrix.copy()
+        m.translation = (pelvis_rest.x, pelvis_rest.y, m.translation.z)
+        samples.append((f, m))
+    for f, m in samples:
+        bpy.context.scene.frame_set(f)
+        pb_pelvis.matrix = m
+        bpy.context.view_layer.update()
+        pb_pelvis.keyframe_insert(data_path="location", frame=f)
+    cleaned_actions.append(act)
 
 for track in list(main_arm.animation_data.nla_tracks):
     main_arm.animation_data.nla_tracks.remove(track)
 
-for act in bpy.data.actions:
+for act in cleaned_actions:
     track = main_arm.animation_data.nla_tracks.new()
     track.name = act.name
     strip = track.strips.new(act.name, int(act.frame_range[0]), act)
     strip.name = act.name
+    if hasattr(strip, "action_slot") and hasattr(act, "slots") and len(act.slots) > 0:
+        strip.action_slot = act.slots[0]
 
-export_glb(os.path.join(OUT_DIR, "animations_arpg.glb"), export_animations=True)
+# Ensure no stray action slot suffix appears in glTF animation names
+export_glb(os.path.join(OUT_DIR, "animations_arpg.glb"), export_animations=True, strip_loc_except=("pelvis",))
 
 # ==============================================================================
 # 2. BUILD 4 PLAYABLE HERO CLASSES (WITH BLENDER KITBASHING & PBR ENHANCEMENTS)
@@ -308,12 +471,204 @@ export_glb(os.path.join(OUT_DIR, "heroes", "hero_berserker.glb"), export_animati
 # ==============================================================================
 bestiary_dir = os.path.join(ROOT, "Bestiary - Dungeon Monsters Kit[Standard]", "Bestiary - Dungeon Monsters Kit[Standard]")
 
+MONSTER_CLIP_SPECS = [
+    ("Idle_Loop", "Idle_Loop", True),
+    ("Jog_Fwd_Loop", "Jog_Fwd_Loop", True),
+    ("Zombie_Walk_Fwd_Loop", "Zombie_Walk_Fwd_Loop", True),
+    ("Sword_Attack", "Sword_Attack", True),
+    ("Sword_Heavy_Combo", "Sword_Heavy_Combo", True),
+    ("Spell_Simple_Shoot", "Spell_Simple_Shoot", True),
+    ("Hit_Chest", "Hit_Chest", True),
+    ("Idle_Shield_Break", "Hit_Knockback", True),
+    ("Death01", "Death01", False),
+]
+
+def bake_retargeted_monster_clips(dst_arm):
+    """Import UAL1/UAL2, retarget the 9 ARPG clips onto dst_arm, and push them as NLA tracks."""
+    existing_objs = set(bpy.data.objects)
+    existing_acts = set(bpy.data.actions)
+
+    bpy.ops.import_scene.gltf(filepath=ual1)
+    ual1_arm = next(o for o in bpy.data.objects if o not in existing_objs and o.type == 'ARMATURE')
+    ual1_acts = {a.name.split(".")[0]: a for a in bpy.data.actions if a not in existing_acts}
+
+    mid_objs = set(bpy.data.objects)
+    mid_acts = set(bpy.data.actions)
+    bpy.ops.import_scene.gltf(filepath=ual2)
+    ual2_arm = next(o for o in bpy.data.objects if o not in mid_objs and o.type == 'ARMATURE')
+    ual2_acts = {a.name.split(".")[0]: a for a in bpy.data.actions if a not in mid_acts}
+
+    retargeted = []
+    for src_name, dst_name, zero_xy in MONSTER_CLIP_SPECS:
+        if src_name in ual1_acts:
+            src_arm, src_act = ual1_arm, ual1_acts[src_name]
+        elif src_name in ual2_acts:
+            src_arm, src_act = ual2_arm, ual2_acts[src_name]
+        else:
+            continue
+        act = retarget_action_to_armature(src_arm, src_act, dst_arm, f"__ret_{dst_name}", zero_xy_pelvis=zero_xy)
+        retargeted.append((dst_name, act))
+
+    # Remove imported UAL objects & unused actions before assigning clean names
+    for obj in list(bpy.data.objects):
+        if obj not in existing_objs:
+            bpy.data.objects.remove(obj, do_unlink=True)
+    retargeted_set = {act for _, act in retargeted}
+    for act in list(bpy.data.actions):
+        if act not in existing_acts and act not in retargeted_set:
+            bpy.data.actions.remove(act)
+
+    if not dst_arm.animation_data:
+        dst_arm.animation_data_create()
+    dst_arm.animation_data.action = None
+    for tr in list(dst_arm.animation_data.nla_tracks):
+        dst_arm.animation_data.nla_tracks.remove(tr)
+    for dst_name, act in retargeted:
+        act.name = dst_name
+        tr = dst_arm.animation_data.nla_tracks.new()
+        tr.name = dst_name
+        st = tr.strips.new(dst_name, int(act.frame_range[0]), act)
+        st.name = dst_name
+        if hasattr(st, "action_slot") and hasattr(act, "slots") and len(act.slots) > 0:
+            st.action_slot = act.slots[0]
+
+def build_alien_animations(arm, lift_z):
+    """Create Idle_Loop, Jog_Fwd_Loop, Sword_Attack, Hit_Chest, Hit_Knockback, Death01 for Alien_Armature."""
+    if not arm.animation_data:
+        arm.animation_data_create()
+    orig_idle = arm.animation_data.action or (bpy.data.actions[0] if bpy.data.actions else None)
+
+    # Sample base pose at frame 0 of Alien_Idle
+    if orig_idle:
+        arm.animation_data.action = orig_idle
+    bpy.context.scene.frame_set(0)
+    base_mats = {pb.name: pb.matrix.copy() for pb in arm.pose.bones}
+    order = topo_bone_names(arm)
+    spine_bones = [b for b in order if b.startswith("Spine_")]
+    claw_big_l = [b for b in order if b.startswith("ClawBig") and b.endswith(".L")]
+    claw_big_r = [b for b in order if b.startswith("ClawBig") and b.endswith(".R")]
+
+    def apply_pose_deltas(frame, root_dz=0.0, root_dy=0.0, bone_eulers=None):
+        bone_eulers = bone_eulers or {}
+        for bname in order:
+            pb = arm.pose.bones[bname]
+            pb.rotation_mode = 'QUATERNION'
+            rx, ry, rz = bone_eulers.get(bname, (0.0, 0.0, 0.0))
+            delta_r = mathutils.Euler((math.radians(rx), math.radians(ry), math.radians(rz)), 'XYZ').to_matrix()
+            bm = base_mats[bname]
+            m4 = (delta_r @ bm.to_3x3()).to_4x4()
+            if bname == "Root":
+                m4.translation = bm.translation + mathutils.Vector((0.0, root_dy, root_dz))
+            else:
+                # Preserve parent-relative bone head offset from current posed parent
+                if pb.parent:
+                    p_rest = arm.data.bones[pb.parent.name].matrix_local.inverted() @ arm.data.bones[bname].matrix_local
+                    m4.translation = (arm.pose.bones[pb.parent.name].matrix @ p_rest).translation
+                else:
+                    m4.translation = bm.translation
+            pb.matrix = m4
+            bpy.context.view_layer.update()
+            if bname == "Root":
+                pb.keyframe_insert(data_path="location", frame=frame)
+            pb.keyframe_insert(data_path="rotation_quaternion", frame=frame)
+
+    created = []
+    if orig_idle:
+        idle_copy = orig_idle.copy()
+        idle_copy.name = "Idle_Loop"
+        created.append(idle_copy)
+
+    # 1. Jog_Fwd_Loop (30 frames, cyclic hover-slither)
+    walk_act = bpy.data.actions.new("Jog_Fwd_Loop")
+    arm.animation_data.action = walk_act
+    for f in range(0, 31, 3):
+        t = (f / 30.0) * math.tau
+        eulers = {"Root": (12.0 + 3.0 * math.sin(t), 0.0, 5.0 * math.sin(t))}
+        if "Neck" in base_mats:
+            eulers["Neck"] = (-8.0, 0.0, -4.0 * math.sin(t))
+        if "Head" in base_mats:
+            eulers["Head"] = (-4.0, 0.0, -4.0 * math.sin(t))
+        for idx, sb in enumerate(spine_bones):
+            phase = t - idx * 0.55
+            eulers[sb] = (4.0 * math.cos(phase), 0.0, 11.0 * math.sin(phase))
+        for cb in claw_big_l:
+            eulers[cb] = (10.0 * math.sin(t), 0.0, 8.0 * math.cos(t))
+        for cb in claw_big_r:
+            eulers[cb] = (-10.0 * math.sin(t), 0.0, -8.0 * math.cos(t))
+        apply_pose_deltas(f, root_dz=0.07 * math.sin(t * 2.0), root_dy=0.0, bone_eulers=eulers)
+    created.append(walk_act)
+
+    # 2. Sword_Attack (24 frames, windup -> lunge strike -> recover)
+    atk_act = bpy.data.actions.new("Sword_Attack")
+    arm.animation_data.action = atk_act
+    atk_keys = [
+        (0, 0.0, 0.0, 0.0, 0.0),
+        (7, 0.06, 0.14, -18.0, -25.0),
+        (13, -0.04, -0.22, 26.0, 35.0),
+        (18, 0.02, -0.06, 10.0, 12.0),
+        (24, 0.0, 0.0, 0.0, 0.0),
+    ]
+    for f, dz, dy, pitch, claw_p in atk_keys:
+        eulers = {"Root": (pitch, 0.0, 0.0)}
+        if "Neck" in base_mats:
+            eulers["Neck"] = (pitch * 0.5, 0.0, 0.0)
+        if "Head" in base_mats:
+            eulers["Head"] = (pitch * 0.4, 0.0, 0.0)
+        for idx, sb in enumerate(spine_bones):
+            eulers[sb] = (-pitch * (0.35 + idx * 0.12), 0.0, 0.0)
+        for cb in claw_big_l:
+            eulers[cb] = (claw_p, 0.0, -claw_p * 0.5)
+        for cb in claw_big_r:
+            eulers[cb] = (claw_p, 0.0, claw_p * 0.5)
+        apply_pose_deltas(f, root_dz=dz, root_dy=dy, bone_eulers=eulers)
+    created.append(atk_act)
+
+    # 3. Hit_Chest (12 frames) and Hit_Knockback (18 frames)
+    for hname, end_f, recoil_deg, back_dy in [("Hit_Chest", 12, -20.0, 0.10), ("Hit_Knockback", 18, -32.0, 0.22)]:
+        hact = bpy.data.actions.new(hname)
+        arm.animation_data.action = hact
+        for f, k in [(0, 0.0), (int(end_f * 0.28), 1.0), (end_f, 0.0)]:
+            eulers = {"Root": (recoil_deg * k, 8.0 * k, 0.0)}
+            for sb in spine_bones[:3]:
+                eulers[sb] = (recoil_deg * 0.35 * k, 0.0, 0.0)
+            if "Head" in base_mats:
+                eulers["Head"] = (recoil_deg * 0.5 * k, 0.0, 0.0)
+            apply_pose_deltas(f, root_dz=-0.05 * k, root_dy=back_dy * k, bone_eulers=eulers)
+        created.append(hact)
+
+    # 4. Death01 (36 frames: drops gently and pitches onto the floor without sinking underground)
+    death_act = bpy.data.actions.new("Death01")
+    arm.animation_data.action = death_act
+    drop_dz = -0.25
+    for f, k in [(0, 0.0), (12, 0.35), (24, 0.85), (36, 1.0)]:
+        eulers = {"Root": (-72.0 * k, 22.0 * k, 15.0 * k)}
+        for idx, sb in enumerate(spine_bones):
+            eulers[sb] = (14.0 * k, 0.0, 10.0 * k)
+        for cb in claw_big_l + claw_big_r:
+            eulers[cb] = (-25.0 * k, 0.0, 0.0)
+        apply_pose_deltas(f, root_dz=drop_dz * k, root_dy=0.25 * k, bone_eulers=eulers)
+    created.append(death_act)
+
+    arm.animation_data.action = None
+    for tr in list(arm.animation_data.nla_tracks):
+        arm.animation_data.nla_tracks.remove(tr)
+    if orig_idle and orig_idle not in created:
+        bpy.data.actions.remove(orig_idle)
+    for act in created:
+        tr = arm.animation_data.nla_tracks.new()
+        tr.name = act.name
+        st = tr.strips.new(act.name, int(act.frame_range[0]), act)
+        st.name = act.name
+        if hasattr(st, "action_slot") and hasattr(act, "slots") and len(act.slots) > 0:
+            st.action_slot = act.slots[0]
+
 # 3A. Imp
 print("=== Building monster_imp.glb ===")
 clear_scene()
 bpy.ops.import_scene.gltf(filepath=os.path.join(bestiary_dir, "Exports", "GLB (Godot-Unreal)", "Imp.glb"))
-merge_armatures_to_primary()
-export_glb(os.path.join(OUT_DIR, "monsters", "monster_imp.glb"), export_animations=False)
+arm = merge_armatures_to_primary()
+bake_retargeted_monster_clips(arm)
+export_glb(os.path.join(OUT_DIR, "monsters", "monster_imp.glb"), export_animations=True, strip_loc_except=("pelvis",))
 
 # 3B. Frost-Rift Imp
 print("=== Building monster_imp_frost.glb ===")
@@ -325,8 +680,8 @@ for img in bpy.data.images:
         img.filepath = os.path.join(bestiary_dir, "Textures", "T_Imp_BaseColor_2.png")
         img.reload()
 cryo_mat = create_emissive_mat("M_Cryo_Crystal", (0.1, 0.85, 1.0, 1.0), (0.1, 0.9, 1.0, 1.0), 4.0, metallic=0.2, roughness=0.1)
-for idx, (ox, oz, rx, ry) in enumerate([(-0.12, 0.95, -0.4, -0.3), (0.12, 0.95, -0.4, 0.3), (0.0, 1.08, -0.5, 0.0)]):
-    bpy.ops.mesh.primitive_cone_add(vertices=5, radius1=0.055, radius2=0.0, depth=0.28, location=(ox, -0.14, oz), rotation=(rx, ry, 0))
+for idx, (ox, oz, rx, ry) in enumerate([(-0.12, 0.98, 0.45, -0.3), (0.12, 0.98, 0.45, 0.3), (0.0, 1.12, 0.55, 0.0)]):
+    bpy.ops.mesh.primitive_cone_add(vertices=5, radius1=0.055, radius2=0.0, depth=0.28, location=(ox, 0.11, oz), rotation=(rx, ry, 0))
     spike = bpy.context.active_object
     spike.name = f"CryoSpike_{idx}"
     spike.data.materials.append(cryo_mat)
@@ -335,14 +690,16 @@ for idx, (ox, oz, rx, ry) in enumerate([(-0.12, 0.95, -0.4, -0.3), (0.12, 0.95, 
     vg.add([v.index for v in spike.data.vertices], 1.0, 'REPLACE')
     mod = spike.modifiers.new(name="Armature", type='ARMATURE')
     mod.object = arm
-export_glb(os.path.join(OUT_DIR, "monsters", "monster_imp_frost.glb"), export_animations=False)
+bake_retargeted_monster_clips(arm)
+export_glb(os.path.join(OUT_DIR, "monsters", "monster_imp_frost.glb"), export_animations=True, strip_loc_except=("pelvis",))
 
 # 3C. Puglin
 print("=== Building monster_puglin.glb ===")
 clear_scene()
 bpy.ops.import_scene.gltf(filepath=os.path.join(bestiary_dir, "Exports", "GLB (Godot-Unreal)", "Puglin.glb"))
-merge_armatures_to_primary()
-export_glb(os.path.join(OUT_DIR, "monsters", "monster_puglin.glb"), export_animations=False)
+arm = merge_armatures_to_primary()
+bake_retargeted_monster_clips(arm)
+export_glb(os.path.join(OUT_DIR, "monsters", "monster_puglin.glb"), export_animations=True, strip_loc_except=("pelvis",))
 
 # 3D. Puglin Warlord Chieftain
 print("=== Building monster_puglin_chieftain.glb ===")
@@ -354,7 +711,7 @@ for img in bpy.data.images:
         img.filepath = os.path.join(bestiary_dir, "Textures", "T_Puglin_BaseColor_3.png")
         img.reload()
 crown_mat = create_emissive_mat("M_Warlord_Crown", (1.0, 0.78, 0.15, 1.0), (1.0, 0.45, 0.05, 1.0), 2.5, metallic=0.95, roughness=0.18)
-bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=0.16, depth=0.12, location=(0, 0.02, 1.48))
+bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=0.15, depth=0.10, location=(0, -0.22, 0.90))
 crown = bpy.context.active_object
 crown.name = "Warlord_Crown"
 crown.data.materials.append(crown_mat)
@@ -363,19 +720,23 @@ vg = crown.vertex_groups.new(name="Head")
 vg.add([v.index for v in crown.data.vertices], 1.0, 'REPLACE')
 mod = crown.modifiers.new(name="Armature", type='ARMATURE')
 mod.object = arm
-export_glb(os.path.join(OUT_DIR, "monsters", "monster_puglin_chieftain.glb"), export_animations=False)
+bake_retargeted_monster_clips(arm)
+export_glb(os.path.join(OUT_DIR, "monsters", "monster_puglin_chieftain.glb"), export_animations=True, strip_loc_except=("pelvis",))
 
 # 3E. Sci-Fi Rift Aliens
 scifi_dir = os.path.join(ROOT, "Modular SciFi MegaKit[Standard]", "Modular SciFi MegaKit[Standard]")
-for alien_file, out_name, emit_col in [
-    ("Alien_Scolitex.gltf", "monster_alien_scolitex.glb", (0.1, 1.0, 0.55, 1.0)),
-    ("Alien_Oculichrysalis.gltf", "monster_alien_oculichrysalis.glb", (1.0, 0.15, 0.35, 1.0)),
-    ("Alien_Cyclop.gltf", "monster_alien_cyclop.glb", (0.15, 0.75, 1.0, 1.0)),
+for alien_file, out_name, emit_col, lift_z in [
+    ("Alien_Scolitex.gltf", "monster_alien_scolitex.glb", (0.1, 1.0, 0.55, 1.0), 1.40),
+    ("Alien_Oculichrysalis.gltf", "monster_alien_oculichrysalis.glb", (1.0, 0.15, 0.35, 1.0), 1.10),
+    ("Alien_Cyclop.gltf", "monster_alien_cyclop.glb", (0.15, 0.75, 1.0, 1.0), 1.15),
 ]:
     print(f"=== Building {out_name} ===")
     clear_scene()
     bpy.ops.import_scene.gltf(filepath=os.path.join(scifi_dir, "glTF", "Aliens", alien_file))
     remove_icospheres()
+    arm = next(o for o in bpy.data.objects if o.type == 'ARMATURE')
+    arm.location.z = lift_z
+    build_alien_animations(arm, lift_z)
     for mat in bpy.data.materials:
         if mat.use_nodes:
             bsdf = mat.node_tree.nodes.get("Principled BSDF")
@@ -388,7 +749,7 @@ for alien_file, out_name, emit_col in [
                 else:
                     bsdf.inputs["Metallic"].default_value = 0.65
                     bsdf.inputs["Roughness"].default_value = 0.28
-    export_glb(os.path.join(OUT_DIR, "monsters", out_name), export_animations=True)
+    export_glb(os.path.join(OUT_DIR, "monsters", out_name), export_animations=True, strip_loc_except=None)
 
 # 3F. CUSTOM BLENDER RAID BOSS: Malakor, The Chrono-Fused Archon
 print("=== Building Custom Blender Raid Boss: boss_chrono_archon.glb ===")
@@ -404,7 +765,7 @@ boss_gold_mat = create_emissive_mat("M_Archon_Gold", (1.0, 0.78, 0.22, 1.0), (1.
 boss_core_mat = create_emissive_mat("M_Archon_Core", (0.2, 0.95, 1.0, 1.0), (0.2, 0.95, 1.0, 1.0), 8.0, metallic=0.1, roughness=0.1)
 
 for obj in bpy.data.objects:
-    if obj.type == 'MESH' and "Superhero" in obj.name:
+    if obj.type == 'MESH' and "superhero" in obj.name.lower():
         obj.data.materials.clear()
         obj.data.materials.append(boss_armor_mat)
 
@@ -418,23 +779,24 @@ vg.add([v.index for v in helm.data.vertices], 1.0, 'REPLACE')
 mod = helm.modifiers.new(name="Armature", type='ARMATURE')
 mod.object = arm
 
-bpy.ops.mesh.primitive_torus_add(major_radius=0.62, minor_radius=0.035, major_segments=36, minor_segments=12, location=(0, -0.28, 1.48), rotation=(math.radians(90), 0, 0))
+bpy.ops.mesh.primitive_torus_add(major_radius=0.62, minor_radius=0.035, major_segments=36, minor_segments=12, location=(0, 0.24, 1.48), rotation=(math.radians(90), 0, 0))
 boss_halo = bpy.context.active_object
 boss_halo.name = "Archon_Chrono_Halo"
 boss_halo.data.materials.append(boss_gold_mat)
 
 wing_objs = [boss_halo]
 for i in range(6):
-    ang = math.radians(30 + i * 30)
-    wx = math.cos(ang) * 0.85 * (1 if i >= 3 else -1)
+    side = 1 if i >= 3 else -1
+    ang = math.radians(25 + (i % 3) * 25)
+    wx = math.cos(ang) * 0.85 * side
     wz = 1.25 + math.sin(ang) * 0.55
-    bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=0.07, radius2=0.0, depth=0.65, location=(wx, -0.32, wz), rotation=(0, math.radians(45 if i >= 3 else -45), 0))
+    bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=0.07, radius2=0.0, depth=0.65, location=(wx, 0.28, wz), rotation=(0, math.radians(-45 * side), 0))
     w = bpy.context.active_object
     w.name = f"Archon_Wing_{i}"
     w.data.materials.append(boss_core_mat if i % 2 == 0 else boss_gold_mat)
     wing_objs.append(w)
 
-bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=0.11, location=(0, 0.16, 1.36))
+bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=0.11, location=(0, -0.14, 1.32))
 core = bpy.context.active_object
 core.name = "Archon_Chest_Core"
 core.data.materials.append(boss_core_mat)
@@ -447,7 +809,8 @@ for wo in wing_objs:
     mod = wo.modifiers.new(name="Armature", type='ARMATURE')
     mod.object = arm
 
-export_glb(os.path.join(OUT_DIR, "monsters", "boss_chrono_archon.glb"), export_animations=False)
+bake_retargeted_monster_clips(arm)
+export_glb(os.path.join(OUT_DIR, "monsters", "boss_chrono_archon.glb"), export_animations=True, strip_loc_except=("pelvis",))
 
 # ==============================================================================
 # 4. EXPORT 12 WEAPONS & SHIELDS FROM BLEND FILES
