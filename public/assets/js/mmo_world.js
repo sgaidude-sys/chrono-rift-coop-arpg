@@ -181,17 +181,17 @@
       // 4) Monster camps
       this.camps = [];
       this.campGrid = new Map();
-      const spacing = 50;
+      const spacing = 36;
       for (let gx = -W.half + 60; gx < W.half - 60; gx += spacing) {
         for (let gz = -W.half + 60; gz < W.half - 60; gz += spacing) {
-          const x = gx + (rng() - 0.5) * 34, z = gz + (rng() - 0.5) * 34;
-          if (rng() < 0.18) continue;
-          if (Math.hypot(x, z) < 95) continue;
+          const x = gx + (rng() - 0.5) * 24, z = gz + (rng() - 0.5) * 24;
+          if (rng() < 0.08) continue;
+          if (Math.hypot(x, z) < 80) continue;
           const zr = this.zoneAt(x, z);
-          if (zr.f < 36) continue;
+          if (zr.f < 30) continue;
           const zone = this.zones[zr.i];
-          if (this.roadDist(x, z) < 15) continue;
-          if (dist2(x, z, zone.outpost[0], zone.outpost[1]) < 75 * 75) continue;
+          if (this.roadDist(x, z) < 12) continue;
+          if (dist2(x, z, zone.outpost[0], zone.outpost[1]) < 60 * 60) continue;
           if (dist2(x, z, zone.bossPos[0], zone.bossPos[1]) < 95 * 95) continue;
           if (zone.worldBossPos && dist2(x, z, zone.worldBossPos[0], zone.worldBossPos[1]) < 110 * 110) continue;
           if (zone.sites.some(s => dist2(x, z, s[0], s[1]) < 30 * 30)) continue;
@@ -212,7 +212,7 @@
           const cands = zone.mobs.filter(m => c.level >= m.lv[0] && c.level <= m.lv[1]);
           const pick = (cands.length ? cands : zone.mobs)[Math.floor(rng() * (cands.length || zone.mobs.length))];
           c.mob = pick;
-          c.count = 2 + Math.floor(rng() * 3);
+          c.count = 3 + Math.floor(rng() * 3);
         });
         // Named elites: take the farthest-from-road camp near their level
         zone.elites.forEach((el, ei) => {
@@ -954,6 +954,7 @@
         this.updateCamps();
       }
       this.updateMobVisualsPost(dt);
+      this.updatePlayerFootsteps(dt);
       this.updateBossFx(dt);
       if (this.waypointMeshes) {
         const t = this.clock.getElapsedTime();
@@ -963,6 +964,46 @@
         }
       }
       this.updateBossCastBar();
+    },
+
+    // Footsteps from the animation itself: a step plays when a foot bone plants
+    // (reaches the bottom of its swing). The run cycle also speeds up with move speed
+    // so feet don't slide during the faster out-of-combat travel pace.
+    updatePlayerFootsteps(dt) {
+      const p = this.player;
+      if (!p.glbNode || !p.meshRoot) return;
+      const cls = HERO_CLASSES[p.classId] || HERO_CLASSES.vanguard;
+      const locomotion = p.animState === 'Jog_Fwd_Loop' || p.animState === 'Walk_Loop' || p.animState === 'Sprint_Loop';
+      const moving = p.grounded && locomotion && p.vel && (p.vel.x * p.vel.x + p.vel.z * p.vel.z) > 1;
+      if (locomotion && p.activeAction) {
+        const sp = Math.hypot(p.vel.x, p.vel.z);
+        p.activeAction.timeScale = moving ? Math.max(0.8, Math.min(1.6, sp / cls.speed)) : 1;
+      }
+      if (!this._feet || this._feet.root !== p.glbNode) {
+        const feet = [];
+        p.glbNode.traverse((n) => { if (n.isBone && (n.name === 'foot_l' || n.name === 'foot_r')) feet.push({ bone: n, prev: null, desc: false, minY: Infinity, cool: 0 }); });
+        this._feet = { root: p.glbNode, list: feet };
+        this.footstepsFromBones = feet.length === 2;
+      }
+      if (!this.footstepsFromBones) return;
+      const v = this._v3;
+      const baseY = p.meshRoot.position.y;
+      for (let i = 0; i < this._feet.list.length; i++) {
+        const f = this._feet.list[i];
+        f.cool -= dt;
+        f.bone.getWorldPosition(v);
+        const y = v.y - baseY;
+        f.minY = Math.min(f.minY + dt * 0.02, y); // slowly forget, so the floor adapts to the clip
+        if (f.prev !== null) {
+          const goingDown = y < f.prev - 0.0005;
+          if (f.desc && !goingDown && moving && f.cool <= 0 && y < f.minY + 0.07) {
+            f.cool = 0.16;
+            this.audio.playFootstep(this.footstepSurface || this.currentZone);
+          }
+          f.desc = goingDown;
+        }
+        f.prev = y;
+      }
     },
 
     // Called by the player movement code: keep heroes out of ridges and inside the world.
