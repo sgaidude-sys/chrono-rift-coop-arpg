@@ -1515,7 +1515,12 @@
         this.playerToken = sessionPeerId;
 
         const urlParams = new URLSearchParams(window.location.search);
-        this.roomCode = (urlParams.get('room') || localStorage.getItem('arpg_room_code') || 'ASHEN-1').toUpperCase();
+        let initialRoom = urlParams.get('room') || localStorage.getItem('arpg_room_code');
+        if (!initialRoom) {
+          initialRoom = 'RIFT-' + Math.random().toString(36).slice(2, 6).toUpperCase();
+          localStorage.setItem('arpg_room_code', initialRoom);
+        }
+        this.roomCode = initialRoom.trim().toUpperCase() || 'ASHEN-1';
         document.getElementById('room-code-input').value = this.roomCode;
         document.getElementById('hud-room-code').textContent = this.roomCode;
         document.getElementById('modal-room-indicator').textContent = 'ROOM: ' + this.roomCode;
@@ -1658,11 +1663,17 @@
         this.supabase = null;
         this.channel = null;
         this.channelSubscribed = false;
+        this.isInWorld = false;
+        this.roomHostId = this.playerToken;
+        this.isRoomHost = true;
         this.netStatus = 'connecting';
         this.reconnectTimer = null;
         this.reconnectAttempts = 0;
         this.lastBroadcastTime = 0;
         this.lastPresenceTrackTime = 0;
+        this.lastMobSnapshotTime = 0;
+        this._mobSnapshotCount = 0;
+        this._awaitingInitialWaveSyncUntil = 0;
         this._lastPresenceSig = '';
         this._lastSentPos = new THREE.Vector3(9999, 0, 9999);
         this._lastSentYaw = 999;
@@ -2530,6 +2541,9 @@
         const template = this.modelCache[modelKey];
         if (!template || !entity.meshRoot) return;
 
+        if (entity.mixer) {
+          entity.mixer.stopAllAction();
+        }
         entity.modelKey = modelKey;
         entity.meshRoot.clear();
         const cloned = cloneSkinnedModel(template);
@@ -2858,7 +2872,9 @@
             name: d.name,
             pos: root.position,
             homePos: new THREE.Vector3(d.x, 0, d.z),
+            targetPos: new THREE.Vector3(d.x, 0, d.z),
             yaw: 0,
+            targetYaw: 0,
             hp: maxHp,
             maxHp: maxHp,
             dmg: Math.round(d.dmg * waveScale),
@@ -2872,6 +2888,10 @@
             offhandId: d.offhandId || '',
             meshRoot: root,
             state: 'idle',
+            animState: 'Idle_Loop',
+            netAnimState: 'Idle_Loop',
+            isMovingNow: false,
+            _lastNetSnap: null,
             attackCd: 1.5 + Math.random(),
             windupTimer: 0,
             attackAnimTimer: 0,
@@ -3237,6 +3257,8 @@
       useSkill(slot, isRemoteOrAI = false, actor = null) {
         this.audio.init();
         const ent = actor || this.player;
+        const isRemotePeer = !!(actor && actor !== this.player && !actor.isAI);
+        const canDealLocalDamage = !isRemotePeer;
         if (!isRemoteOrAI) {
           if (this.player.cooldowns[slot] > 0) return;
           if (slot === 5 && this.player.synergy < 100) {
@@ -3279,10 +3301,12 @@
           this.audio.playSwing(false);
 
           if (ent.classId === 'ranger') {
-            this.spawnProjectile(ent.pos.clone().add(new THREE.Vector3(0, 1.1, 0)), forward, 28, wStats.dmg, 0x2ee68a, true);
+            this.spawnProjectile(ent.pos.clone().add(new THREE.Vector3(0, 1.1, 0)), forward, 28, wStats.dmg, 0x2ee68a, true, isRemotePeer);
           } else {
             this.spawnSlashArc(ent.pos, ent.yaw, 3.1, cls.color, comboIdx, false);
-            this.damageEnemiesInCone(ent.pos, forward, 3.6, 0.45, wStats.dmg, false, ent);
+            if (canDealLocalDamage) {
+              this.damageEnemiesInCone(ent.pos, forward, 3.6, 0.45, wStats.dmg, false, ent);
+            }
           }
         }
         else if (slot === 2) {
@@ -3293,13 +3317,14 @@
           if (ent.classId === 'ranger') {
             for (let i = -3; i <= 3; i++) {
               const dir = forward.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), i * 0.16);
-              this.spawnProjectile(ent.pos.clone().add(new THREE.Vector3(0, 1.1, 0)), dir, 25, Math.round(wStats.dmg * 0.85), 0x38e8ff, true);
+              this.spawnProjectile(ent.pos.clone().add(new THREE.Vector3(0, 1.1, 0)), dir, 25, Math.round(wStats.dmg * 0.85), 0x38e8ff, true, isRemotePeer);
             }
           } else if (ent.classId === 'arcanist') {
             const targetPos = ent.pos.clone().add(forward.clone().multiplyScalar(5.5));
             this.audio.playSpell('arcane');
             this.spawnVFXFlipbook('vortex', targetPos, 5.4, 0.85, 0xb266ff, true);
             this.spawnTelegraphCircle(targetPos, 4.5, 0.35, 0xb266ff, () => {
+              if (!canDealLocalDamage) return;
               this.monsters.forEach((m) => {
                 if (!m.dead && m.pos.distanceTo(targetPos) < 4.8) {
                   const pull = targetPos.clone().sub(m.pos).multiplyScalar(0.55);
@@ -3312,8 +3337,10 @@
             const impactPos = ent.pos.clone().add(forward.clone().multiplyScalar(2.0));
             this.spawnVFXFlipbook('bighit', impactPos, 4.2, 0.5, cls.color);
             this.spawnSlashArc(ent.pos, ent.yaw, 4.2, 0xff5533, 2, true);
-            this.screenShake = Math.max(this.screenShake, 0.35);
-            this.damageEnemiesInRadius(impactPos, 4.4, Math.round(wStats.dmg * 1.85), true, ent);
+            if (canDealLocalDamage) {
+              this.screenShake = Math.max(this.screenShake, 0.35);
+              this.damageEnemiesInRadius(impactPos, 4.4, Math.round(wStats.dmg * 1.85), true, ent);
+            }
           }
         }
         else if (slot === 3) {
@@ -3321,10 +3348,12 @@
           ent.dodgeTimer = 0.36;
           this.audio.playSwing(false);
           this.spawnVFXFlipbook('charged', ent.pos, 2.5, 0.35, 0x38e8ff);
-          ent.pos.add(forward.clone().multiplyScalar(4.2));
-          ent.pos.x = Math.max(-75, Math.min(75, ent.pos.x));
-          ent.pos.z = Math.max(-75, Math.min(45, ent.pos.z));
-          this.resolveObstacleCollisions(ent.pos, 0.55);
+          if (!isRemotePeer) {
+            ent.pos.add(forward.clone().multiplyScalar(4.2));
+            ent.pos.x = Math.max(-75, Math.min(75, ent.pos.x));
+            ent.pos.z = Math.max(-75, Math.min(45, ent.pos.z));
+            this.resolveObstacleCollisions(ent.pos, 0.55);
+          }
         }
         else if (slot === 4) {
           this.playEntityAnim(ent, 'Spell_Simple_Enter', true);
@@ -3338,12 +3367,14 @@
             this.spawnFloatingText(this.player.pos, `+${healAmt} PARTY AURA!`, '#2ee68a', 17);
             this.player.synergy = Math.min(100, this.player.synergy + 20);
           }
-          this.monsters.forEach((m) => {
-            if (!m.dead && m.pos.distanceTo(ent.pos) < 6.5) {
-              m.stunTimer = 2.8;
-              this.applyDamageToMonster(m, Math.round(wStats.dmg * 1.35), false, ent);
-            }
-          });
+          if (canDealLocalDamage) {
+            this.monsters.forEach((m) => {
+              if (!m.dead && m.pos.distanceTo(ent.pos) < 6.5) {
+                m.stunTimer = 2.8;
+                this.applyDamageToMonster(m, Math.round(wStats.dmg * 1.35), false, ent);
+              }
+            });
+          }
         }
         else if (slot === 5) {
           if (ent === this.player) this.player.synergy = 0;
@@ -3351,7 +3382,7 @@
           this.audio.playSpell('ult');
           this.audio.speakVoiceLine('Astral Convergence unleashed!', 0.95, 1.05);
           this.screenShake = 0.75;
-          this.hitStopTimer = 0.065;
+          if (!isRemotePeer) this.hitStopTimer = 0.065;
 
           const fxEl = document.getElementById('screen-fx');
           fxEl.classList.add('synergy-flash');
@@ -3362,7 +3393,9 @@
 
           this.player.hp = this.player.maxHp;
           this.aiAllies.forEach(a => { a.hp = a.maxHp; });
-          this.damageEnemiesInRadius(ent.pos, 11.5, Math.round(wStats.dmg * 3.8), true, ent);
+          if (canDealLocalDamage) {
+            this.damageEnemiesInRadius(ent.pos, 11.5, Math.round(wStats.dmg * 3.8), true, ent);
+          }
           this.addChatMessage(ent.name, '🌌 Unleashed CO-OP AETHER CONVERGENCE!', 'sys-synergy');
         }
       }
@@ -3381,7 +3414,7 @@
         document.getElementById('potion-count').textContent = this.player.potions;
       }
 
-      spawnProjectile(origin, dir, speed, dmg, colorHex, fromPlayer = true) {
+      spawnProjectile(origin, dir, speed, dmg, colorHex, fromPlayer = true, visualOnly = false) {
         let mesh;
         if (fromPlayer && this.modelCache['weapon_Arrow']) {
           const arrowTemplate = this.modelCache['weapon_Arrow'];
@@ -3397,7 +3430,7 @@
         mesh.position.copy(origin);
         mesh.rotation.y = Math.atan2(dir.x, dir.z);
         this.scene.add(mesh);
-        this.projectiles.push({ mesh, dir: dir.clone().normalize(), speed, dmg, fromPlayer, life: 1.8 });
+        this.projectiles.push({ mesh, dir: dir.clone().normalize(), speed, dmg, fromPlayer, visualOnly, life: 1.8 });
       }
 
       damageEnemiesInCone(origin, forward, radius, minDot, baseDmg, forceHeavy, attacker) {
@@ -3424,6 +3457,7 @@
               d.dead = true;
               this.scene.remove(d.group);
               this.spawnLootDrop(d.pos, d.isChest);
+              this.broadcastGameEvent('dest_break', { id: d.id });
             }
           }
         });
@@ -3441,22 +3475,39 @@
         });
       }
 
-      applyDamageToMonster(mob, baseDmg, isHeavy, attacker) {
-        if (mob.dead) return;
-        const wStats = this.getWeaponStats();
-        const isCrit = isHeavy || Math.random() < wStats.crit;
-        const finalDmg = Math.round(baseDmg * (isCrit ? 1.65 : 1.0) * (0.92 + Math.random() * 0.16));
+      applyDamageToMonster(mob, baseDmg, isHeavy, attacker, fromNetwork = false, netData = null) {
+        if (!mob || mob.dead) return;
+        let isCrit = false;
+        let finalDmg = 0;
+        let hitDir;
 
-        mob.hp = Math.max(0, mob.hp - finalDmg);
+        if (fromNetwork && netData) {
+          isCrit = !!netData.isCrit;
+          isHeavy = !!netData.isHeavy;
+          finalDmg = Math.max(1, Math.round(netData.dmg || baseDmg || 1));
+          const targetHp = typeof netData.newHp === 'number' ? Math.max(0, netData.newHp) : Math.max(0, mob.hp - finalDmg);
+          mob.hp = Math.min(mob.hp, targetHp);
+          hitDir = new THREE.Vector3(netData.kbX || 0, 0, netData.kbZ || 0);
+          if (hitDir.lengthSq() > 0.0001) hitDir.normalize();
+          else hitDir.set(0, 0, -1);
+        } else {
+          const wStats = this.getWeaponStats();
+          isCrit = isHeavy || Math.random() < wStats.crit;
+          finalDmg = Math.round(baseDmg * (isCrit ? 1.65 : 1.0) * (0.92 + Math.random() * 0.16));
+          mob.hp = Math.max(0, mob.hp - finalDmg);
+          hitDir = mob.pos.clone().sub(attacker ? attacker.pos : this.player.pos).setY(0);
+          if (hitDir.lengthSq() > 0.0001) hitDir.normalize();
+          else hitDir.set(0, 0, -1);
+        }
+
         mob.aggroTimer = 8.0;
         this.triggerEntityHitFlash(mob);
         this.audio.playHit(isCrit, isHeavy);
-        const hitDir = mob.pos.clone().sub(attacker ? attacker.pos : this.player.pos).setY(0).normalize();
         this.spawnVFXFlipbook(isCrit ? 'bighit' : 'impact', mob.pos, isCrit ? 3.2 : 2.3, 0.34, isCrit ? 0xffd56b : 0xffffff);
         this.spawnHitSparks(mob.pos, hitDir, isCrit ? 0xffd56b : 0x38e8ff, isCrit ? 11 : 6);
         this.spawnFloatingText(mob.pos, isCrit ? `${finalDmg} CRIT!` : `${finalDmg}`, isCrit ? '#ffd56b' : '#ffffff', isCrit ? 19 : 15);
 
-        if (isCrit || isHeavy) {
+        if (!fromNetwork && (isCrit || isHeavy)) {
           this.hitStopTimer = 0.042;
           this.screenShake = Math.max(this.screenShake, 0.22);
         }
@@ -3470,17 +3521,42 @@
           mob.stunTimer = Math.max(mob.stunTimer, isHeavy ? 0.55 : 0.22);
         }
 
+        if (!fromNetwork) {
+          this.broadcastGameEvent('mob_hit', {
+            mobId: mob.id,
+            dmg: finalDmg,
+            newHp: mob.hp,
+            isCrit,
+            isHeavy: !!isHeavy,
+            attackerId: this.playerToken,
+            attackerName: this.player.name,
+            kbX: Number(hitDir.x.toFixed(3)),
+            kbZ: Number(hitDir.z.toFixed(3))
+          });
+        }
+
         if (mob.hp <= 0) {
-          this.handleMonsterDeath(mob);
+          this.handleMonsterDeath(mob, fromNetwork);
         }
       }
 
-      handleMonsterDeath(mob) {
+      handleMonsterDeath(mob, fromNetwork = false) {
+        if (!mob || mob.dead) return;
         mob.dead = true;
+        mob.hp = 0;
         mob.deathTimer = 2.6;
         this.playEntityAnim(mob, 'Death01', true);
         this.spawnVFXFlipbook('anima', mob.pos, mob.isBoss ? 6.0 : 3.2, 0.65, 0x38e8ff);
         this.spawnLootDrop(mob.pos, mob.isElite || mob.isBoss);
+
+        if (!fromNetwork) {
+          this.broadcastGameEvent('mob_death', {
+            mobId: mob.id,
+            killerId: this.playerToken,
+            killerName: this.player.name,
+            riftWave: this.riftWave
+          });
+        }
 
         this.player.xp += mob.xp;
         this.player.gold += mob.isBoss ? 250 : (mob.isElite ? 65 : 18);
@@ -3502,7 +3578,7 @@
         if (mob.isBoss) {
           this.audio.speakVoiceLine('Impossible! The Chrono Rift will consume all timelines!', 0.65, 0.92);
           this.addChatMessage('Raid Victory', `🏆 ${this.player.name}'s Party vanquished ${mob.name} on Rift Wave ${this.riftWave}!`, 'sys-boss');
-          this.recordLeaderboardVictory();
+          if (!fromNetwork) this.recordLeaderboardVictory();
           this.riftWave++;
         }
       }
@@ -3562,12 +3638,23 @@
         this.spawnFloatingText(this.player.pos, 'SANCTUARY BLESSING RESTORED!', '#2ee68a', 19);
       }
 
-      activateAstralPortal() {
+      activateAstralPortal(fromNetwork = false, targetWave = null, byName = null) {
+        if (fromNetwork) {
+          if (typeof targetWave === 'number' && targetWave > this.riftWave) {
+            this.riftWave = targetWave;
+            this.spawnZoneMonsters();
+            this.audio.playSpell('ult');
+            this.addChatMessage('Astral Gate', `🌀 ${byName || 'Ally'} opened Rift Wave ${this.riftWave}! Fresh Bestiary & Xeno-Constructs spawned!`, 'sys-synergy');
+          }
+          return;
+        }
         this.riftWave++;
         this.spawnZoneMonsters();
         this.audio.playSpell('ult');
         this.audio.speakVoiceLine(`Astral Rift Wave ${this.riftWave} awakened!`, 0.85, 1.0);
         this.addChatMessage('Astral Gate', `🌀 Rift Wave ${this.riftWave} opened! Fresh Bestiary & Xeno-Constructs spawned!`, 'sys-synergy');
+        this.broadcastGameEvent('portal_wave', { riftWave: this.riftWave, byName: this.player.name });
+        this.sendWaveSync();
         this.warpToZone('astral_breach');
       }
 
@@ -3706,6 +3793,7 @@
         const p = this.player;
         return {
           id: this.playerToken,
+          inWorld: !!this.isInWorld,
           name: p.name,
           classId: p.classId,
           weaponId: p.weaponId,
@@ -3720,6 +3808,164 @@
           maxHp: p.maxHp,
           animState: p.animState
         };
+      }
+
+      updateRoomHost() {
+        if (!this.isInWorld || !this.channelSubscribed || this.remotePeers.size === 0) {
+          this.roomHostId = this.playerToken;
+          this.isRoomHost = true;
+          return;
+        }
+        const ids = [this.playerToken, ...Array.from(this.remotePeers.keys())];
+        ids.sort();
+        this.roomHostId = ids[0];
+        this.isRoomHost = (this.roomHostId === this.playerToken);
+      }
+
+      broadcastGameEvent(event, payload) {
+        if (!this.channel || !this.channelSubscribed || this.channel.state !== 'joined') return;
+        this.channel.send({
+          type: 'broadcast',
+          event,
+          payload
+        });
+      }
+
+      sendHelloSync() {
+        if (!this.isInWorld) return;
+        this.broadcastGameEvent('hello_sync', this.buildPlayerStatePayload());
+      }
+
+      sendWaveSync(force = false) {
+        if (!this.isInWorld) return;
+        const now = performance.now();
+        if (!force && now - (this._lastWaveSyncSent || 0) < 200) return;
+        this._lastWaveSyncSent = now;
+        this.broadcastGameEvent('wave_sync', {
+          hostId: this.playerToken,
+          riftWave: this.riftWave,
+          mobs: this.monsters.map(m => ({
+            id: m.id,
+            x: Number(m.pos.x.toFixed(2)),
+            z: Number(m.pos.z.toFixed(2)),
+            yaw: Number(m.yaw.toFixed(2)),
+            hp: Math.round(m.hp),
+            maxHp: m.maxHp,
+            dead: !!m.dead,
+            anim: m.animState || 'Idle_Loop'
+          })),
+          deadDestructibles: this.destructibles.filter(d => d.dead).map(d => d.id)
+        });
+      }
+
+      applyWaveSync(payload) {
+        if (!payload || payload.hostId === this.playerToken) return;
+        this._awaitingInitialWaveSyncUntil = 0;
+        this._receivedWaveSyncOnce = true;
+
+        if (typeof payload.riftWave === 'number' && payload.riftWave !== this.riftWave) {
+          this.riftWave = payload.riftWave;
+          this.spawnZoneMonsters();
+        }
+        if (Array.isArray(payload.mobs)) {
+          payload.mobs.forEach((sm) => {
+            const mob = this.monsters.find(m => m.id === sm.id);
+            if (!mob) return;
+            if (typeof sm.maxHp === 'number') mob.maxHp = sm.maxHp;
+            if (typeof sm.hp === 'number') mob.hp = sm.hp;
+            if (typeof sm.x === 'number' && typeof sm.z === 'number') {
+              mob.pos.set(sm.x, 0, sm.z);
+              if (mob.targetPos) mob.targetPos.set(sm.x, 0, sm.z);
+            }
+            if (typeof sm.yaw === 'number') {
+              mob.yaw = sm.yaw;
+              mob.targetYaw = sm.yaw;
+            }
+            mob.netAnimState = sm.anim || 'Idle_Loop';
+            if (mob.meshRoot) {
+              mob.meshRoot.position.set(mob.pos.x, 0, mob.pos.z);
+              mob.meshRoot.rotation.set(0, mob.yaw, 0);
+            }
+            if (sm.dead) {
+              mob.dead = true;
+              mob.hp = 0;
+              mob.deathTimer = -1;
+              if (mob.meshRoot) mob.meshRoot.visible = false;
+            } else {
+              mob.dead = false;
+              mob.deathTimer = 0;
+            }
+          });
+        }
+        if (Array.isArray(payload.deadDestructibles)) {
+          payload.deadDestructibles.forEach((did) => {
+            const dest = this.destructibles.find(d => d.id === did);
+            if (dest && !dest.dead) {
+              dest.dead = true;
+              if (dest.group) this.scene.remove(dest.group);
+            }
+          });
+        }
+      }
+
+      applyMobsSnapshot(payload) {
+        if (!payload || payload.hostId === this.playerToken) return;
+        if (this.isRoomHost && this.roomHostId === this.playerToken && (!this._awaitingInitialWaveSyncUntil || performance.now() >= this._awaitingInitialWaveSyncUntil)) {
+          return;
+        }
+        if (typeof payload.riftWave === 'number' && payload.riftWave > this.riftWave) {
+          this.riftWave = payload.riftWave;
+          this.spawnZoneMonsters();
+        }
+        if (!Array.isArray(payload.mobs)) return;
+        payload.mobs.forEach((s) => {
+          const mob = this.monsters.find(m => m.id === s.id);
+          if (!mob) return;
+          if (s.dead) {
+            if (!mob.dead) {
+              mob.hp = 0;
+              this.handleMonsterDeath(mob, true);
+            }
+            return;
+          }
+          if (mob.dead) return;
+          if (typeof s.hp === 'number') {
+            mob.hp = Math.max(0, Math.min(mob.maxHp, s.hp));
+          }
+          if (typeof s.x === 'number' && typeof s.z === 'number') {
+            if (!mob.targetPos) mob.targetPos = new THREE.Vector3(s.x, 0, s.z);
+            else mob.targetPos.set(s.x, 0, s.z);
+            if (mob.pos.distanceToSquared(mob.targetPos) > 100) {
+              mob.pos.copy(mob.targetPos);
+            }
+          }
+          if (typeof s.yaw === 'number') {
+            mob.targetYaw = s.yaw;
+          }
+          if (s.anim) {
+            mob.netAnimState = s.anim;
+          }
+        });
+      }
+
+      enterWorld() {
+        const wasInWorld = this.isInWorld;
+        this.isInWorld = true;
+        if (!wasInWorld) {
+          this._receivedWaveSyncOnce = false;
+          this._awaitingInitialWaveSyncUntil = performance.now() + 1800;
+        }
+        this.updateRoomHost();
+        if (this.channel && this.channelSubscribed && this.channel.state === 'joined') {
+          this.trackPresence(true);
+          this.broadcastPlayerState(false);
+          this.sendHelloSync();
+          setTimeout(() => {
+            if (this.isInWorld && this.remotePeers.size > 0 && !this._receivedWaveSyncOnce) {
+              this.broadcastGameEvent('request_wave_sync', { id: this.playerToken });
+            }
+          }, 550);
+        }
       }
 
       updateNetDiagnosticsUI() {
@@ -3758,7 +4004,7 @@
       }
 
       trackPresence(force = false) {
-        if (!this.channel || !this.channelSubscribed || this.channel.state !== 'joined') return;
+        if (!this.isInWorld || !this.channel || !this.channelSubscribed || this.channel.state !== 'joined') return;
         const now = performance.now();
         if (this._hasTrackedOnce && now - this.lastPresenceTrackTime < (force ? 3500 : 15000)) {
           return;
@@ -3770,7 +4016,7 @@
       }
 
       broadcastPlayerState(forceTrack = false) {
-        if (!this.channel || !this.channelSubscribed || this.channel.state !== 'joined') return;
+        if (!this.isInWorld || !this.channel || !this.channelSubscribed || this.channel.state !== 'joined') return;
         const now = performance.now();
         const payload = this.buildPlayerStatePayload();
         this.lastBroadcastTime = now;
@@ -3838,10 +4084,12 @@
           this.remotePeers.forEach(p => { if (p.meshRoot) this.scene.remove(p.meshRoot); });
           this.remotePeers.clear();
           this.reconnectAttempts = 0;
+          this._receivedWaveSyncOnce = false;
         }
         this.channelSubscribed = false;
         this._hasTrackedOnce = false;
         this._presenceCount = 1;
+        this.updateRoomHost();
         this.netStatus = isReconnect ? 'reconnecting' : 'connecting';
         this.updateNetDiagnosticsUI();
 
@@ -3860,10 +4108,11 @@
             if (this.channel !== ch) return;
             const state = ch.presenceState();
             const activeIds = new Set();
+            if (this.isInWorld) activeIds.add(this.playerToken);
             Object.values(state).forEach((presences) => {
               if (!Array.isArray(presences)) return;
               presences.forEach((entry) => {
-                if (!entry || !entry.id) return;
+                if (!entry || !entry.id || entry.inWorld !== true) return;
                 activeIds.add(entry.id);
                 if (entry.id !== this.playerToken) {
                   this.handleRemotePlayerState(entry, true);
@@ -3871,13 +4120,16 @@
               });
             });
             const now = performance.now();
+            let removed = false;
             this.remotePeers.forEach((peer, id) => {
-              if (!activeIds.has(id) && now - peer.lastSeen > 12000) {
+              if (!activeIds.has(id) && now - peer.lastSeen > 3500) {
                 if (peer.meshRoot) this.scene.remove(peer.meshRoot);
                 this.remotePeers.delete(id);
+                removed = true;
               }
             });
-            this._presenceCount = Math.max(1, activeIds.size || Object.keys(state).length);
+            if (removed) this.updateRoomHost();
+            this._presenceCount = Math.max(1, activeIds.size || 1);
             this.updateNetDiagnosticsUI();
             this.updatePartyRosterUI();
           })
@@ -3885,25 +4137,126 @@
             if (this.channel !== ch) return;
             if (Array.isArray(newPresences)) {
               newPresences.forEach((entry) => {
-                if (entry && entry.id && entry.id !== this.playerToken) {
+                if (entry && entry.id && entry.id !== this.playerToken && entry.inWorld === true) {
                   this.handleRemotePlayerState(entry, true);
                 }
               });
             }
-            setTimeout(() => {
-              if (this.channel === ch && this.channelSubscribed) {
-                this.broadcastPlayerState(false);
-              }
-            }, 120);
+            if (this.isInWorld) {
+              setTimeout(() => {
+                if (this.channel === ch && this.channelSubscribed && this.isInWorld) {
+                  this.broadcastPlayerState(false);
+                }
+              }, 120);
+            }
             this.updateNetDiagnosticsUI();
             this.updatePartyRosterUI();
           })
+          .on('presence', { event: 'leave' }, ({ leftPresences }) => {
+            if (this.channel !== ch) return;
+            let removed = false;
+            if (Array.isArray(leftPresences)) {
+              leftPresences.forEach((entry) => {
+                if (entry && entry.id && this.remotePeers.has(entry.id)) {
+                  const peer = this.remotePeers.get(entry.id);
+                  if (peer && peer.meshRoot) this.scene.remove(peer.meshRoot);
+                  this.remotePeers.delete(entry.id);
+                  removed = true;
+                }
+              });
+            }
+            if (removed) {
+              this.updateRoomHost();
+              this.updateNetDiagnosticsUI();
+              this.updatePartyRosterUI();
+            }
+          })
           .on('broadcast', { event: 'hello_sync' }, ({ payload }) => {
-            if (!payload || payload.id === this.playerToken) return;
+            if (!payload || payload.id === this.playerToken || payload.inWorld !== true) return;
+            const existingIds = [this.playerToken, ...Array.from(this.remotePeers.keys()).filter(id => id !== payload.id)].sort();
+            const shouldRespondWaveSync = this.isInWorld && existingIds[0] === this.playerToken;
             if (!this.remotePeers.has(payload.id)) {
               this.handleRemotePlayerState(payload, false);
             }
-            this.broadcastPlayerState(false);
+            if (this.isInWorld) {
+              this.broadcastPlayerState(false);
+            }
+            if (shouldRespondWaveSync) {
+              this.sendWaveSync(true);
+            }
+          })
+          .on('broadcast', { event: 'request_wave_sync' }, ({ payload }) => {
+            if (!payload || payload.id === this.playerToken || !this.isInWorld) return;
+            const existingIds = [this.playerToken, ...Array.from(this.remotePeers.keys()).filter(id => id !== payload.id)].sort();
+            if (existingIds[0] === this.playerToken) {
+              this.sendWaveSync(true);
+            }
+          })
+          .on('broadcast', { event: 'wave_sync' }, ({ payload }) => {
+            this.applyWaveSync(payload);
+          })
+          .on('broadcast', { event: 'mobs_snapshot' }, ({ payload }) => {
+            this.applyMobsSnapshot(payload);
+          })
+          .on('broadcast', { event: 'mob_hit' }, ({ payload }) => {
+            if (!payload || payload.attackerId === this.playerToken) return;
+            const mob = this.monsters.find(m => m.id === payload.mobId);
+            if (!mob) return;
+            this.applyDamageToMonster(mob, payload.dmg, payload.isHeavy, null, true, payload);
+          })
+          .on('broadcast', { event: 'mob_death' }, ({ payload }) => {
+            if (!payload || payload.killerId === this.playerToken) return;
+            const mob = this.monsters.find(m => m.id === payload.mobId);
+            if (mob && !mob.dead) {
+              mob.hp = 0;
+              this.handleMonsterDeath(mob, true);
+            }
+          })
+          .on('broadcast', { event: 'mob_attack' }, ({ payload }) => {
+            if (!payload || payload.hostId === this.playerToken) return;
+            const mob = this.monsters.find(m => m.id === payload.mobId);
+            if (!mob || mob.dead) return;
+            if (typeof payload.yaw === 'number') {
+              mob.yaw = payload.yaw;
+              mob.targetYaw = payload.yaw;
+            }
+            mob.attackAnimTimer = payload.isBoss ? 1.35 : 0.95;
+            if (payload.atkClip) this.playEntityAnim(mob, payload.atkClip, true);
+            const targetSnap = new THREE.Vector3(payload.tx || 0, 0, payload.tz || 0);
+            const teleRadius = payload.teleRadius || (mob.isBoss ? 4.4 : 2.4);
+            const teleCenter = mob.ranged
+              ? targetSnap
+              : mob.pos.clone().add(new THREE.Vector3(Math.sin(mob.yaw), 0, Math.cos(mob.yaw)).multiplyScalar(1.6));
+            this.spawnTelegraphCircle(teleCenter, teleRadius, payload.windup || 0.55, 0xff3b5c, () => {
+              if (mob.dead) return;
+              if (mob.ranged) {
+                const dir = targetSnap.clone().sub(mob.pos).setY(0);
+                if (dir.lengthSq() > 0.0001) dir.normalize();
+                else dir.set(Math.sin(mob.yaw), 0, Math.cos(mob.yaw));
+                this.spawnProjectile(mob.pos.clone().add(new THREE.Vector3(0, 1.1, 0)), dir, 16, mob.dmg, 0xff3b5c, false);
+              } else {
+                const hitCenter = mob.pos.clone().add(new THREE.Vector3(Math.sin(mob.yaw), 0, Math.cos(mob.yaw)).multiplyScalar(1.6));
+                this.spawnVFXFlipbook('smallhit', hitCenter, teleRadius, 0.3, 0xff3b5c);
+                this.spawnSlashArc(mob.pos, mob.yaw, teleRadius * 0.95, 0xff3b5c, 0, mob.isBoss);
+                if (this.player.pos.distanceTo(hitCenter) <= teleRadius && this.player.dodgeTimer <= 0) {
+                  this.damagePlayer(mob.dmg, mob.name);
+                }
+              }
+            });
+          })
+          .on('broadcast', { event: 'portal_wave' }, ({ payload }) => {
+            if (!payload) return;
+            this.activateAstralPortal(true, payload.riftWave, payload.byName);
+          })
+          .on('broadcast', { event: 'dest_break' }, ({ payload }) => {
+            if (!payload) return;
+            const d = this.destructibles.find(x => x.id === payload.id);
+            if (d && !d.dead) {
+              d.dead = true;
+              if (d.group) this.scene.remove(d.group);
+              this.spawnVFXFlipbook('smallhit', d.pos, 2.2, 0.28, 0xffd56b);
+              this.spawnLootDrop(d.pos, d.isChest);
+            }
           })
           .on('broadcast', { event: 'player_state' }, ({ payload }) => {
             if (!payload || payload.id === this.playerToken) return;
@@ -3924,13 +4277,18 @@
               this.channelSubscribed = true;
               this.reconnectAttempts = 0;
               this.netStatus = 'connected';
-              this.trackPresence(true);
-              this.broadcastPlayerState(false);
-              ch.send({
-                type: 'broadcast',
-                event: 'hello_sync',
-                payload: this.buildPlayerStatePayload()
-              });
+              this.updateRoomHost();
+              if (this.isInWorld) {
+                this._awaitingInitialWaveSyncUntil = performance.now() + 1800;
+                this.trackPresence(true);
+                this.broadcastPlayerState(false);
+                this.sendHelloSync();
+                setTimeout(() => {
+                  if (this.isInWorld && this.remotePeers.size > 0 && !this._receivedWaveSyncOnce) {
+                    this.broadcastGameEvent('request_wave_sync', { id: this.playerToken });
+                  }
+                }, 550);
+              }
               this.updateNetDiagnosticsUI();
               this.updatePartyRosterUI();
               if (!isReconnect) {
@@ -3938,6 +4296,7 @@
               }
             } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
               this.channelSubscribed = false;
+              this.updateRoomHost();
               this.netStatus = 'reconnecting';
               this.updateNetDiagnosticsUI();
               if (!this.reconnectTimer && this.roomCode === targetRoom) {
@@ -3967,6 +4326,17 @@
 
       handleRemotePlayerState(p, fromPresence = false) {
         if (!p || !p.id || p.id === this.playerToken) return;
+        if (p.inWorld !== true) {
+          const existing = this.remotePeers.get(p.id);
+          if (existing) {
+            if (existing.meshRoot) this.scene.remove(existing.meshRoot);
+            this.remotePeers.delete(p.id);
+            this.updateRoomHost();
+            this.updateNetDiagnosticsUI();
+            this.updatePartyRosterUI();
+          }
+          return;
+        }
         const now = performance.now();
         const px = typeof p.x === 'number' ? p.x : 0;
         const pz = typeof p.z === 'number' ? p.z : 12;
@@ -4000,6 +4370,7 @@
             lastBroadcastSeen: fromPresence ? 0 : now
           };
           this.remotePeers.set(p.id, peer);
+          this.updateRoomHost();
           const mKey = 'hero_' + peer.classId;
           if (this.modelCache[mKey]) this.upgradeEntityToGLB(peer, mKey, 1.05);
           else root.add(this.createArticulatedFallback(0x38e8ff, 1.0));
@@ -4099,28 +4470,52 @@
       }
 
       async refreshRoomsList() {
-        if (!this.supabase) return;
-        const { data } = await this.supabase
-          .from('arpg_rooms')
-          .select('*')
-          .order('updated_at', { ascending: false })
-          .limit(10);
         const container = document.getElementById('rooms-list-container');
-        if (!container || !data) return;
-        container.innerHTML = data.map(r => `
+        if (!container) return;
+        let rows = [];
+        if (this.supabase) {
+          const { data } = await this.supabase
+            .from('arpg_rooms')
+            .select('*')
+            .order('updated_at', { ascending: false })
+            .limit(10);
+          if (data) rows = data;
+        }
+        const hasPublicHub = rows.some(r => r.room_code === 'ASHEN-1');
+        if (!hasPublicHub) {
+          rows.unshift({
+            room_code: 'ASHEN-1',
+            room_name: '🏰 Ashenvale Public Co-Op Plaza',
+            host_name: 'Open Realm',
+            current_zone: 'ashenvale_bastion',
+            rift_wave: 1
+          });
+        }
+        container.innerHTML = rows.map(r => `
           <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.06); padding:10px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.14);">
             <div>
               <div style="font-weight:700; color:var(--gold-bright);">${r.room_name} <span class="room-badge">${r.room_code}</span></div>
               <div style="font-size:11px; color:var(--text-muted);">Host: ${r.host_name} • Zone: ${r.current_zone} • Wave ${r.rift_wave}</div>
             </div>
-            <button class="mini-btn" onclick="window.game.joinRealtimeRoom('${r.room_code}'); window.game.closeModals();">Join Realm</button>
+            <button class="mini-btn" onclick="window.game.joinRoomFromLobby('${r.room_code}')">Join Realm</button>
           </div>
         `).join('');
+      }
+
+      async joinRoomFromLobby(code) {
+        this.isInWorld = true;
+        this._receivedWaveSyncOnce = false;
+        this._awaitingInitialWaveSyncUntil = performance.now() + 1800;
+        await this.joinRealtimeRoom(code);
+        this.closeModals();
       }
 
       async createAndJoinRoom() {
         const codeInput = document.getElementById('new-room-code').value.trim().toUpperCase() || ('RIFT-' + Math.floor(10 + Math.random() * 89));
         const nameInput = document.getElementById('new-room-name').value.trim() || `${this.player.name}'s Co-Op Expedition`;
+        this.isInWorld = true;
+        this._receivedWaveSyncOnce = false;
+        this._awaitingInitialWaveSyncUntil = performance.now() + 1800;
         if (this.supabase) {
           await this.supabase.from('arpg_rooms').upsert({
             room_code: codeInput,
@@ -4220,16 +4615,19 @@
         }
         const roomVal = document.getElementById('room-code-input').value.trim().toUpperCase();
         if (roomVal && roomVal !== this.roomCode) {
+          this.isInWorld = true;
+          this._receivedWaveSyncOnce = false;
+          this._awaitingInitialWaveSyncUntil = performance.now() + 1800;
           this.joinRealtimeRoom(roomVal);
         } else {
-          this.broadcastPlayerState(true);
+          this.enterWorld();
         }
         this.saveHeroToSupabase();
         this.closeModals();
       }
 
       openModal(id) {
-        this.closeModals();
+        this.closeModals(true);
         document.getElementById(id)?.classList.add('active');
         this.isAnyModalOpen = true;
         this.audio.playSample('ui_open', 1.0, 0.35);
@@ -4238,9 +4636,12 @@
         if (id === 'leaderboard-modal') this.loadLeaderboardModal();
       }
 
-      closeModals() {
+      closeModals(fromOpenModal = false) {
         document.querySelectorAll('.modal-backdrop').forEach(el => el.classList.remove('active'));
         this.isAnyModalOpen = false;
+        if (!fromOpenModal && !this.isInWorld) {
+          this.enterWorld();
+        }
       }
 
       toggleAudio() {
@@ -4330,6 +4731,12 @@
       // INPUT HANDLERS (KEYBOARD + MOUSE + TOUCH JOYSTICK)
       // -----------------------------------------------------------------------
       initInputHandlers() {
+        window.addEventListener('beforeunload', () => {
+          if (this.channel && this.channelSubscribed) {
+            try { this.channel.untrack(); } catch (e) {}
+          }
+        });
+
         window.addEventListener('resize', () => {
           this.camera.aspect = window.innerWidth / window.innerHeight;
           this.camera.updateProjectionMatrix();
@@ -4757,6 +5164,16 @@
         const elapsed = this.clock.getElapsedTime();
         const px = this.player.pos.x;
         const pz = this.player.pos.z;
+        const isHostSim = this.isRoomHost;
+
+        const alivePlayers = [];
+        if (this.isInWorld && this.player.hp > 0) {
+          alivePlayers.push(this.player);
+        }
+        this.remotePeers.forEach((peer) => {
+          if (peer.hp === undefined || peer.hp > 0) alivePlayers.push(peer);
+        });
+        if (alivePlayers.length === 0) alivePlayers.push(this.player);
 
         for (let idx = 0; idx < this.monsters.length; idx++) {
           const m = this.monsters[idx];
@@ -4775,18 +5192,75 @@
             continue;
           }
 
-          // Distance culling: skip AnimationMixer & AI for monsters > 32m away (1024 sq meters)
-          const toPlayerX = px - m.pos.x;
-          const toPlayerZ = pz - m.pos.z;
-          const distSqToPlayer = toPlayerX * toPlayerX + toPlayerZ * toPlayerZ;
+          const toLocalX = px - m.pos.x;
+          const toLocalZ = pz - m.pos.z;
+          const distSqToLocal = toLocalX * toLocalX + toLocalZ * toLocalZ;
+          const visibleToLocal = distSqToLocal <= 1024;
+
+          if (!isHostSim) {
+            if (m.meshRoot) m.meshRoot.visible = visibleToLocal;
+            if (visibleToLocal && m.mixer) m.mixer.update(dt);
+
+            if (m.aggroTimer > 0) m.aggroTimer = Math.max(0, m.aggroTimer - dt);
+            if (m.attackAnimTimer > 0) m.attackAnimTimer = Math.max(0, m.attackAnimTimer - dt);
+            if (m.stunTimer > 0) m.stunTimer = Math.max(0, m.stunTimer - dt);
+
+            let isMoving = false;
+            if (m.targetPos) {
+              const dSq = m.pos.distanceToSquared(m.targetPos);
+              if (dSq > 100) {
+                m.pos.copy(m.targetPos);
+              } else if (dSq > 0.0025) {
+                isMoving = true;
+                m.pos.lerp(m.targetPos, Math.min(1, dt * 10));
+              }
+            }
+            if (typeof m.targetYaw === 'number') {
+              let dyaw = m.targetYaw - m.yaw;
+              while (dyaw > Math.PI) dyaw -= Math.PI * 2;
+              while (dyaw < -Math.PI) dyaw += Math.PI * 2;
+              m.yaw += dyaw * Math.min(1, dt * 12);
+            }
+            if (m.attackAnimTimer <= 0 && m.stunTimer <= 0 && m.netAnimState && m.netAnimState !== m.animState) {
+              this.playEntityAnim(m, m.netAnimState);
+            }
+            if (distSqToLocal < (m.isBoss ? 576 : 240)) {
+              activeCombatCount++;
+              if (m.isBoss) activeBoss = m;
+            } else if (m.isBoss && (m.aggroTimer > 0 || m.hp < m.maxHp) && distSqToLocal < 1024) {
+              activeBoss = m;
+            }
+            m.isMovingNow = isMoving;
+            continue;
+          }
+
+          // Host AI: find nearest alive player across local & remote peers
+          let nearestTarget = alivePlayers[0];
+          let distSqToPlayer = Infinity;
+          let toPlayerX = 0;
+          let toPlayerZ = 0;
+          for (let pIdx = 0; pIdx < alivePlayers.length; pIdx++) {
+            const cand = alivePlayers[pIdx];
+            const dx = cand.pos.x - m.pos.x;
+            const dz = cand.pos.z - m.pos.z;
+            const dSq = dx * dx + dz * dz;
+            if (dSq < distSqToPlayer) {
+              distSqToPlayer = dSq;
+              nearestTarget = cand;
+              toPlayerX = dx;
+              toPlayerZ = dz;
+            }
+          }
+
+          // Distance culling: skip AI if NO player is within 32m (1024 sq meters)
           if (distSqToPlayer > 1024) {
             if (m.meshRoot && m.meshRoot.visible) m.meshRoot.visible = false;
             m.isMovingNow = false;
             continue;
           }
-          if (m.meshRoot && !m.meshRoot.visible) m.meshRoot.visible = true;
+          if (m.meshRoot) m.meshRoot.visible = visibleToLocal;
 
-          if (m.mixer) m.mixer.update(dt);
+          if (visibleToLocal && m.mixer) m.mixer.update(dt);
 
           if (m.kbVel && m.kbVel.lengthSq() > 0.01) {
             m.pos.addScaledVector(m.kbVel, dt);
@@ -4806,7 +5280,7 @@
           const distFromHome = m.pos.distanceTo(m.homePos);
           const aggroRadius = m.isBoss ? 24.0 : 15.5;
           const leashLimit = m.isBoss ? 36.0 : 30.0;
-          const inSanctuarySafeZone = !m.isBoss && m.homePos.z < -4 && pz > 4.5 && m.pos.z > 1.5;
+          const inSanctuarySafeZone = !m.isBoss && m.homePos.z < -4 && nearestTarget.pos.z > 4.5 && m.pos.z > 1.5;
 
           let isMoving = false;
           if ((distFromHome > leashLimit || inSanctuarySafeZone) && m.aggroTimer <= 0) {
@@ -4845,11 +5319,27 @@
                 : (m.ranged ? 'Spell_Simple_Shoot' : 'Sword_Attack');
               this.playEntityAnim(m, atkClip, true);
 
-              const targetSnap = this.player.pos.clone();
+              const targetSnap = nearestTarget.pos.clone();
               const teleRadius = m.isBoss ? 4.4 : 2.4;
               const teleCenter = m.ranged
                 ? targetSnap
                 : m.pos.clone().add(new THREE.Vector3(Math.sin(m.yaw), 0, Math.cos(m.yaw)).multiplyScalar(1.6));
+
+              if (this.remotePeers.size > 0 && this.isInWorld) {
+                this.broadcastGameEvent('mob_attack', {
+                  hostId: this.playerToken,
+                  mobId: m.id,
+                  tx: Number(targetSnap.x.toFixed(2)),
+                  tz: Number(targetSnap.z.toFixed(2)),
+                  yaw: Number(m.yaw.toFixed(2)),
+                  atkClip,
+                  windup: m.windupTimer,
+                  ranged: m.ranged,
+                  isBoss: m.isBoss,
+                  teleRadius
+                });
+              }
+
               this.spawnTelegraphCircle(teleCenter, teleRadius, m.windupTimer, 0xff3b5c, () => {
                 if (m.dead) return;
                 if (m.ranged) {
@@ -4873,40 +5363,46 @@
             this.playEntityAnim(m, 'Idle_Loop');
           }
 
-          // Keep monster from overlapping exact player position
-          const dxP = m.pos.x - px;
-          const dzP = m.pos.z - pz;
+          // Keep monster from overlapping exact player position(s)
           const minPlayerDist = m.isBoss ? 1.75 : 1.05;
-          const distPSq = dxP * dxP + dzP * dzP;
-          if (distPSq < minPlayerDist * minPlayerDist) {
-            const dP = Math.sqrt(distPSq) || 0.001;
-            const pushP = (minPlayerDist - dP) / dP;
-            m.pos.x += dxP * pushP;
-            m.pos.z += dzP * pushP;
+          const minPlayerDistSq = minPlayerDist * minPlayerDist;
+          for (let pIdx = 0; pIdx < alivePlayers.length; pIdx++) {
+            const cand = alivePlayers[pIdx];
+            const dxP = m.pos.x - cand.pos.x;
+            const dzP = m.pos.z - cand.pos.z;
+            const distPSq = dxP * dxP + dzP * dzP;
+            if (distPSq < minPlayerDistSq) {
+              const dP = Math.sqrt(distPSq) || 0.001;
+              const pushP = (minPlayerDist - dP) / dP;
+              m.pos.x += dxP * pushP;
+              m.pos.z += dzP * pushP;
+            }
           }
 
           this.resolveObstacleCollisions(m.pos, m.isBoss ? 1.1 : 0.55);
           m.isMovingNow = isMoving;
         }
 
-        // Monster-to-Monster collision separation (only for visible nearby monsters)
-        for (let i = 0; i < this.monsters.length; i++) {
-          const m1 = this.monsters[i];
-          if (m1.dead || !m1.meshRoot || !m1.meshRoot.visible) continue;
-          for (let j = i + 1; j < this.monsters.length; j++) {
-            const m2 = this.monsters[j];
-            if (m2.dead || !m2.meshRoot || !m2.meshRoot.visible) continue;
-            const dx = m2.pos.x - m1.pos.x;
-            const dz = m2.pos.z - m1.pos.z;
-            const minSep = (m1.isBoss ? 1.8 : 0.95) + (m2.isBoss ? 1.8 : 0.95);
-            const dSq = dx * dx + dz * dz;
-            if (dSq < minSep * minSep) {
-              const d = Math.sqrt(dSq) || 0.01;
-              const overlap = (minSep - d) * 0.5;
-              const nx = dx / d;
-              const nz = dz / d;
-              if (!m1.isBoss) { m1.pos.x -= nx * overlap; m1.pos.z -= nz * overlap; }
-              if (!m2.isBoss) { m2.pos.x += nx * overlap; m2.pos.z += nz * overlap; }
+        // Monster-to-Monster collision separation (Host authoritative)
+        if (isHostSim) {
+          for (let i = 0; i < this.monsters.length; i++) {
+            const m1 = this.monsters[i];
+            if (m1.dead) continue;
+            for (let j = i + 1; j < this.monsters.length; j++) {
+              const m2 = this.monsters[j];
+              if (m2.dead) continue;
+              const dx = m2.pos.x - m1.pos.x;
+              const dz = m2.pos.z - m1.pos.z;
+              const minSep = (m1.isBoss ? 1.8 : 0.95) + (m2.isBoss ? 1.8 : 0.95);
+              const dSq = dx * dx + dz * dz;
+              if (dSq < minSep * minSep) {
+                const d = Math.sqrt(dSq) || 0.01;
+                const overlap = (minSep - d) * 0.5;
+                const nx = dx / d;
+                const nz = dz / d;
+                if (!m1.isBoss) { m1.pos.x -= nx * overlap; m1.pos.z -= nz * overlap; }
+                if (!m2.isBoss) { m2.pos.x += nx * overlap; m2.pos.z += nz * overlap; }
+              }
             }
           }
         }
@@ -4928,6 +5424,52 @@
             m.procTiltX += (targetTilt - (m.procTiltX || 0)) * Math.min(1, dt * 14);
             m.meshRoot.position.y = m.procBobY;
             m.meshRoot.rotation.x = m.procTiltX;
+          }
+        }
+
+        // Host broadcasts compact monster state snapshots @ ~7 Hz (every 140ms)
+        const nowSnap = performance.now();
+        if (
+          isHostSim &&
+          this.isInWorld &&
+          this.remotePeers.size > 0 &&
+          this.channel &&
+          this.channelSubscribed &&
+          this.channel.state === 'joined' &&
+          (!this._awaitingInitialWaveSyncUntil || nowSnap >= this._awaitingInitialWaveSyncUntil) &&
+          nowSnap - (this.lastMobSnapshotTime || 0) >= 140
+        ) {
+          this.lastMobSnapshotTime = nowSnap;
+          const forceFull = ((++this._mobSnapshotCount) % 10) === 0;
+          const snapMobs = [];
+          for (let idx = 0; idx < this.monsters.length; idx++) {
+            const m = this.monsters[idx];
+            const nx = Number(m.pos.x.toFixed(2));
+            const nz = Number(m.pos.z.toFixed(2));
+            const nyaw = Number(m.yaw.toFixed(2));
+            const nhp = Math.round(m.hp);
+            const ndead = !!m.dead;
+            const nanim = m.animState || 'Idle_Loop';
+            const prev = m._lastNetSnap;
+            const changed = !prev ||
+              Math.abs(prev.x - nx) > 0.03 ||
+              Math.abs(prev.z - nz) > 0.03 ||
+              Math.abs(prev.yaw - nyaw) > 0.04 ||
+              prev.hp !== nhp ||
+              prev.dead !== ndead ||
+              prev.anim !== nanim;
+            if (forceFull || changed) {
+              const entry = { id: m.id, x: nx, z: nz, yaw: nyaw, hp: nhp, dead: ndead, anim: nanim };
+              m._lastNetSnap = entry;
+              snapMobs.push(entry);
+            }
+          }
+          if (snapMobs.length > 0) {
+            this.broadcastGameEvent('mobs_snapshot', {
+              hostId: this.playerToken,
+              riftWave: this.riftWave,
+              mobs: snapMobs
+            });
           }
         }
 
@@ -4986,7 +5528,9 @@
           if (pr.fromPlayer) {
             for (const m of this.monsters) {
               if (!m.dead && m.pos.distanceTo(pr.mesh.position) < (m.isBoss ? 1.8 : 1.1)) {
-                this.applyDamageToMonster(m, pr.dmg, false, this.player);
+                if (!pr.visualOnly) {
+                  this.applyDamageToMonster(m, pr.dmg, false, this.player);
+                }
                 hit = true;
                 break;
               }
