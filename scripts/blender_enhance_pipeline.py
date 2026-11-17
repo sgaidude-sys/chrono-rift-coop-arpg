@@ -521,13 +521,113 @@ prop_jobs = [
     (os.path.join(scifi_dir, "glTF", "Props", "Prop_AccessPoint.gltf"), "prop_access_point.glb", [scifi_tex_dir]),
 ]
 
+def optimize_scene_for_static_prop(max_dim=256):
+    canonical_mats = {}
+    for mat in list(bpy.data.materials):
+        base = mat.name.split(".")[0]
+        if base not in canonical_mats:
+            canonical_mats[base] = mat
+
+    meshes = [o for o in bpy.data.objects if o.type == 'MESH' and not o.name.startswith("Icosphere")]
+    for obj in meshes:
+        if obj.data.uv_layers:
+            obj.data.uv_layers[0].name = "UVMap"
+            while len(obj.data.uv_layers) > 1:
+                obj.data.uv_layers.remove(obj.data.uv_layers[-1])
+        while len(obj.data.color_attributes) > 0:
+            obj.data.color_attributes.remove(obj.data.color_attributes[0])
+        for slot in obj.material_slots:
+            if slot.material:
+                base = slot.material.name.split(".")[0]
+                if base in canonical_mats:
+                    slot.material = canonical_mats[base]
+
+    bpy.ops.object.select_all(action='DESELECT')
+    for obj in meshes:
+        obj.select_set(True)
+    if meshes:
+        bpy.context.view_layer.objects.active = meshes[0]
+        bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
+        if len(meshes) > 1:
+            bpy.ops.object.join()
+        joined = bpy.context.view_layer.objects.active
+        joined.name = "PropMesh"
+        joined.data.name = "PropMesh"
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        bpy.ops.object.material_slot_remove_unused()
+        if len(joined.data.vertices) > 1800:
+            mod = joined.modifiers.new(name="PerfDecimate", type='DECIMATE')
+            mod.ratio = max(0.08, 1500.0 / float(len(joined.data.vertices)))
+            bpy.ops.object.modifier_apply(modifier=mod.name)
+
+    for obj in list(bpy.data.objects):
+        if obj.type != 'MESH' or obj.name.startswith("Icosphere"):
+            bpy.data.objects.remove(obj, do_unlink=True)
+
+    for mat in list(bpy.data.materials):
+        if mat.users == 0:
+            bpy.data.materials.remove(mat)
+
+    for mat in bpy.data.materials:
+        if not mat.node_tree:
+            continue
+        tree = mat.node_tree
+        bsdf = next((n for n in tree.nodes if n.type == 'BSDF_PRINCIPLED'), None)
+        if bsdf:
+            for sock_name in ("Normal", "Metallic", "Roughness"):
+                sock = bsdf.inputs.get(sock_name)
+                if sock and sock.is_linked:
+                    for link in list(sock.links):
+                        tree.links.remove(link)
+            if "Roughness" in bsdf.inputs:
+                bsdf.inputs["Roughness"].default_value = max(bsdf.inputs["Roughness"].default_value, 0.65)
+            bc_sock = bsdf.inputs.get("Base Color")
+            if bc_sock and bc_sock.is_linked:
+                from_node = bc_sock.links[0].from_node
+                if from_node.type != 'TEX_IMAGE':
+                    tex_n = next((n for n in tree.nodes if n.type == 'TEX_IMAGE' and n.image and not any(k in n.image.name.lower() for k in ("normal", "_orm", "roughness"))), None)
+                    if tex_n:
+                        tree.links.new(tex_n.outputs["Color"], bc_sock)
+
+        out_node = next((n for n in tree.nodes if n.type == 'OUTPUT_MATERIAL'), None)
+        keep_nodes = set()
+        if out_node:
+            stack = [out_node]
+            while stack:
+                curr = stack.pop()
+                if curr in keep_nodes:
+                    continue
+                keep_nodes.add(curr)
+                for inp in curr.inputs:
+                    for link in inp.links:
+                        stack.append(link.from_node)
+
+        for node in list(tree.nodes):
+            if node not in keep_nodes:
+                tree.nodes.remove(node)
+            elif node.type == 'TEX_IMAGE' and node.image:
+                iname = node.image.name.lower()
+                if any(k in iname for k in ("normal", "_orm", "roughness", "metallic")):
+                    tree.nodes.remove(node)
+
+    used_images = set()
+    for mat in bpy.data.materials:
+        if mat.users > 0 and mat.node_tree:
+            for node in mat.node_tree.nodes:
+                if node.type == 'TEX_IMAGE' and node.image:
+                    used_images.add(node.image)
+    for img in list(bpy.data.images):
+        if img not in used_images:
+            bpy.data.images.remove(img)
+
 for src_path, out_name, tex_dirs in prop_jobs:
     if os.path.exists(src_path):
         clear_scene()
         bpy.ops.import_scene.gltf(filepath=src_path)
         remove_icospheres()
         relink_missing_textures(tex_dirs)
-        export_glb(os.path.join(OUT_DIR, "props", out_name), export_animations=False)
+        optimize_scene_for_static_prop(256)
+        export_glb(os.path.join(OUT_DIR, "props", out_name), export_animations=False, max_tex=256)
 
 # 5B. Custom Blender Centerpiece 1: Astral Co-Op Rift Portal (prop_astral_portal.glb)
 print("=== Building Custom Blender Astral Portal: prop_astral_portal.glb ===")
@@ -548,13 +648,14 @@ vortex_mat = create_emissive_mat("M_Portal_Vortex", (0.15, 0.85, 1.0, 1.0), (0.3
 bpy.ops.mesh.primitive_cylinder_add(vertices=12, radius=2.6, depth=0.28, location=(0, 0, 0.14))
 bpy.context.active_object.data.materials.append(ped_mat)
 
-bpy.ops.mesh.primitive_torus_add(major_radius=1.65, minor_radius=0.12, major_segments=48, minor_segments=16, location=(0, 0, 2.15), rotation=(math.radians(90), 0, 0))
+bpy.ops.mesh.primitive_torus_add(major_radius=1.65, minor_radius=0.12, major_segments=32, minor_segments=12, location=(0, 0, 2.15), rotation=(math.radians(90), 0, 0))
 bpy.context.active_object.data.materials.append(ring_mat)
 
-bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=1.52, depth=0.06, location=(0, 0, 2.15), rotation=(math.radians(90), 0, 0))
+bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=1.52, depth=0.06, location=(0, 0, 2.15), rotation=(math.radians(90), 0, 0))
 bpy.context.active_object.data.materials.append(vortex_mat)
 
-export_glb(os.path.join(OUT_DIR, "props", "prop_astral_portal.glb"), export_animations=False)
+optimize_scene_for_static_prop(256)
+export_glb(os.path.join(OUT_DIR, "props", "prop_astral_portal.glb"), export_animations=False, max_tex=256)
 
 # 5C. Custom Blender Centerpiece 2: Sanctuary Revival & Blessing Shrine (prop_revive_shrine.glb)
 print("=== Building Custom Blender Sanctuary Shrine: prop_revive_shrine.glb ===")
@@ -579,8 +680,9 @@ bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=0.32, location=(0, 
 crys = bpy.context.active_object
 crys.scale = (0.75, 0.75, 1.45)
 crys.data.materials.append(shrine_crystal)
-bpy.ops.mesh.primitive_torus_add(major_radius=0.58, minor_radius=0.03, major_segments=32, minor_segments=12, location=(0, 0, 2.15), rotation=(math.radians(35), math.radians(20), 0))
+bpy.ops.mesh.primitive_torus_add(major_radius=0.58, minor_radius=0.03, major_segments=24, minor_segments=10, location=(0, 0, 2.15), rotation=(math.radians(35), math.radians(20), 0))
 bpy.context.active_object.data.materials.append(shrine_gold)
 
-export_glb(os.path.join(OUT_DIR, "props", "prop_revive_shrine.glb"), export_animations=False)
+optimize_scene_for_static_prop(256)
+export_glb(os.path.join(OUT_DIR, "props", "prop_revive_shrine.glb"), export_animations=False, max_tex=256)
 print("=== ALL BLENDER 5.2 ASSET ENHANCEMENTS COMPLETE ===")

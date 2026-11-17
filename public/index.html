@@ -111,10 +111,9 @@
     }
 
     .hud-card {
-      background: linear-gradient(160deg, rgba(20, 26, 44, 0.88), rgba(10, 14, 26, 0.88));
+      background: rgba(12, 16, 28, 0.94);
       border: 1px solid var(--panel-border);
       border-radius: 10px;
-      backdrop-filter: blur(12px);
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.12);
     }
 
@@ -624,9 +623,8 @@
       position: fixed;
       inset: 0;
       z-index: 50;
-      /* Glassmorphic overlay that lets the live 3D village & sky dome shine through! */
-      background: radial-gradient(circle at 50% 45%, rgba(16, 22, 42, 0.35) 0%, rgba(6, 9, 18, 0.72) 100%);
-      backdrop-filter: blur(4px);
+      /* Crisp overlay that lets the live 3D village & sky dome shine through without GPU framebuffer readback */
+      background: radial-gradient(circle at 50% 45%, rgba(16, 22, 42, 0.45) 0%, rgba(6, 9, 18, 0.82) 100%);
       display: none;
       align-items: center;
       justify-content: center;
@@ -887,7 +885,10 @@
     <div id="network-panel" class="hud-card">
       <div class="net-status-row">
         <span><span id="net-dot" class="status-dot"></span><span id="net-status-text">Supabase Live Co-Op</span></span>
-        <span id="hud-room-code" class="room-badge">ASHEN-1</span>
+        <span style="display: inline-flex; gap: 5px; align-items: center;">
+          <span id="hud-fps" class="room-badge" style="color: var(--emerald); border-color: rgba(46, 230, 138, 0.45); background: rgba(46, 230, 138, 0.14);">60 FPS</span>
+          <span id="hud-room-code" class="room-badge">ASHEN-1</span>
+        </span>
       </div>
       <div class="net-actions">
         <button class="mini-btn" onclick="window.game.openModal('lobby-modal')">🌐 Rooms (<span id="hud-online-count">1</span>)</button>
@@ -1521,6 +1522,14 @@
         this.cameraYaw = 0;
         this.cameraZoom = 18.0;
 
+        // Deterministic slight spawn offset around (0, 0, 12) from playerToken hash so Co-Op heroes don't overlap on spawn
+        let tokenHash = 0;
+        for (let i = 0; i < this.playerToken.length; i++) {
+          tokenHash = ((tokenHash << 5) - tokenHash + this.playerToken.charCodeAt(i)) | 0;
+        }
+        const spawnOffX = (((Math.abs(tokenHash) % 40) - 20) / 10);
+        const spawnOffZ = ((((Math.abs(tokenHash >> 6)) % 40) - 20) / 10);
+
         this.player = {
           id: this.playerToken,
           name: savedName,
@@ -1540,7 +1549,7 @@
           weaponLevel: 1,
           element: 'Flame',
           unlockedWeapons: new Set(['Sword_Golden', 'Bow_Golden', 'Axe_Double', 'Dagger_2', 'Shield_Celtic_Golden']),
-          pos: new THREE.Vector3(0, 0, 12),
+          pos: new THREE.Vector3(spawnOffX, 0, 12 + spawnOffZ),
           vel: new THREE.Vector3(),
           yaw: Math.PI,
           animState: 'Idle_Loop',
@@ -1575,6 +1584,7 @@
         this.destructibles = [];
         this.interactables = [];
         this.worldObstacles = [];
+        this.worldProps = [];
         this.tetherLines = [];
         this.floatingMonoliths = [];
         this.aiCompanionTargetCount = 0;
@@ -1582,9 +1592,61 @@
         this.isOrbitDragging = false;
         this.orbitDragStart = { x: 0, y: 0, moved: false };
 
+        // Cached DOM references & throttled UI state (eliminates 60fps layout thrashing)
+        this.ui = {
+          heroName: document.getElementById('hud-hero-name'),
+          heroLvl: document.getElementById('hud-hero-lvl'),
+          weaponLabel: document.getElementById('hud-weapon-label'),
+          gold: document.getElementById('hud-gold'),
+          shards: document.getElementById('hud-shards'),
+          hpFill: document.getElementById('hud-hp-fill'),
+          hpText: document.getElementById('hud-hp-text'),
+          mpFill: document.getElementById('hud-mp-fill'),
+          mpText: document.getElementById('hud-mp-text'),
+          xpFill: document.getElementById('hud-xp-fill'),
+          synergyText: document.getElementById('hud-synergy-text'),
+          slot5: document.getElementById('slot-5'),
+          cd: {
+            1: document.getElementById('cd-1'),
+            2: document.getElementById('cd-2'),
+            3: document.getElementById('cd-3'),
+            4: document.getElementById('cd-4'),
+            5: document.getElementById('cd-5'),
+            potion: document.getElementById('cd-potion')
+          },
+          minimapCanvas: document.getElementById('minimap-canvas'),
+          minimapCoords: document.getElementById('minimap-coords'),
+          screenFx: document.getElementById('screen-fx'),
+          interactPrompt: document.getElementById('interact-prompt'),
+          interactText: document.getElementById('interact-text'),
+          bossHud: document.getElementById('boss-hud'),
+          bossNameLabel: document.getElementById('boss-name-label'),
+          bossHpLabel: document.getElementById('boss-hp-label'),
+          bossHpFill: document.getElementById('boss-hp-fill'),
+          heroModal: document.getElementById('hero-modal'),
+          hudFps: document.getElementById('hud-fps')
+        };
+        this.minimapCtx = this.ui.minimapCanvas ? this.ui.minimapCanvas.getContext('2d') : null;
+        this.uiState = {};
+        this.frameCount = 0;
+        this.hudUpdateAccum = 0.1;
+        this.fpsFrames = 0;
+        this.fpsAccum = 0;
+        this.lastShadowAnchor = new THREE.Vector3(9999, 0, 9999);
+
+        // Pre-allocated scratch vectors for tight 60fps loops (zero per-frame GC allocations)
+        this._v1 = new THREE.Vector3();
+        this._v2 = new THREE.Vector3();
+        this._v3 = new THREE.Vector3();
+        this._camOffset = new THREE.Vector3();
+        this._desiredCam = new THREE.Vector3();
+
         this.supabase = null;
         this.channel = null;
+        this.channelSubscribed = false;
         this.lastBroadcastTime = 0;
+        this.lastPresenceTrackTime = 0;
+        this.isAnyModalOpen = true;
 
         this.initThreeScene();
         this.initSkyDomeAndHorizonScenery();
@@ -1613,33 +1675,34 @@
 
         this.renderer = new THREE.WebGLRenderer({
           canvas: this.canvas,
-          antialias: true,
+          antialias: false,
           powerPreference: 'high-performance'
         });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.renderer.setPixelRatio(1);
         this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer.shadowMap.autoUpdate = true;
+        this.renderer.shadowMap.type = THREE.PCFShadowMap;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = 1.25;
 
         // Warm Golden-Hour + Astral Hemispheric & Directional Lighting
-        this.hemiLight = new THREE.HemisphereLight(0xa8c8ff, 0x4d3726, 0.95);
+        this.hemiLight = new THREE.HemisphereLight(0xa8c8ff, 0x4d3726, 1.05);
         this.scene.add(this.hemiLight);
 
-        this.sunLight = new THREE.DirectionalLight(0xffe4bc, 1.65);
+        this.sunLight = new THREE.DirectionalLight(0xffe4bc, 1.75);
         this.sunLight.position.set(24, 42, 22);
         this.sunLight.castShadow = true;
-        this.sunLight.shadow.mapSize.width = 2048;
-        this.sunLight.shadow.mapSize.height = 2048;
-        this.sunLight.shadow.camera.near = 2;
-        this.sunLight.shadow.camera.far = 130;
-        const d = 42;
+        this.sunLight.shadow.mapSize.width = 1024;
+        this.sunLight.shadow.mapSize.height = 1024;
+        this.sunLight.shadow.camera.near = 4;
+        this.sunLight.shadow.camera.far = 110;
+        const d = 32;
         this.sunLight.shadow.camera.left = -d;
         this.sunLight.shadow.camera.right = d;
         this.sunLight.shadow.camera.top = d;
         this.sunLight.shadow.camera.bottom = -d;
-        this.sunLight.shadow.bias = -0.0005;
+        this.sunLight.shadow.bias = -0.0008;
         this.scene.add(this.sunLight);
         this.scene.add(this.sunLight.target);
 
@@ -1685,22 +1748,10 @@
             uniform sampler2D uTexScifi;
             varying vec3 vWorldPos;
 
-            float hash(vec2 p) {
-              return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
-            }
-            float noise(vec2 p) {
-              vec2 i = floor(p);
-              vec2 f = fract(p);
-              f = f * f * (3.0 - 2.0 * f);
-              return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
-                         mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
-            }
-
             void main() {
               vec2 uv = vWorldPos.xz;
-              float n1 = noise(uv * 0.25);
 
-              // Sample real kit textures
+              // Hardware-filtered kit textures (zero procedural noise/hash per pixel)
               vec3 smpCobble = texture2D(uTexCobble, uv * 0.22).rgb;
               vec3 smpBrick  = texture2D(uTexBrick,  uv * 0.25).rgb;
               vec3 smpDung   = texture2D(uTexDungeon, uv * 0.20).rgb;
@@ -1712,7 +1763,7 @@
                              + smoothstep(3.4, 1.8, abs(uv.y - 10.0)) * step(-25.0, uv.x) * step(uv.x, 25.0);
               float plazaMask = clamp(smoothstep(16.0, 11.0, dPlaza) + roadMask, 0.0, 1.0);
 
-              vec3 grassCol = mix(vec3(0.16, 0.29, 0.14), vec3(0.25, 0.38, 0.18), n1);
+              vec3 grassCol = mix(vec3(0.16, 0.29, 0.14), vec3(0.24, 0.36, 0.18), smpCobble.g);
               vec3 villageCol = mix(grassCol, mix(smpCobble * 0.95, smpBrick * 1.05, smoothstep(10.0, 5.0, dPlaza)), plazaMask);
 
               // Biome weights
@@ -1720,14 +1771,11 @@
               float wCatacomb = (1.0 - wBastion) * smoothstep(4.0, -12.0, vWorldPos.x);
               float wAstral = (1.0 - wBastion) * (1.0 - wCatacomb);
 
-              // Catacomb stone + glowing emerald/magma cracks
+              // Catacomb stone + Astral deck with fast grid highlights
               vec2 tile = abs(fract(uv * 0.4) - 0.5);
               float crack = smoothstep(0.46, 0.495, max(tile.x, tile.y));
               vec3 catacombCol = smpDung * vec3(0.55, 0.68, 0.62) + vec3(0.1, 0.75, 0.45) * crack * 0.45;
-
-              // Astral Sci-Fi metallic deck + neon grid veins
-              float vein = smoothstep(0.465, 0.495, max(tile.x, tile.y)) * (0.55 + 0.45 * sin(uTime * 2.5 + uv.x * 0.4));
-              vec3 astralCol = smpScifi * vec3(0.65, 0.75, 0.95) + vec3(0.15, 0.75, 1.0) * vein * 0.65;
+              vec3 astralCol = smpScifi * vec3(0.65, 0.75, 0.95) + vec3(0.15, 0.75, 1.0) * crack * 0.55;
 
               vec3 baseCol = villageCol * wBastion + catacombCol * wCatacomb + astralCol * wAstral;
 
@@ -1736,13 +1784,12 @@
               float ring = smoothstep(0.22, 0.0, abs(dSanctuary - 7.5)) + smoothstep(0.14, 0.0, abs(dSanctuary - 4.2));
               baseCol += vec3(1.0, 0.78, 0.28) * ring * 0.55;
 
-              // Warm player torchlight
+              // Warm player torchlight & horizon fog using fast algebraic attenuation
               float dPlayer = length(vWorldPos.xz - uPlayerPos.xz);
-              baseCol += vec3(0.16, 0.11, 0.05) * exp(-dPlayer * 0.09);
+              float torch = max(0.0, 1.0 - dPlayer * 0.065);
+              baseCol += vec3(0.16, 0.11, 0.05) * (torch * torch);
 
-              // Horizon atmospheric perspective blend
-              float distCam = length(vWorldPos - uPlayerPos);
-              float fogF = clamp(1.0 - exp(-distCam * 0.0085), 0.0, 1.0);
+              float fogF = smoothstep(24.0, 115.0, dPlayer);
               baseCol = mix(baseCol, vec3(0.14, 0.18, 0.30), fogF);
 
               gl_FragColor = vec4(baseCol, 1.0);
@@ -1753,8 +1800,8 @@
         this.groundMesh.receiveShadow = true;
         this.scene.add(this.groundMesh);
 
-        // Environmental Floating Particles
-        const pCount = 280;
+        // Environmental Floating Particles (lightweight count)
+        const pCount = 120;
         const pGeo = new THREE.BufferGeometry();
         const pPos = new Float32Array(pCount * 3);
         const pCol = new Float32Array(pCount * 3);
@@ -1781,11 +1828,11 @@
       }
 
       // -----------------------------------------------------------------------
-      // 360° 3D SKYBOX DOME, MOUNTAINS, CASTLE SILHOUETTE & PINE FOREST
+      // 360° 3D SKYBOX DOME, INSTANCED MOUNTAINS, CASTLE & INSTANCED FOREST
       // -----------------------------------------------------------------------
       initSkyDomeAndHorizonScenery() {
-        // 1. 360° 3D Panoramic Sky Dome (Custom GLSL Sunset + Twin Moons + Astral Rift Aurora)
-        const skyGeo = new THREE.SphereGeometry(210, 48, 32);
+        // 1. 360° 3D Panoramic Sky Dome (Ultra-fast zero-noise/zero-FBM gradient + Twin Moons shader)
+        const skyGeo = new THREE.SphereGeometry(210, 24, 16);
         this.skyUniforms = {
           uTime: { value: 0 },
           uHorizonColor: { value: new THREE.Color(0xd97d48) },
@@ -1810,58 +1857,29 @@
             uniform vec3 uNebulaColor;
             varying vec3 vDir;
 
-            float hash(vec2 p) {
-              return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-            }
-            float noise(vec2 p) {
-              vec2 i = floor(p);
-              vec2 f = fract(p);
-              f = f * f * (3.0 - 2.0 * f);
-              return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
-                         mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
-            }
-            float fbm(vec2 p) {
-              float v = 0.0;
-              float a = 0.5;
-              for (int i = 0; i < 4; i++) {
-                v += a * noise(p);
-                p *= 2.05;
-                a *= 0.5;
-              }
-              return v;
-            }
-
             void main() {
-              float elev = clamp(vDir.y, 0.0, 1.0);
-              // Rich Twilight Horizon to Zenith Gradient
-              vec3 sky = mix(uHorizonColor, uZenithColor, pow(elev, 0.48));
+              vec3 dir = normalize(vDir);
+              float elev = clamp(dir.y, 0.0, 1.0);
+              vec3 sky = mix(uHorizonColor, uZenithColor, sqrt(elev));
 
-              // Warm Sunset / Dawn Glow in the South-West
-              vec3 sunDir = normalize(vec3(0.45, 0.24, 0.85));
-              float sunDot = max(0.0, dot(vDir, sunDir));
-              sky += vec3(1.0, 0.68, 0.32) * pow(sunDot, 6.0) * 0.55;
-              sky += vec3(1.0, 0.92, 0.75) * smoothstep(0.996, 0.999, sunDot) * 1.4;
+              // Warm Sunset / Dawn Glow in the South-West (pure dot products, zero pow/fbm)
+              vec3 sunDir = vec3(0.453, 0.242, 0.858);
+              float sunDot = max(0.0, dot(dir, sunDir));
+              float s2 = sunDot * sunDot;
+              sky += vec3(1.0, 0.68, 0.32) * (s2 * s2 * s2) * 0.55;
+              sky += vec3(1.0, 0.92, 0.75) * smoothstep(0.996, 0.999, sunDot) * 1.3;
 
               // Second Astral Cyan Moon in the North-East
-              vec3 moon2Dir = normalize(vec3(-0.4, 0.38, -0.82));
-              float m2Dot = max(0.0, dot(vDir, moon2Dir));
-              sky += uNebulaColor * pow(m2Dot, 10.0) * 0.5;
-              sky += vec3(0.75, 0.96, 1.0) * smoothstep(0.9975, 0.9992, m2Dot) * 1.2;
+              vec3 moonDir = vec3(-0.402, 0.382, -0.832);
+              float mDot = max(0.0, dot(dir, moonDir));
+              float m2 = mDot * mDot;
+              sky += uNebulaColor * (m2 * m2 * m2 * m2) * 0.5;
+              sky += vec3(0.75, 0.96, 1.0) * smoothstep(0.997, 0.999, mDot) * 1.1;
 
-              // Swirling Volumetric Clouds & Astral Rift Aurora Ribbon
-              vec2 skyUV = vDir.xz / (vDir.y + 0.35);
-              float clouds = fbm(skyUV * 1.4 + vec2(uTime * 0.015, -uTime * 0.01));
-              vec3 cloudCol = mix(uHorizonColor * 1.15, uNebulaColor, smoothstep(-0.2, 0.5, -vDir.z));
-              sky = mix(sky, cloudCol, smoothstep(0.42, 0.78, clouds) * 0.45 * smoothstep(0.02, 0.25, elev));
-
-              // Giant Astral Rift Crack in the Northern Sky
-              float riftBand = exp(-abs(vDir.x + sin(vDir.y * 4.0 + uTime * 0.4) * 0.18) * 9.0) * step(0.0, -vDir.z) * smoothstep(0.1, 0.6, elev);
-              sky += mix(vec3(0.75, 0.25, 1.0), vec3(0.2, 0.95, 1.0), sin(uTime + vDir.y * 6.0) * 0.5 + 0.5) * riftBand * 0.95;
-
-              // Stars at higher elevation
-              float starHash = hash(floor(vDir.xz * 260.0));
-              float star = step(0.9965, starHash) * smoothstep(0.18, 0.55, elev);
-              sky += vec3(0.9, 0.95, 1.0) * star * (0.6 + 0.4 * sin(uTime * 3.0 + starHash * 50.0));
+              // Fast Astral Rift Ribbon in the Northern Sky
+              float northMask = clamp(-dir.z, 0.0, 1.0) * smoothstep(0.08, 0.55, elev);
+              float riftBand = max(0.0, 1.0 - abs(dir.x + dir.y * 0.25) * 5.5) * northMask;
+              sky += mix(vec3(0.65, 0.25, 0.95), uNebulaColor, elev) * (riftBand * riftBand) * 0.75;
 
               gl_FragColor = vec4(sky, 1.0);
             }
@@ -1870,29 +1888,35 @@
         this.skyDome = new THREE.Mesh(skyGeo, skyMat);
         this.scene.add(this.skyDome);
 
-        // 2. 360° 3D Mountain Range Encircling the Horizon
-        const mountainGroup = new THREE.Group();
-        const mtnMatBastion = new THREE.MeshStandardMaterial({ color: 0x2a3148, roughness: 0.88, metalness: 0.12 });
-        const mtnPeakMat = new THREE.MeshStandardMaterial({ color: 0x566385, roughness: 0.7, metalness: 0.2 });
-        const mtnRiftMat = new THREE.MeshStandardMaterial({ color: 0x1e1836, emissive: 0x3b1566, emissiveIntensity: 0.45, roughness: 0.6 });
+        const dummy = new THREE.Object3D();
+        const col = new THREE.Color();
 
-        for (let i = 0; i < 40; i++) {
-          const ang = (i / 40) * Math.PI * 2;
+        // 2. Batched 360° Horizon Mountain Range (1 THREE.InstancedMesh = 1 Draw Call!)
+        const mtnCount = 24;
+        const mtnGeo = new THREE.ConeGeometry(1, 1, 6);
+        const mtnMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, metalness: 0.12 });
+        const mtnInst = new THREE.InstancedMesh(mtnGeo, mtnMat, mtnCount);
+        mtnInst.castShadow = false;
+        mtnInst.receiveShadow = false;
+        for (let i = 0; i < mtnCount; i++) {
+          const ang = (i / mtnCount) * Math.PI * 2;
           const dist = 92 + (i % 3) * 14;
           const h = 26 + (i * 17 % 28);
           const r = 16 + (i * 13 % 12);
           const isNorth = Math.sin(ang) < -0.15;
-
-          const peak = new THREE.Mesh(
-            new THREE.ConeGeometry(r, h, 6),
-            isNorth ? mtnRiftMat : (i % 2 === 0 ? mtnMatBastion : mtnPeakMat)
-          );
-          peak.position.set(Math.cos(ang) * dist, h * 0.45 - 2, Math.sin(ang) * dist);
-          peak.rotation.y = i * 0.7;
-          mountainGroup.add(peak);
+          dummy.position.set(Math.cos(ang) * dist, h * 0.45 - 2, Math.sin(ang) * dist);
+          dummy.rotation.set(0, i * 0.7, 0);
+          dummy.scale.set(r, h, r);
+          dummy.updateMatrix();
+          mtnInst.setMatrixAt(i, dummy.matrix);
+          col.setHex(isNorth ? 0x2c1d4d : (i % 2 === 0 ? 0x2a3148 : 0x566385));
+          mtnInst.setColorAt(i, col);
         }
+        mtnInst.instanceMatrix.needsUpdate = true;
+        if (mtnInst.instanceColor) mtnInst.instanceColor.needsUpdate = true;
+        this.scene.add(mtnInst);
 
-        // 3. Distant Medieval Castle & Cathedral Silhouette on the Southern/Eastern Ridge
+        // 3. Distant Medieval Castle Silhouette on the Southern Ridge (castShadow = false)
         const castleMat = new THREE.MeshStandardMaterial({ color: 0x23293d, roughness: 0.75, metalness: 0.25 });
         const roofMat = new THREE.MeshStandardMaterial({ color: 0x5c2c2c, roughness: 0.6 });
         const windowMat = new THREE.MeshBasicMaterial({ color: 0xffc864 });
@@ -1918,45 +1942,61 @@
           win.rotation.y = Math.PI;
           castleBase.add(win);
         });
-        mountainGroup.add(castleBase);
+        this.scene.add(castleBase);
 
-        // 4. Stylized 3D Pine & Autumn Forest Ring around Ashenvale Village
-        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x422918, roughness: 0.9 });
-        const foliageGreen = new THREE.MeshStandardMaterial({ color: 0x244d29, roughness: 0.8 });
-        const foliageGold = new THREE.MeshStandardMaterial({ color: 0x9c5a22, roughness: 0.8 });
-
-        for (let i = 0; i < 68; i++) {
-          const ang = (i / 68) * Math.PI * 2;
+        // 4. Batched 3D Pine & Autumn Forest Ring (3 THREE.InstancedMesh = 3 Draw Calls total!)
+        const treePlacements = [];
+        for (let i = 0; i < 36; i++) {
+          const ang = (i / 36) * Math.PI * 2;
           const radius = 32 + (i * 19 % 34);
           const tx = Math.cos(ang) * radius;
           const tz = Math.sin(ang) * radius;
-          // Keep central roads & boss arena clear
           if (Math.abs(tx) < 15 && Math.abs(tz) < 24) continue;
           if (Math.abs(tx) < 7 && tz < 0) continue;
-
-          const tree = new THREE.Group();
-          tree.position.set(tx, 0, tz);
           const s = 0.85 + (i % 5) * 0.22;
-          tree.scale.setScalar(s);
-
-          const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.35, 2.2, 6), trunkMat);
-          trunk.position.y = 1.1;
-          trunk.castShadow = true;
-          tree.add(trunk);
-
-          const fMat = (i % 4 === 0 || tz > 15) ? foliageGold : foliageGreen;
-          const cone1 = new THREE.Mesh(new THREE.ConeGeometry(1.65, 3.2, 7), fMat);
-          cone1.position.y = 2.8;
-          cone1.castShadow = true;
-          tree.add(cone1);
-
-          const cone2 = new THREE.Mesh(new THREE.ConeGeometry(1.25, 2.6, 7), fMat);
-          cone2.position.y = 4.4;
-          cone2.castShadow = true;
-          tree.add(cone2);
-
-          mountainGroup.add(tree);
+          const isGold = (i % 4 === 0 || tz > 15);
+          treePlacements.push({ tx, tz, s, isGold });
         }
+
+        const tCount = treePlacements.length;
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x422918, roughness: 0.9 });
+        const foliageMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 });
+
+        const trunkInst = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.22, 0.35, 2.2, 6), trunkMat, tCount);
+        const cone1Inst = new THREE.InstancedMesh(new THREE.ConeGeometry(1.65, 3.2, 7), foliageMat, tCount);
+        const cone2Inst = new THREE.InstancedMesh(new THREE.ConeGeometry(1.25, 2.6, 7), foliageMat, tCount);
+        trunkInst.castShadow = false; trunkInst.receiveShadow = false;
+        cone1Inst.castShadow = false; cone1Inst.receiveShadow = false;
+        cone2Inst.castShadow = false; cone2Inst.receiveShadow = false;
+
+        treePlacements.forEach((tp, idx) => {
+          dummy.rotation.set(0, idx * 0.5, 0);
+          dummy.scale.setScalar(tp.s);
+
+          dummy.position.set(tp.tx, 1.1 * tp.s, tp.tz);
+          dummy.updateMatrix();
+          trunkInst.setMatrixAt(idx, dummy.matrix);
+
+          dummy.position.set(tp.tx, 2.8 * tp.s, tp.tz);
+          dummy.updateMatrix();
+          cone1Inst.setMatrixAt(idx, dummy.matrix);
+
+          dummy.position.set(tp.tx, 4.4 * tp.s, tp.tz);
+          dummy.updateMatrix();
+          cone2Inst.setMatrixAt(idx, dummy.matrix);
+
+          col.setHex(tp.isGold ? 0x9c5a22 : 0x244d29);
+          cone1Inst.setColorAt(idx, col);
+          cone2Inst.setColorAt(idx, col);
+        });
+        trunkInst.instanceMatrix.needsUpdate = true;
+        cone1Inst.instanceMatrix.needsUpdate = true;
+        cone2Inst.instanceMatrix.needsUpdate = true;
+        if (cone1Inst.instanceColor) cone1Inst.instanceColor.needsUpdate = true;
+        if (cone2Inst.instanceColor) cone2Inst.instanceColor.needsUpdate = true;
+        this.scene.add(trunkInst);
+        this.scene.add(cone1Inst);
+        this.scene.add(cone2Inst);
 
         // 5. Floating Astral Monoliths & Energy Spires in the Northern Sky
         const monoMat = new THREE.MeshStandardMaterial({
@@ -1966,37 +2006,23 @@
           metalness: 0.85,
           roughness: 0.2
         });
-        for (let i = 0; i < 10; i++) {
-          const m = new THREE.Mesh(new THREE.OctahedronGeometry(2.2 + (i % 3) * 1.1, 0), monoMat);
+        const monoGeo = new THREE.OctahedronGeometry(2.4, 0);
+        for (let i = 0; i < 8; i++) {
+          const m = new THREE.Mesh(monoGeo, monoMat);
+          m.castShadow = false;
+          m.receiveShadow = false;
           m.scale.set(0.6, 2.4, 0.6);
-          m.position.set(-42 + i * 9.5, 14 + (i % 3) * 5, -62 - (i % 2) * 10);
+          m.position.set(-38 + i * 11, 14 + (i % 3) * 5, -62 - (i % 2) * 10);
           this.scene.add(m);
           this.floatingMonoliths.push({ mesh: m, baseY: m.position.y, phase: i * 0.9 });
         }
-
-        this.scene.add(mountainGroup);
       }
 
       // -----------------------------------------------------------------------
       // WORLD ARCHITECTURE, INTERACTABLES & 3 BIOME ZONES
       // -----------------------------------------------------------------------
       initEnvironmentAndZones() {
-        const forgeLight = new THREE.PointLight(0xff8c3b, 2.8, 22);
-        forgeLight.position.set(-7.5, 3.0, 8);
-        this.scene.add(forgeLight);
-
-        const portalLight = new THREE.PointLight(0x38e8ff, 3.2, 25);
-        portalLight.position.set(0, 3.8, 0);
-        this.scene.add(portalLight);
-
-        const shrineLight = new THREE.PointLight(0x2ee68a, 2.5, 20);
-        shrineLight.position.set(7.5, 3.0, 8);
-        this.scene.add(shrineLight);
-
-        const villageWarmLight = new THREE.PointLight(0xffb866, 2.2, 28);
-        villageWarmLight.position.set(0, 5.0, 20);
-        this.scene.add(villageWarmLight);
-
+        // Zero THREE.PointLights (eliminates 4x per-pixel PBR evaluations across all scene meshes)
         this.interactables = [
           { id: 'forge', pos: new THREE.Vector3(-7.5, 0, 8), radius: 3.4, label: 'Open Blacksmith Relic Forge & Armory', action: () => this.openModal('forge-modal') },
           { id: 'shrine', pos: new THREE.Vector3(7.5, 0, 8), radius: 3.4, label: 'Invoke Sanctuary Blessing Shrine (Full Heal + Revive Party)', action: () => this.activateSanctuaryShrine() },
@@ -2063,8 +2089,8 @@
               gltf.scene.traverse(c => {
                 c.frustumCulled = false;
                 if (c.isMesh) {
-                  c.castShadow = true;
-                  c.receiveShadow = true;
+                  c.castShadow = false;
+                  c.receiveShadow = false;
                 }
               });
               const bbox = new THREE.Box3().setFromObject(gltf.scene);
@@ -2109,7 +2135,7 @@
                 c.frustumCulled = false;
                 if (c.isMesh) {
                   c.castShadow = true;
-                  c.receiveShadow = true;
+                  c.receiveShadow = false;
                 }
               });
               this.modelCache['hero_' + cls.id] = gltf.scene;
@@ -2135,7 +2161,7 @@
                 c.frustumCulled = false;
                 if (c.isMesh) {
                   c.castShadow = true;
-                  c.receiveShadow = true;
+                  c.receiveShadow = false;
                 }
               });
               this.modelCache[mKey] = gltf.scene;
@@ -2237,45 +2263,91 @@
           'prop_access_point.glb': 1.0
         };
         this.worldObstacles = [];
+        this.worldProps = [];
 
-        const loadedPropCache = {};
         placements.forEach((p) => {
           const obsR = obstacleRadiusByFile[p.file];
           if (obsR) {
             this.worldObstacles.push({ x: p.x, z: p.z, r: obsR });
           }
-          const spawnInstance = (sceneTemplate) => {
-            const obj = sceneTemplate.clone();
-            obj.position.set(p.x, 0, p.z);
-            obj.scale.setScalar(p.scale);
-            obj.rotation.y = p.yaw;
-            obj.traverse(c => {
-              c.frustumCulled = false;
-              if (c.isMesh) {
-                c.castShadow = true;
-                c.receiveShadow = true;
-              }
-            });
-            this.scene.add(obj);
-          };
-
-          if (loadedPropCache[p.file]) {
-            spawnInstance(loadedPropCache[p.file]);
-          } else {
-            const pUrl = `assets/models/props/${p.file}`;
-            this.loader.load(
-              pUrl,
-              (gltf) => {
-                loadedPropCache[p.file] = gltf.scene;
-                spawnInstance(gltf.scene);
-              },
-              undefined,
-              (err) => console.warn('[GLTFLoader] Failed to load prop GLB:', pUrl, err)
-            );
-          }
         });
 
-        // Destructible Barrels, Crates & Loot Chests
+        // Deduplicated prop loader + staggered non-blocking instantiation queue (2 props per tick)
+        const loadedPropCache = {};
+        const pendingPropCallbacks = {};
+        const spawnQueue = [];
+        let queueActive = false;
+
+        const processSpawnQueue = () => {
+          let count = 0;
+          while (spawnQueue.length > 0 && count < 2) {
+            const task = spawnQueue.shift();
+            task();
+            count++;
+          }
+          if (spawnQueue.length > 0) {
+            setTimeout(processSpawnQueue, 12);
+          } else {
+            queueActive = false;
+          }
+        };
+
+        const enqueueSpawn = (fn) => {
+          spawnQueue.push(fn);
+          if (!queueActive) {
+            queueActive = true;
+            setTimeout(processSpawnQueue, 8);
+          }
+        };
+
+        const loadPropOnce = (file, cb) => {
+          if (loadedPropCache[file]) {
+            cb(loadedPropCache[file]);
+            return;
+          }
+          if (pendingPropCallbacks[file]) {
+            pendingPropCallbacks[file].push(cb);
+            return;
+          }
+          pendingPropCallbacks[file] = [cb];
+          const pUrl = `assets/models/props/${file}`;
+          this.loader.load(
+            pUrl,
+            (gltf) => {
+              gltf.scene.traverse(c => {
+                c.frustumCulled = false;
+                if (c.isMesh) {
+                  c.castShadow = false;
+                  c.receiveShadow = false;
+                }
+              });
+              loadedPropCache[file] = gltf.scene;
+              const waiters = pendingPropCallbacks[file] || [];
+              delete pendingPropCallbacks[file];
+              waiters.forEach(w => w(gltf.scene));
+            },
+            undefined,
+            (err) => console.warn('[GLTFLoader] Failed to load prop GLB:', pUrl, err)
+          );
+        };
+
+        placements.forEach((p) => {
+          loadPropOnce(p.file, (sceneTemplate) => {
+            enqueueSpawn(() => {
+              const obj = sceneTemplate.clone();
+              obj.position.set(p.x, 0, p.z);
+              obj.scale.setScalar(p.scale);
+              obj.rotation.y = p.yaw;
+              const dx = p.x - this.player.pos.x;
+              const dz = p.z - this.player.pos.z;
+              obj.visible = (dx * dx + dz * dz) <= 3025; // 55m distance cull
+              this.scene.add(obj);
+              this.worldProps.push(obj);
+            });
+          });
+        });
+
+        // Destructible Barrels, Crates & Loot Chests (also deduplicated & shadow-disabled)
         const destructibleCoords = [
           { type: 'prop_barrel.glb', x: -6, z: 12, hp: 40 },
           { type: 'prop_crate.glb', x: 6, z: 12, hp: 40 },
@@ -2290,21 +2362,15 @@
           this.scene.add(group);
           const item = { id: 'dest_' + idx, pos: group.position, hp: d.hp, isChest: !!d.isChest, group, dead: false };
           this.destructibles.push(item);
-          const dUrl = `assets/models/props/${d.type}`;
-          this.loader.load(
-            dUrl,
-            (gltf) => {
-              const m = gltf.scene.clone();
+          this.worldProps.push(group);
+          loadPropOnce(d.type, (sceneTemplate) => {
+            enqueueSpawn(() => {
+              if (item.dead) return;
+              const m = sceneTemplate.clone();
               m.scale.setScalar(1.3);
-              m.traverse(c => {
-                c.frustumCulled = false;
-                if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; }
-              });
               group.add(m);
-            },
-            undefined,
-            (err) => console.warn('[GLTFLoader] Failed to load destructible GLB:', dUrl, err)
-          );
+            });
+          });
         });
       }
 
@@ -2382,7 +2448,7 @@
           }
           if (node.isMesh) {
             node.castShadow = true;
-            node.receiveShadow = true;
+            node.receiveShadow = false;
             if (node.material) {
               node.material = node.material.clone();
               if (node.isSkinnedMesh) node.material.skinning = true;
@@ -2393,9 +2459,12 @@
 
         entity.meshRoot.add(cloned);
         entity.glbNode = cloned;
+        if (entity.nameplateSprite) {
+          entity.meshRoot.add(entity.nameplateSprite);
+        }
 
         if (entity === this.player || entity.isAlly) {
-          const ringGeo = new THREE.RingGeometry(0.52, 0.64, 28);
+          const ringGeo = new THREE.RingGeometry(0.52, 0.64, 24);
           ringGeo.rotateX(-Math.PI / 2);
           const ringMat = new THREE.MeshBasicMaterial({
             color: entity === this.player ? 0xf3c86b : 0x38e8ff,
@@ -2782,6 +2851,11 @@
         };
       }
 
+      updateMouseWorld() {
+        this.raycaster.setFromCamera(this.mouseNDC, this.camera);
+        this.raycaster.ray.intersectPlane(this.groundPlane, this.mouseWorld);
+      }
+
       useSkill(slot, isRemoteOrAI = false, actor = null) {
         this.audio.init();
         const ent = actor || this.player;
@@ -2791,11 +2865,12 @@
             this.spawnFloatingText(this.player.pos, 'NEED 100% SYNERGY!', '#38e8ff', 14);
             return;
           }
-          if (ent === this.player && (slot === 1 || slot === 2 || slot === 3) && this.mouseWorld) {
-            const toCursor = this.mouseWorld.clone().sub(ent.pos);
-            toCursor.y = 0;
-            if (toCursor.lengthSq() > 0.04) {
-              ent.yaw = Math.atan2(toCursor.x, toCursor.z);
+          if (ent === this.player && (slot === 1 || slot === 2 || slot === 3)) {
+            this.updateMouseWorld();
+            this._v1.copy(this.mouseWorld).sub(ent.pos);
+            this._v1.y = 0;
+            if (this._v1.lengthSq() > 0.04) {
+              ent.yaw = Math.atan2(this._v1.x, this._v1.z);
               if (ent.meshRoot) ent.meshRoot.rotation.y = ent.yaw;
             }
           }
@@ -3174,6 +3249,19 @@
 
         this.audio.playSpell('arcane');
         this.spawnVFXFlipbook('vortex', this.player.pos, 4.0, 0.5, 0x38e8ff);
+        this.broadcastPlayerState(true);
+      }
+
+      warpToPeer(peerId) {
+        const peer = this.remotePeers.get(peerId) || this.aiAllies.find(a => a.id === peerId);
+        if (!peer) return;
+        this.audio.init();
+        this.player.pos.set(peer.pos.x + 1.4, 0, peer.pos.z + 1.4);
+        this.resolveObstacleCollisions(this.player.pos, 0.55);
+        this.audio.playSpell('arcane');
+        this.spawnVFXFlipbook('vortex', this.player.pos, 3.8, 0.45, 0x38e8ff);
+        this.spawnFloatingText(this.player.pos, `WARPED TO ${peer.name.toUpperCase()}!`, '#38e8ff', 16);
+        this.broadcastPlayerState(true);
       }
 
       // -----------------------------------------------------------------------
@@ -3231,6 +3319,76 @@
         }, { onConflict: 'player_token' });
       }
 
+      buildPlayerStatePayload() {
+        const p = this.player;
+        return {
+          id: this.playerToken,
+          name: p.name,
+          classId: p.classId,
+          weaponId: p.weaponId,
+          offhandId: p.offhandId,
+          level: p.level,
+          x: Number(p.pos.x.toFixed(2)),
+          z: Number(p.pos.z.toFixed(2)),
+          vx: Number(p.vel.x.toFixed(2)),
+          vz: Number(p.vel.z.toFixed(2)),
+          yaw: Number(p.yaw.toFixed(2)),
+          hp: Math.round(p.hp),
+          maxHp: p.maxHp,
+          animState: p.animState
+        };
+      }
+
+      broadcastPlayerState(forceTrack = false) {
+        if (!this.channel || !this.channelSubscribed) return;
+        const now = performance.now();
+        const payload = this.buildPlayerStatePayload();
+        this.lastBroadcastTime = now;
+        this.channel.send({
+          type: 'broadcast',
+          event: 'player_state',
+          payload
+        });
+        if (forceTrack || now - this.lastPresenceTrackTime > 1500) {
+          this.lastPresenceTrackTime = now;
+          this.channel.track(payload).catch(() => {});
+        }
+      }
+
+      createPeerNameplateSprite(name) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 64;
+        const ctx = canvas.getContext('2d');
+        const tex = new THREE.CanvasTexture(canvas);
+        const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+        const sprite = new THREE.Sprite(mat);
+        sprite.position.set(0, 2.35, 0);
+        sprite.scale.set(2.4, 0.6, 1);
+        sprite.userData.canvas = canvas;
+        sprite.userData.ctx = ctx;
+        sprite.userData.tex = tex;
+        this.drawPeerNameplateCanvas(sprite, name);
+        return sprite;
+      }
+
+      drawPeerNameplateCanvas(sprite, name) {
+        if (!sprite || !sprite.userData.ctx) return;
+        const ctx = sprite.userData.ctx;
+        ctx.clearRect(0, 0, 256, 64);
+        ctx.fillStyle = 'rgba(10, 16, 30, 0.85)';
+        ctx.strokeStyle = '#38e8ff';
+        ctx.lineWidth = 3;
+        ctx.fillRect(12, 10, 232, 44);
+        ctx.strokeRect(12, 10, 232, 44);
+        ctx.font = 'bold 20px Inter, sans-serif';
+        ctx.fillStyle = '#ffe599';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(name || 'Co-Op Ally').slice(0, 18), 128, 32);
+        sprite.userData.tex.needsUpdate = true;
+      }
+
       async joinRealtimeRoom(newCode) {
         if (!this.supabase) return;
         this.roomCode = newCode.trim().toUpperCase() || 'ASHEN-1';
@@ -3241,6 +3399,7 @@
 
         this.remotePeers.forEach(p => { if (p.meshRoot) this.scene.remove(p.meshRoot); });
         this.remotePeers.clear();
+        this.channelSubscribed = false;
 
         if (this.channel) {
           await this.supabase.removeChannel(this.channel);
@@ -3253,8 +3412,37 @@
         this.channel
           .on('presence', { event: 'sync' }, () => {
             const state = this.channel.presenceState();
-            const count = Object.keys(state).length;
-            document.getElementById('hud-online-count').textContent = Math.max(1, count);
+            const activeIds = new Set();
+            Object.values(state).forEach((presences) => {
+              if (!Array.isArray(presences)) return;
+              presences.forEach((entry) => {
+                if (!entry || !entry.id) return;
+                activeIds.add(entry.id);
+                if (entry.id !== this.playerToken) {
+                  this.handleRemotePlayerState(entry);
+                }
+              });
+            });
+            const now = performance.now();
+            this.remotePeers.forEach((peer, id) => {
+              if (!activeIds.has(id) && now - peer.lastSeen > 5000) {
+                if (peer.meshRoot) this.scene.remove(peer.meshRoot);
+                this.remotePeers.delete(id);
+              }
+            });
+            const count = Math.max(1, activeIds.size || Object.keys(state).length);
+            document.getElementById('hud-online-count').textContent = count;
+            this.updatePartyRosterUI();
+          })
+          .on('presence', { event: 'join' }, ({ newPresences }) => {
+            if (Array.isArray(newPresences)) {
+              newPresences.forEach((entry) => {
+                if (entry && entry.id && entry.id !== this.playerToken) {
+                  this.handleRemotePlayerState(entry);
+                }
+              });
+            }
+            this.broadcastPlayerState(true);
             this.updatePartyRosterUI();
           })
           .on('broadcast', { event: 'player_state' }, ({ payload }) => {
@@ -3272,12 +3460,8 @@
           })
           .subscribe(async (status) => {
             if (status === 'SUBSCRIBED') {
-              await this.channel.track({
-                id: this.playerToken,
-                name: this.player.name,
-                classId: this.player.classId,
-                level: this.player.level
-              });
+              this.channelSubscribed = true;
+              this.broadcastPlayerState(true);
               this.addChatMessage('Supabase Realtime', `Connected to Co-Op Realm [${this.roomCode}]. Share the invite link so friends can drop in live!`, 'sys-synergy');
             }
           });
@@ -3294,11 +3478,16 @@
       }
 
       handleRemotePlayerState(p) {
+        if (!p || !p.id || p.id === this.playerToken) return;
+        const px = typeof p.x === 'number' ? p.x : 0;
+        const pz = typeof p.z === 'number' ? p.z : 12;
         let peer = this.remotePeers.get(p.id);
         if (!peer) {
           const root = new THREE.Group();
-          root.position.set(p.x || 0, 0, p.z || 10);
+          root.position.set(px, 0, pz);
           this.scene.add(root);
+          const nameplate = this.createPeerNameplateSprite(p.name || 'Co-Op Ally');
+          root.add(nameplate);
           peer = {
             id: p.id,
             name: p.name || 'Co-Op Ally',
@@ -3309,9 +3498,12 @@
             hp: p.hp || 500,
             maxHp: p.maxHp || 500,
             pos: root.position,
-            targetPos: new THREE.Vector3(p.x || 0, 0, p.z || 10),
-            yaw: p.yaw || 0,
+            targetPos: new THREE.Vector3(px, 0, pz),
+            vx: typeof p.vx === 'number' ? p.vx : 0,
+            vz: typeof p.vz === 'number' ? p.vz : 0,
+            yaw: typeof p.yaw === 'number' ? p.yaw : 0,
             meshRoot: root,
+            nameplateSprite: nameplate,
             lastSeen: performance.now()
           };
           this.remotePeers.set(p.id, peer);
@@ -3321,11 +3513,22 @@
           this.updatePartyRosterUI();
         }
 
-        peer.name = p.name || peer.name;
+        if (p.name && p.name !== peer.name) {
+          peer.name = p.name;
+          this.drawPeerNameplateCanvas(peer.nameplateSprite, peer.name);
+          this.updatePartyRosterUI();
+        }
         peer.hp = p.hp ?? peer.hp;
         peer.maxHp = p.maxHp ?? peer.maxHp;
-        peer.targetPos.set(p.x, 0, p.z);
-        peer.yaw = p.yaw;
+        if (typeof p.x === 'number' && typeof p.z === 'number') {
+          peer.targetPos.set(p.x, 0, p.z);
+          if (peer.pos.distanceToSquared(peer.targetPos) > 625) {
+            peer.pos.copy(peer.targetPos);
+          }
+        }
+        peer.vx = typeof p.vx === 'number' ? p.vx : 0;
+        peer.vz = typeof p.vz === 'number' ? p.vz : 0;
+        if (typeof p.yaw === 'number') peer.yaw = p.yaw;
         peer.lastSeen = performance.now();
 
         if (p.classId && p.classId !== peer.classId) {
@@ -3505,6 +3708,8 @@
         const roomVal = document.getElementById('room-code-input').value.trim().toUpperCase();
         if (roomVal && roomVal !== this.roomCode) {
           this.joinRealtimeRoom(roomVal);
+        } else {
+          this.broadcastPlayerState(true);
         }
         this.saveHeroToSupabase();
         this.closeModals();
@@ -3513,6 +3718,7 @@
       openModal(id) {
         this.closeModals();
         document.getElementById(id)?.classList.add('active');
+        this.isAnyModalOpen = true;
         this.audio.playSample('ui_open', 1.0, 0.35);
         if (id === 'forge-modal') this.renderForgeModal();
         if (id === 'lobby-modal') this.refreshRoomsList();
@@ -3521,6 +3727,7 @@
 
       closeModals() {
         document.querySelectorAll('.modal-backdrop').forEach(el => el.classList.remove('active'));
+        this.isAnyModalOpen = false;
       }
 
       toggleAudio() {
@@ -3566,6 +3773,7 @@
         this.audio.playLootChime();
         this.renderForgeModal();
         this.saveHeroToSupabase();
+        this.broadcastPlayerState(true);
       }
 
       craftWeapon(wId) {
@@ -3637,10 +3845,9 @@
         });
 
         this.canvas.addEventListener('mousemove', (e) => {
+          // Only record NDC coordinates on mousemove; raycast only on click/attack!
           this.mouseNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
           this.mouseNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
-          this.raycaster.setFromCamera(this.mouseNDC, this.camera);
-          this.raycaster.ray.intersectPlane(this.groundPlane, this.mouseWorld);
 
           if (this.isOrbitDragging) {
             const dx = e.clientX - this.orbitDragStart.x;
@@ -3655,11 +3862,10 @@
         });
 
         this.canvas.addEventListener('mousedown', (e) => {
-          if (document.querySelector('.modal-backdrop.active')) return;
+          if (this.isAnyModalOpen) return;
           this.mouseNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
           this.mouseNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
-          this.raycaster.setFromCamera(this.mouseNDC, this.camera);
-          this.raycaster.ray.intersectPlane(this.groundPlane, this.mouseWorld);
+          this.updateMouseWorld();
 
           if (e.button === 0) {
             this.mouseDownLeft = true;
@@ -3678,7 +3884,8 @@
             const wasMoved = this.orbitDragStart.moved;
             const btn = this.orbitDragStart.button;
             this.isOrbitDragging = false;
-            if (btn === 2 && !wasMoved && !document.querySelector('.modal-backdrop.active')) {
+            if (btn === 2 && !wasMoved && !this.isAnyModalOpen) {
+              this.updateMouseWorld();
               this.useSkill(2);
             }
           }
@@ -3719,7 +3926,21 @@
       // -----------------------------------------------------------------------
       animate() {
         requestAnimationFrame(this.animate);
-        let dt = Math.min(this.clock.getDelta(), 0.1);
+        const rawDt = this.clock.getDelta();
+        let dt = Math.min(rawDt, 0.1);
+
+        // Live FPS Counter readout
+        this.fpsFrames++;
+        this.fpsAccum += rawDt;
+        if (this.fpsAccum >= 0.5) {
+          const fps = Math.min(144, Math.round(this.fpsFrames / this.fpsAccum));
+          this.fpsFrames = 0;
+          this.fpsAccum = 0;
+          if (this.ui.hudFps && this.uiState.fps !== fps) {
+            this.uiState.fps = fps;
+            this.ui.hudFps.textContent = `${fps} FPS`;
+          }
+        }
 
         if (this.hitStopTimer > 0) {
           this.hitStopTimer -= dt;
@@ -3733,19 +3954,53 @@
         this.skyUniforms.uTime.value = elapsed;
         this.skyDome.position.copy(this.player.pos);
 
+        // Distance-cull off-zone world props every 15 frames (55m radius = 3025 sq meters)
+        if ((++this.frameCount % 15) === 0) {
+          const px = this.player.pos.x;
+          const pz = this.player.pos.z;
+          for (let i = 0; i < this.worldProps.length; i++) {
+            const prop = this.worldProps[i];
+            const dx = prop.position.x - px;
+            const dz = prop.position.z - pz;
+            prop.visible = (dx * dx + dz * dz) <= 3025;
+          }
+        }
+
         // Animate Floating Astral Monoliths in the background sky
-        this.floatingMonoliths.forEach(fm => {
+        for (let i = 0; i < this.floatingMonoliths.length; i++) {
+          const fm = this.floatingMonoliths[i];
           fm.mesh.position.y = fm.baseY + Math.sin(elapsed * 1.2 + fm.phase) * 1.4;
           fm.mesh.rotation.y += dt * 0.25;
-        });
+        }
 
         this.updatePlayer(dt);
         this.updateAICompanions(dt);
 
+        // Remote Co-Op Peers: Velocity Dead-Reckoning + Smooth Interpolation + Auto Walk Animation
+        const nowPerf = performance.now();
         this.remotePeers.forEach((peer) => {
-          peer.pos.lerp(peer.targetPos, Math.min(1, dt * 10));
+          const sinceSeen = (nowPerf - peer.lastSeen) * 0.001;
+          if (sinceSeen < 0.25 && (peer.vx || peer.vz)) {
+            peer.targetPos.x += (peer.vx || 0) * dt;
+            peer.targetPos.z += (peer.vz || 0) * dt;
+          }
+          const distToTarget = peer.pos.distanceTo(peer.targetPos);
+          if (distToTarget > 25) {
+            peer.pos.copy(peer.targetPos);
+          } else {
+            peer.pos.lerp(peer.targetPos, Math.min(1, dt * 12));
+          }
+          const speedSq = (peer.vx || 0) * (peer.vx || 0) + (peer.vz || 0) * (peer.vz || 0);
+          const peerMoving = distToTarget > 0.05 || speedSq > 0.09;
+          const isOneShot = peer.animState && peer.animState !== 'Idle_Loop' && peer.animState !== 'Jog_Fwd_Loop';
+          if (!isOneShot) {
+            this.playEntityAnim(peer, peerMoving ? 'Jog_Fwd_Loop' : 'Idle_Loop');
+          }
           if (peer.meshRoot) {
             peer.meshRoot.position.copy(peer.pos);
+            if (peerMoving && !peer.activeAction) {
+              peer.meshRoot.position.y += Math.abs(Math.sin(elapsed * 11)) * 0.14;
+            }
             peer.meshRoot.rotation.y = peer.yaw;
           }
           if (peer.mixer) peer.mixer.update(dt);
@@ -3756,29 +4011,40 @@
         this.updateSynergyTethers(dt);
 
         // While Hero Selection Modal is open, gently orbit the camera so the 3D Village & Sky Dome shine behind the UI!
-        const heroModalOpen = document.getElementById('hero-modal')?.classList.contains('active');
+        const heroModalOpen = this.ui.heroModal ? this.ui.heroModal.classList.contains('active') : false;
         const activeYaw = heroModalOpen ? Math.sin(elapsed * 0.28) * 0.55 : this.cameraYaw;
         const activePitch = heroModalOpen ? 0.52 : 0.78;
         const activeZoom = heroModalOpen ? 14.5 : this.cameraZoom;
 
-        const camOffset = new THREE.Vector3(
+        this._camOffset.set(
           Math.sin(activeYaw) * activeZoom * 0.85,
           activeZoom * activePitch,
           Math.cos(activeYaw) * activeZoom * 0.85
         );
-        const desiredCam = this.player.pos.clone().add(camOffset);
+        this._desiredCam.copy(this.player.pos).add(this._camOffset);
         if (this.screenShake > 0) {
-          desiredCam.x += (Math.random() - 0.5) * this.screenShake;
-          desiredCam.y += (Math.random() - 0.5) * this.screenShake;
+          this._desiredCam.x += (Math.random() - 0.5) * this.screenShake;
+          this._desiredCam.y += (Math.random() - 0.5) * this.screenShake;
           this.screenShake = Math.max(0, this.screenShake - dt * 2.2);
         }
-        this.camera.position.lerp(desiredCam, Math.min(1, dt * 8.5));
+        this.camera.position.lerp(this._desiredCam, Math.min(1, dt * 8.5));
         this.camera.lookAt(this.player.pos.x, this.player.pos.y + (heroModalOpen ? 2.2 : 1.3), this.player.pos.z - (heroModalOpen ? 4.0 : 0));
 
-        this.sunLight.position.set(this.player.pos.x + 24, 42, this.player.pos.z + 22);
-        this.sunLight.target.position.copy(this.player.pos);
+        // Only update shadow camera anchor when player moves > 3.0m (9.0 sq meters)
+        if (this.player.pos.distanceToSquared(this.lastShadowAnchor) > 9.0) {
+          this.lastShadowAnchor.copy(this.player.pos);
+          this.sunLight.position.set(this.player.pos.x + 24, 42, this.player.pos.z + 22);
+          this.sunLight.target.position.copy(this.player.pos);
+          this.sunLight.target.updateMatrixWorld();
+        }
 
-        this.updateHUDAndMinimap(dt);
+        // Throttle HUD & Minimap updates to 10 Hz (every 0.1s)
+        this.hudUpdateAccum += dt;
+        if (this.hudUpdateAccum >= 0.1) {
+          this.hudUpdateAccum = 0;
+          this.updateHUDAndMinimap();
+        }
+
         this.renderer.render(this.scene, this.camera);
       }
 
@@ -3790,12 +4056,14 @@
         if (this.keys['q']) this.cameraYaw -= 1.85 * dt;
         if (this.keys['e']) this.cameraYaw += 1.85 * dt;
 
-        this.raycaster.setFromCamera(this.mouseNDC, this.camera);
-        this.raycaster.ray.intersectPlane(this.groundPlane, this.mouseWorld);
+        const cds = p.cooldowns;
+        if (cds[1] > 0) cds[1] = Math.max(0, cds[1] - dt);
+        if (cds[2] > 0) cds[2] = Math.max(0, cds[2] - dt);
+        if (cds[3] > 0) cds[3] = Math.max(0, cds[3] - dt);
+        if (cds[4] > 0) cds[4] = Math.max(0, cds[4] - dt);
+        if (cds[5] > 0) cds[5] = Math.max(0, cds[5] - dt);
+        if (cds.potion > 0) cds.potion = Math.max(0, cds.potion - dt);
 
-        Object.keys(p.cooldowns).forEach(k => {
-          if (p.cooldowns[k] > 0) p.cooldowns[k] = Math.max(0, p.cooldowns[k] - dt);
-        });
         if (p.attackTimer > 0) p.attackTimer = Math.max(0, p.attackTimer - dt);
         if (p.dodgeTimer > 0) p.dodgeTimer = Math.max(0, p.dodgeTimer - dt);
         if (p.buffTimer > 0) {
@@ -3804,7 +4072,7 @@
         }
         p.mp = Math.min(p.maxMp, p.mp + dt * 6);
 
-        if (this.mouseDownLeft && p.cooldowns[1] <= 0 && !document.querySelector('.modal-backdrop.active')) {
+        if (this.mouseDownLeft && cds[1] <= 0 && !this.isAnyModalOpen) {
           this.useSkill(1);
         }
 
@@ -3826,9 +4094,11 @@
           const sinY = Math.sin(this.cameraYaw);
           const mx = ix * cosY + iz * sinY;
           const mz = -ix * sinY + iz * cosY;
+          const spd = cls.speed * speedMult;
 
-          p.pos.x = Math.max(-75, Math.min(75, p.pos.x + mx * cls.speed * speedMult * dt));
-          p.pos.z = Math.max(-75, Math.min(45, p.pos.z + mz * cls.speed * speedMult * dt));
+          p.vel.set(mx * spd, 0, mz * spd);
+          p.pos.x = Math.max(-75, Math.min(75, p.pos.x + p.vel.x * dt));
+          p.pos.z = Math.max(-75, Math.min(45, p.pos.z + p.vel.z * dt));
           this.resolveObstacleCollisions(p.pos, 0.55);
           p.yaw = Math.atan2(mx, mz);
 
@@ -3841,9 +4111,12 @@
             this.audio.playFootstep(this.currentZone);
           }
         } else {
-          const toMouse = this.mouseWorld.clone().sub(p.pos);
-          if (toMouse.lengthSq() > 0.25 && p.attackTimer > 0) {
-            p.yaw = Math.atan2(toMouse.x, toMouse.z);
+          p.vel.set(0, 0, 0);
+          if (p.attackTimer > 0) {
+            this._v1.copy(this.mouseWorld).sub(p.pos);
+            if (this._v1.lengthSq() > 0.25) {
+              p.yaw = Math.atan2(this._v1.x, this._v1.z);
+            }
           }
           if (p.attackTimer <= 0 && p.dodgeTimer <= 0) {
             this.playEntityAnim(p, 'Idle_Loop');
@@ -3868,69 +4141,64 @@
         if (p.mixer) p.mixer.update(dt);
 
         const isLow = p.hp < p.maxHp * 0.28;
-        this.audio.setLowHpMuffle(isLow);
-        document.getElementById('screen-fx').classList.toggle('low-hp', isLow);
+        if (this.uiState.isLowHp !== isLow) {
+          this.uiState.isLowHp = isLow;
+          this.audio.setLowHpMuffle(isLow);
+          if (this.ui.screenFx) this.ui.screenFx.classList.toggle('low-hp', isLow);
+        }
 
         this.activeInteractable = null;
-        for (const inter of this.interactables) {
-          if (p.pos.distanceTo(inter.pos) <= inter.radius) {
+        for (let i = 0; i < this.interactables.length; i++) {
+          const inter = this.interactables[i];
+          if (p.pos.distanceToSquared(inter.pos) <= inter.radius * inter.radius) {
             this.activeInteractable = inter;
             break;
           }
         }
-        const promptEl = document.getElementById('interact-prompt');
-        if (this.activeInteractable) {
-          promptEl.style.display = 'flex';
-          document.getElementById('interact-text').textContent = this.activeInteractable.label;
-        } else {
-          promptEl.style.display = 'none';
+        const activeInterId = this.activeInteractable ? this.activeInteractable.id : '';
+        if (this.uiState.activeInterId !== activeInterId) {
+          this.uiState.activeInterId = activeInterId;
+          if (this.ui.interactPrompt) {
+            if (this.activeInteractable) {
+              this.ui.interactPrompt.style.display = 'flex';
+              if (this.ui.interactText) this.ui.interactText.textContent = this.activeInteractable.label;
+            } else {
+              this.ui.interactPrompt.style.display = 'none';
+            }
+          }
         }
 
         const now = performance.now();
-        if (this.channel && now - this.lastBroadcastTime > 85) {
-          this.lastBroadcastTime = now;
-          this.channel.send({
-            type: 'broadcast',
-            event: 'player_state',
-            payload: {
-              id: this.playerToken,
-              name: p.name,
-              classId: p.classId,
-              weaponId: p.weaponId,
-              x: Number(p.pos.x.toFixed(2)),
-              z: Number(p.pos.z.toFixed(2)),
-              yaw: Number(p.yaw.toFixed(2)),
-              hp: p.hp,
-              maxHp: p.maxHp,
-              animState: p.animState
-            }
-          });
+        if (this.channel && this.channelSubscribed && now - this.lastBroadcastTime > 85) {
+          this.broadcastPlayerState(false);
         }
       }
 
       updateAICompanions(dt) {
-        this.aiAllies.forEach((ally, idx) => {
+        for (let i = 0; i < this.aiAllies.length; i++) {
+          const ally = this.aiAllies[i];
           if (ally.mixer) ally.mixer.update(dt);
           ally.attackCd = Math.max(0, ally.attackCd - dt);
 
           let nearestMob = null;
-          let nearestDist = 14.0;
-          this.monsters.forEach((m) => {
+          let nearestDistSq = 14.0 * 14.0;
+          for (let j = 0; j < this.monsters.length; j++) {
+            const m = this.monsters[j];
             if (!m.dead) {
-              const d = m.pos.distanceTo(this.player.pos);
-              if (d < nearestDist) { nearestDist = d; nearestMob = m; }
+              const dSq = m.pos.distanceToSquared(this.player.pos);
+              if (dSq < nearestDistSq) { nearestDistSq = dSq; nearestMob = m; }
             }
-          });
+          }
 
           if (nearestMob) {
             const desiredRange = ally.classId === 'ranger' ? 6.5 : 2.3;
-            const toMob = nearestMob.pos.clone().sub(ally.pos);
-            const dist = toMob.length();
-            ally.yaw = Math.atan2(toMob.x, toMob.z);
+            this._v1.copy(nearestMob.pos).sub(ally.pos);
+            const dist = this._v1.length();
+            ally.yaw = Math.atan2(this._v1.x, this._v1.z);
 
             if (dist > desiredRange) {
-              toMob.normalize();
-              ally.pos.addScaledVector(toMob, 7.2 * dt);
+              this._v1.normalize();
+              ally.pos.addScaledVector(this._v1, 7.2 * dt);
               this.playEntityAnim(ally, 'Jog_Fwd_Loop');
             } else if (ally.attackCd <= 0) {
               ally.attackCd = 1.25 + Math.random() * 0.5;
@@ -3940,12 +4208,11 @@
               this.playEntityAnim(ally, 'Idle_Loop');
             }
           } else {
-            const goal = this.player.pos.clone().add(ally.offset);
-            const toGoal = goal.sub(ally.pos);
-            if (toGoal.length() > 0.6) {
-              ally.yaw = Math.atan2(toGoal.x, toGoal.z);
-              toGoal.normalize();
-              ally.pos.addScaledVector(toGoal, 7.8 * dt);
+            this._v1.copy(this.player.pos).add(ally.offset).sub(ally.pos);
+            if (this._v1.lengthSq() > 0.36) {
+              ally.yaw = Math.atan2(this._v1.x, this._v1.z);
+              this._v1.normalize();
+              ally.pos.addScaledVector(this._v1, 7.8 * dt);
               this.playEntityAnim(ally, 'Jog_Fwd_Loop');
             } else {
               this.playEntityAnim(ally, 'Idle_Loop');
@@ -3958,49 +4225,68 @@
             ally.meshRoot.position.copy(ally.pos);
             ally.meshRoot.rotation.y = ally.yaw;
           }
-        });
+        }
       }
 
       updateMonsters(dt) {
         let activeCombatCount = 0;
         let activeBoss = null;
         const elapsed = this.clock.getElapsedTime();
+        const px = this.player.pos.x;
+        const pz = this.player.pos.z;
 
-        this.monsters.forEach((m, idx) => {
-          if (m.mixer) m.mixer.update(dt);
+        for (let idx = 0; idx < this.monsters.length; idx++) {
+          const m = this.monsters[idx];
 
           if (m.dead) {
-            m.deathTimer -= dt;
-            if (m.deathTimer < 0.6 && m.meshRoot) {
-              m.meshRoot.position.y -= dt * 1.4;
+            if (m.meshRoot && m.meshRoot.visible) {
+              if (m.mixer) m.mixer.update(dt);
+              m.deathTimer -= dt;
+              if (m.deathTimer < 0.6) {
+                m.meshRoot.position.y -= dt * 1.4;
+              }
+              if (m.deathTimer <= -0.5) {
+                m.meshRoot.visible = false;
+              }
             }
-            return;
+            continue;
           }
+
+          // Distance culling: skip AnimationMixer & AI for monsters > 32m away (1024 sq meters)
+          const toPlayerX = px - m.pos.x;
+          const toPlayerZ = pz - m.pos.z;
+          const distSqToPlayer = toPlayerX * toPlayerX + toPlayerZ * toPlayerZ;
+          if (distSqToPlayer > 1024) {
+            if (m.meshRoot && m.meshRoot.visible) m.meshRoot.visible = false;
+            m.isMovingNow = false;
+            continue;
+          }
+          if (m.meshRoot && !m.meshRoot.visible) m.meshRoot.visible = true;
+
+          if (m.mixer) m.mixer.update(dt);
 
           if (m.aggroTimer > 0) m.aggroTimer = Math.max(0, m.aggroTimer - dt);
 
           if (m.stunTimer > 0) {
             m.stunTimer -= dt;
-            return;
+            continue;
           }
 
-          const toPlayer = this.player.pos.clone().sub(m.pos);
-          toPlayer.y = 0;
-          const dist = toPlayer.length();
+          const dist = Math.sqrt(distSqToPlayer);
           const distFromHome = m.pos.distanceTo(m.homePos);
           const aggroRadius = m.isBoss ? 24.0 : 15.5;
           const leashLimit = m.isBoss ? 36.0 : 30.0;
-          const inSanctuarySafeZone = !m.isBoss && m.homePos.z < -4 && this.player.pos.z > 4.5 && m.pos.z > 1.5;
+          const inSanctuarySafeZone = !m.isBoss && m.homePos.z < -4 && pz > 4.5 && m.pos.z > 1.5;
 
           let isMoving = false;
           if ((distFromHome > leashLimit || inSanctuarySafeZone) && m.aggroTimer <= 0) {
-            const toHome = m.homePos.clone().sub(m.pos);
-            toHome.y = 0;
-            if (toHome.length() > 1.2) {
+            this._v1.copy(m.homePos).sub(m.pos);
+            this._v1.y = 0;
+            if (this._v1.lengthSq() > 1.44) {
               isMoving = true;
-              m.yaw = Math.atan2(toHome.x, toHome.z);
-              toHome.normalize();
-              m.pos.addScaledVector(toHome, m.speed * 1.15 * dt);
+              m.yaw = Math.atan2(this._v1.x, this._v1.z);
+              this._v1.normalize();
+              m.pos.addScaledVector(this._v1, m.speed * 1.15 * dt);
               this.playEntityAnim(m, m.modelKey.includes('puglin') ? 'Zombie_Walk_Fwd_Loop' : 'Jog_Fwd_Loop');
             } else {
               this.playEntityAnim(m, 'Idle_Loop');
@@ -4008,14 +4294,15 @@
           } else if (dist < aggroRadius || m.aggroTimer > 0) {
             activeCombatCount++;
             if (m.isBoss) activeBoss = m;
-            m.yaw = Math.atan2(toPlayer.x, toPlayer.z);
+            m.yaw = Math.atan2(toPlayerX, toPlayerZ);
             m.attackCd = Math.max(0, m.attackCd - dt);
 
             const stopRange = m.ranged ? 8.5 : (m.isBoss ? 3.2 : 2.1);
             if (dist > stopRange && m.windupTimer <= 0) {
               isMoving = true;
-              toPlayer.normalize();
-              m.pos.addScaledVector(toPlayer, m.speed * dt);
+              const invDist = 1 / (dist || 1);
+              m.pos.x += toPlayerX * invDist * m.speed * dt;
+              m.pos.z += toPlayerZ * invDist * m.speed * dt;
               this.playEntityAnim(m, m.modelKey.includes('puglin') ? 'Zombie_Walk_Fwd_Loop' : 'Jog_Fwd_Loop');
             } else if (m.attackCd <= 0 && m.windupTimer <= 0) {
               m.windupTimer = m.isBoss ? 0.85 : 0.55;
@@ -4050,8 +4337,8 @@
           }
 
           // Keep monster from overlapping exact player position
-          const dxP = m.pos.x - this.player.pos.x;
-          const dzP = m.pos.z - this.player.pos.z;
+          const dxP = m.pos.x - px;
+          const dzP = m.pos.z - pz;
           const minPlayerDist = m.isBoss ? 1.75 : 1.05;
           const distPSq = dxP * dxP + dzP * dzP;
           if (distPSq < minPlayerDist * minPlayerDist) {
@@ -4063,15 +4350,15 @@
 
           this.resolveObstacleCollisions(m.pos, m.isBoss ? 1.1 : 0.55);
           m.isMovingNow = isMoving;
-        });
+        }
 
-        // Monster-to-Monster collision separation so mobs surround player cleanly instead of stacking
+        // Monster-to-Monster collision separation (only for visible nearby monsters)
         for (let i = 0; i < this.monsters.length; i++) {
           const m1 = this.monsters[i];
-          if (m1.dead) continue;
+          if (m1.dead || !m1.meshRoot || !m1.meshRoot.visible) continue;
           for (let j = i + 1; j < this.monsters.length; j++) {
             const m2 = this.monsters[j];
-            if (m2.dead) continue;
+            if (m2.dead || !m2.meshRoot || !m2.meshRoot.visible) continue;
             const dx = m2.pos.x - m1.pos.x;
             const dz = m2.pos.z - m1.pos.z;
             const minSep = (m1.isBoss ? 1.8 : 0.95) + (m2.isBoss ? 1.8 : 0.95);
@@ -4087,8 +4374,9 @@
           }
         }
 
-        this.monsters.forEach((m, idx) => {
-          if (m.dead || !m.meshRoot) return;
+        for (let idx = 0; idx < this.monsters.length; idx++) {
+          const m = this.monsters[idx];
+          if (m.dead || !m.meshRoot || !m.meshRoot.visible) continue;
           m.meshRoot.position.x = m.pos.x;
           m.meshRoot.position.z = m.pos.z;
           m.meshRoot.position.y = 0;
@@ -4105,19 +4393,28 @@
               m.meshRoot.rotation.z = Math.sin(elapsed * 9.5 + idx) * 0.05;
             }
           }
-        });
+        }
 
         this.audio.combatIntensity = Math.min(1, activeCombatCount * 0.25);
         this.audio.bossActive = !!activeBoss;
 
-        const bossHud = document.getElementById('boss-hud');
         if (activeBoss) {
-          bossHud.classList.add('visible');
-          document.getElementById('boss-name-label').textContent = activeBoss.name;
-          document.getElementById('boss-hp-label').textContent = `${activeBoss.hp} / ${activeBoss.maxHp}`;
-          document.getElementById('boss-hp-fill').style.width = `${(activeBoss.hp / activeBoss.maxHp) * 100}%`;
-        } else {
-          bossHud.classList.remove('visible');
+          if (!this.uiState.bossVisible) {
+            this.uiState.bossVisible = true;
+            if (this.ui.bossHud) this.ui.bossHud.classList.add('visible');
+          }
+          if (this.uiState.bossName !== activeBoss.name) {
+            this.uiState.bossName = activeBoss.name;
+            if (this.ui.bossNameLabel) this.ui.bossNameLabel.textContent = activeBoss.name;
+          }
+          if (this.uiState.bossHp !== activeBoss.hp) {
+            this.uiState.bossHp = activeBoss.hp;
+            if (this.ui.bossHpLabel) this.ui.bossHpLabel.textContent = `${activeBoss.hp} / ${activeBoss.maxHp}`;
+            if (this.ui.bossHpFill) this.ui.bossHpFill.style.width = `${(activeBoss.hp / activeBoss.maxHp) * 100}%`;
+          }
+        } else if (this.uiState.bossVisible) {
+          this.uiState.bossVisible = false;
+          if (this.ui.bossHud) this.ui.bossHud.classList.remove('visible');
         }
       }
 
@@ -4229,10 +4526,14 @@
           this.tetherLines = [];
         }
 
-        // Passive synergy charge when fighting near co-op allies (never draw tether lines tying characters together)
-        const allies = [...this.aiAllies, ...Array.from(this.remotePeers.values())];
-        allies.forEach((ally) => {
-          if (ally.pos.distanceTo(this.player.pos) < 11.0) {
+        // Passive synergy charge when fighting near co-op allies
+        for (let i = 0; i < this.aiAllies.length; i++) {
+          if (this.aiAllies[i].pos.distanceToSquared(this.player.pos) < 121.0) {
+            this.player.synergy = Math.min(100, this.player.synergy + dt * 1.2);
+          }
+        }
+        this.remotePeers.forEach((ally) => {
+          if (ally.pos.distanceToSquared(this.player.pos) < 121.0) {
             this.player.synergy = Math.min(100, this.player.synergy + dt * 1.2);
           }
         });
@@ -4244,83 +4545,107 @@
         const allies = [...Array.from(this.remotePeers.values()), ...this.aiAllies];
         roster.innerHTML = allies.map((a) => {
           const pct = Math.max(0, Math.min(100, Math.round((a.hp / a.maxHp) * 100)));
+          const coords = `(${Math.round(a.pos.x)}, ${Math.round(a.pos.z)})`;
           return `
-            <div class="ally-row ${a.isAI ? 'ai-ally' : ''}">
-              <span>${a.isAI ? '🤖' : '🟢'} <b>${a.name}</b></span>
+            <div class="ally-row ${a.isAI ? 'ai-ally' : ''}" style="cursor:pointer;" title="Click to warp to ${a.name}" onclick="window.game.warpToPeer('${a.id}')">
+              <span>${a.isAI ? '🤖' : '🟢'} <b>${a.name}</b> <small style="color:var(--text-muted); font-family:'JetBrains Mono',monospace;">${coords}</small></span>
               <div class="ally-mini-hp"><div style="width:${pct}%"></div></div>
             </div>
           `;
         }).join('');
       }
 
+      setUI(key, el, val, isWidth = false) {
+        if (!el || this.uiState[key] === val) return;
+        this.uiState[key] = val;
+        if (isWidth) el.style.width = val;
+        else el.textContent = val;
+      }
+
       updateHUDAndMinimap() {
         const p = this.player;
-        document.getElementById('hud-hero-name').textContent = p.name;
-        document.getElementById('hud-hero-lvl').textContent = `Lv. ${p.level}`;
-        document.getElementById('hud-weapon-label').textContent = `${p.weaponId} +${p.weaponLevel} (${p.element})`;
-        document.getElementById('hud-gold').textContent = p.gold;
-        document.getElementById('hud-shards').textContent = p.shards;
+        const ui = this.ui;
+        this.setUI('heroName', ui.heroName, p.name);
+        this.setUI('heroLvl', ui.heroLvl, `Lv. ${p.level}`);
+        this.setUI('weaponLabel', ui.weaponLabel, `${p.weaponId} +${p.weaponLevel} (${p.element})`);
+        this.setUI('gold', ui.gold, String(p.gold));
+        this.setUI('shards', ui.shards, String(p.shards));
 
-        document.getElementById('hud-hp-fill').style.width = `${(p.hp / p.maxHp) * 100}%`;
-        document.getElementById('hud-hp-text').textContent = `${Math.round(p.hp)} / ${p.maxHp}`;
-        document.getElementById('hud-mp-fill').style.width = `${(p.mp / p.maxMp) * 100}%`;
-        document.getElementById('hud-mp-text').textContent = `${Math.round(p.mp)} / ${p.maxMp}`;
+        const hpRounded = Math.round(p.hp);
+        this.setUI('hpFill', ui.hpFill, `${Math.round((p.hp / p.maxHp) * 100)}%`, true);
+        this.setUI('hpText', ui.hpText, `${hpRounded} / ${p.maxHp}`);
+
+        const mpRounded = Math.round(p.mp);
+        this.setUI('mpFill', ui.mpFill, `${Math.round((p.mp / p.maxMp) * 100)}%`, true);
+        this.setUI('mpText', ui.mpText, `${mpRounded} / ${p.maxMp}`);
 
         const synPct = Math.floor(p.synergy);
-        document.getElementById('hud-xp-fill').style.width = `${synPct}%`;
-        document.getElementById('hud-synergy-text').textContent = synPct >= 100 ? 'CONVERGENCE READY [R]!' : `SYNERGY ${synPct}%`;
-        document.getElementById('slot-5').classList.toggle('ult-ready', synPct >= 100);
+        this.setUI('xpFill', ui.xpFill, `${synPct}%`, true);
+        this.setUI('synergyText', ui.synergyText, synPct >= 100 ? 'CONVERGENCE READY [R]!' : `SYNERGY ${synPct}%`);
+        const ultReady = synPct >= 100;
+        if (this.uiState.ultReady !== ultReady) {
+          this.uiState.ultReady = ultReady;
+          if (ui.slot5) ui.slot5.classList.toggle('ult-ready', ultReady);
+        }
 
-        [1, 2, 3, 4, 5, 'potion'].forEach((s) => {
+        const cdKeys = [1, 2, 3, 4, 5, 'potion'];
+        for (let i = 0; i < cdKeys.length; i++) {
+          const s = cdKeys[i];
           const cd = p.cooldowns[s];
-          const el = document.getElementById('cd-' + s);
-          if (el) {
-            if (cd > 0.05) {
-              el.style.height = '100%';
-              el.textContent = cd.toFixed(1);
-            } else {
-              el.style.height = '0%';
-              el.textContent = '';
+          const el = ui.cd[s];
+          if (!el) continue;
+          const label = cd > 0.05 ? cd.toFixed(1) : '';
+          if (this.uiState['cd_' + s] !== label) {
+            this.uiState['cd_' + s] = label;
+            el.style.height = label ? '100%' : '0%';
+            el.textContent = label;
+          }
+        }
+
+        if (this.remotePeers.size > 0) {
+          this.updatePartyRosterUI();
+        }
+
+        const ctx = this.minimapCtx;
+        if (ctx) {
+          ctx.clearRect(0, 0, 140, 140);
+          const cx = 70, cy = 70, scale = 1.15;
+
+          ctx.strokeStyle = 'rgba(243, 200, 107, 0.25)';
+          ctx.beginPath(); ctx.arc(cx, cy, 32, 0, Math.PI * 2); ctx.stroke();
+          ctx.beginPath(); ctx.arc(cx, cy, 62, 0, Math.PI * 2); ctx.stroke();
+
+          const drawDot = (wx, wz, col, r = 3) => {
+            const dx = (wx - p.pos.x) * scale;
+            const dz = (wz - p.pos.z) * scale;
+            if (dx * dx + dz * dz < 64 * 64) {
+              ctx.fillStyle = col;
+              ctx.beginPath();
+              ctx.arc(cx + dx, cy + dz, r, 0, Math.PI * 2);
+              ctx.fill();
             }
+          };
+
+          drawDot(0, 0, '#38e8ff', 4.5);
+          drawDot(7.5, 8, '#2ee68a', 4);
+          drawDot(-7.5, 8, '#f3c86b', 4);
+
+          for (let i = 0; i < this.aiAllies.length; i++) {
+            drawDot(this.aiAllies[i].pos.x, this.aiAllies[i].pos.z, '#2ee68a', 3.5);
           }
-        });
-
-        const mm = document.getElementById('minimap-canvas');
-        const ctx = mm.getContext('2d');
-        ctx.clearRect(0, 0, 140, 140);
-        const cx = 70, cy = 70, scale = 1.15;
-
-        ctx.strokeStyle = 'rgba(243, 200, 107, 0.25)';
-        ctx.beginPath(); ctx.arc(cx, cy, 32, 0, Math.PI * 2); ctx.stroke();
-        ctx.beginPath(); ctx.arc(cx, cy, 62, 0, Math.PI * 2); ctx.stroke();
-
-        const drawDot = (wx, wz, col, r = 3) => {
-          const dx = (wx - p.pos.x) * scale;
-          const dz = (wz - p.pos.z) * scale;
-          if (dx * dx + dz * dz < 64 * 64) {
-            ctx.fillStyle = col;
-            ctx.beginPath();
-            ctx.arc(cx + dx, cy + dz, r, 0, Math.PI * 2);
-            ctx.fill();
+          this.remotePeers.forEach(peer => drawDot(peer.pos.x, peer.pos.z, '#38e8ff', 4.5));
+          for (let i = 0; i < this.monsters.length; i++) {
+            const m = this.monsters[i];
+            if (!m.dead) drawDot(m.pos.x, m.pos.z, m.isBoss ? '#ff0055' : '#ff3b5c', m.isBoss ? 5.5 : 3);
           }
-        };
 
-        drawDot(0, 0, '#38e8ff', 4.5);
-        drawDot(7.5, 8, '#2ee68a', 4);
-        drawDot(-7.5, 8, '#f3c86b', 4);
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
 
-        this.aiAllies.forEach(a => drawDot(a.pos.x, a.pos.z, '#2ee68a', 3.5));
-        this.remotePeers.forEach(peer => drawDot(peer.pos.x, peer.pos.z, '#38e8ff', 4));
-        this.monsters.forEach(m => {
-          if (!m.dead) drawDot(m.pos.x, m.pos.z, m.isBoss ? '#ff0055' : '#ff3b5c', m.isBoss ? 5.5 : 3);
-        });
-
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(cx, cy, 4, 0, Math.PI * 2);
-        ctx.fill();
-
-        document.getElementById('minimap-coords').textContent = `WAVE ${this.riftWave} • (${Math.round(p.pos.x)}, ${Math.round(p.pos.z)})`;
+        this.setUI('minimapCoords', ui.minimapCoords, `WAVE ${this.riftWave} • (${Math.round(p.pos.x)}, ${Math.round(p.pos.z)})`);
       }
     }
 
