@@ -1,16 +1,27 @@
 import bpy
 import bmesh
 import os
+import sys
 import math
 import json
 import struct
 import mathutils
+import numpy as np
 
 ROOT = r"c:\Users\Desmond\Documents\Co Op ARPG"
 OUT_DIR = os.path.join(ROOT, "public", "assets", "models")
 
-for sub in ["", "heroes", "monsters", "weapons", "props"]:
+for sub in ["", "heroes", "npcs", "monsters", "weapons", "props"]:
     os.makedirs(os.path.join(OUT_DIR, sub), exist_ok=True)
+
+_ONLY_SECTIONS = None
+if "--" in sys.argv:
+    for arg in sys.argv[sys.argv.index("--") + 1:]:
+        if arg.startswith("--only="):
+            _ONLY_SECTIONS = {s.strip().lower() for s in arg.split("=", 1)[1].split(",") if s.strip()}
+
+def should_run(section):
+    return _ONLY_SECTIONS is None or section.lower() in _ONLY_SECTIONS
 
 ALL_TEX_DIRS = [
     os.path.join(ROOT, "Universal Base Characters[Standard]", "Universal Base Characters[Standard]", "Base Characters", "Textures"),
@@ -83,12 +94,14 @@ def optimize_and_dedup_images(max_dim=512):
         if dup_img.users == 0:
             bpy.data.images.remove(dup_img)
 
-    # Downscale oversized 4K/2K textures to max_dim and pack so glTF AUTO exports the downscaled PNG
+    # Downscale oversized 4K/2K textures to max_dim (256 for normal/ORM/roughness) and pack
     for img in bpy.data.images:
         w0, h0 = img.size[0], img.size[1]
-        if w0 > max_dim or h0 > max_dim:
-            w = min(w0, max_dim)
-            h = min(h0, max_dim)
+        iname = img.name.lower()
+        lim = min(max_dim, 256) if any(k in iname for k in ("normal", "_orm", "roughness")) else max_dim
+        if w0 > lim or h0 > lim:
+            w = min(w0, lim)
+            h = min(h0, lim)
             img.scale(w, h)
             img.pack()
 
@@ -253,104 +266,114 @@ def retarget_action_to_armature(src_arm, src_act, dst_arm, new_name, zero_xy_pel
 # ==============================================================================
 # 1. EXPORT CURATED ARPG SKELETAL ANIMATION PACK (animations_arpg.glb)
 # ==============================================================================
-print("=== Building animations_arpg.glb ===")
-clear_scene()
 ual1 = os.path.join(ROOT, "Universal Animation Library[Standard]", "Universal Animation Library[Standard]", "Unreal-Godot", "UAL1_Standard.glb")
 ual2 = os.path.join(ROOT, "Universal Animation Library 2[Standard]", "Universal Animation Library 2[Standard]", "Unreal-Godot", "UAL2_Standard.glb")
 
-bpy.ops.import_scene.gltf(filepath=ual1)
-bpy.ops.import_scene.gltf(filepath=ual2)
+if should_run("anims"):
+    print("=== Building animations_arpg.glb ===")
+    clear_scene()
+    bpy.ops.import_scene.gltf(filepath=ual1)
+    bpy.ops.import_scene.gltf(filepath=ual2)
 
-arms = [o for o in bpy.data.objects if o.type == 'ARMATURE']
-main_arm = arms[0]
-main_arm.name = "Armature"
+    arms = [o for o in bpy.data.objects if o.type == 'ARMATURE']
+    main_arm = arms[0]
+    main_arm.name = "Armature"
 
-for obj in list(bpy.data.objects):
-    if obj != main_arm:
-        bpy.data.objects.remove(obj, do_unlink=True)
+    for obj in list(bpy.data.objects):
+        if obj != main_arm:
+            bpy.data.objects.remove(obj, do_unlink=True)
 
-mesh_data = bpy.data.meshes.new("AnimCarrierMesh")
-mesh_data.from_pydata([(0,0,0), (0.001,0,0), (0,0.001,0)], [], [(0,1,2)])
-carrier = bpy.data.objects.new("AnimCarrier", mesh_data)
-bpy.context.collection.objects.link(carrier)
-carrier.parent = main_arm
-vg = carrier.vertex_groups.new(name="root")
-vg.add([0, 1, 2], 1.0, 'REPLACE')
-mod = carrier.modifiers.new(name="Armature", type='ARMATURE')
-mod.object = main_arm
+    mesh_data = bpy.data.meshes.new("AnimCarrierMesh")
+    mesh_data.from_pydata([(0,0,0), (0.001,0,0), (0,0.001,0)], [], [(0,1,2)])
+    carrier = bpy.data.objects.new("AnimCarrier", mesh_data)
+    bpy.context.collection.objects.link(carrier)
+    carrier.parent = main_arm
+    vg = carrier.vertex_groups.new(name="root")
+    vg.add([0, 1, 2], 1.0, 'REPLACE')
+    mod = carrier.modifiers.new(name="Armature", type='ARMATURE')
+    mod.object = main_arm
 
-wanted_actions = {
-    'Idle_Loop', 'Sword_Idle', 'Idle_Shield_Loop', 'Spell_Simple_Idle_Loop',
-    'Walk_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Roll',
-    'Sword_Regular_A', 'Sword_Regular_B', 'Sword_Regular_C', 'Sword_Regular_Combo',
-    'Sword_Heavy_Combo', 'Sword_Attack', 'Sword_Dash', 'Sword_Block',
-    'Shield_Dash', 'Shield_OneShot', 'Spell_Simple_Enter', 'Spell_Simple_Shoot',
-    'OverhandThrow', 'Melee_Hook', 'Hit_Chest', 'Idle_Shield_Break',
-    'Death01', 'LayToIdle', 'Interact', 'Chest_Open', 'Dance_Loop',
-    'Zombie_Idle_Loop', 'Zombie_Walk_Fwd_Loop', 'Zombie_Scratch'
-}
+    wanted_actions = {
+        'Idle_Loop', 'Idle_Talking_Loop', 'Idle_FoldArms_Loop',
+        'Sword_Idle', 'Idle_Shield_Loop', 'Spell_Simple_Idle_Loop',
+        'Pistol_Idle_Loop', 'Pistol_Aim_Neutral', 'Pistol_Shoot',
+        'Walk_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Roll',
+        'Sword_Regular_A', 'Sword_Regular_B', 'Sword_Regular_C', 'Sword_Regular_Combo',
+        'Sword_Heavy_Combo', 'Sword_Attack', 'Sword_Dash', 'Sword_Block',
+        'Shield_Dash', 'Shield_OneShot', 'Spell_Simple_Enter', 'Spell_Simple_Shoot',
+        'OverhandThrow', 'Melee_Hook', 'Hit_Chest', 'Idle_Shield_Break',
+        'Death01', 'LayToIdle', 'Interact', 'Chest_Open', 'Dance_Loop',
+        'Zombie_Idle_Loop', 'Zombie_Walk_Fwd_Loop', 'Zombie_Scratch'
+    }
 
-for act in list(bpy.data.actions):
-    base_name = act.name.split(".")[0]
-    if act.name not in wanted_actions:
-        if base_name in wanted_actions and base_name not in [a.name for a in bpy.data.actions]:
-            act.name = base_name
-        else:
-            bpy.data.actions.remove(act)
+    for act in list(bpy.data.actions):
+        base_name = act.name.split(".")[0]
+        if act.name not in wanted_actions:
+            if base_name in wanted_actions and base_name not in [a.name for a in bpy.data.actions]:
+                act.name = base_name
+            else:
+                bpy.data.actions.remove(act)
 
-# Replace flat-on-floor Hit_Knockback with upright Idle_Shield_Break stagger
-if 'Idle_Shield_Break' in bpy.data.actions:
-    bpy.data.actions['Idle_Shield_Break'].name = 'Hit_Knockback'
+    # Replace flat-on-floor Hit_Knockback with upright Idle_Shield_Break stagger
+    if 'Idle_Shield_Break' in bpy.data.actions:
+        bpy.data.actions['Idle_Shield_Break'].name = 'Hit_Knockback'
 
-# Bake clean in-place pelvis (zero horizontal X/Y drift on locomotion/attacks)
-if not main_arm.animation_data:
-    main_arm.animation_data_create()
+    # Bake clean in-place pelvis (zero horizontal X/Y drift on locomotion/attacks)
+    if not main_arm.animation_data:
+        main_arm.animation_data_create()
 
-pelvis_rest = main_arm.data.bones["pelvis"].head_local.copy()
-keep_xy_actions = {'Death01', 'LayToIdle'}
-cleaned_actions = []
-for act in list(bpy.data.actions):
-    if act.name in keep_xy_actions:
+    pelvis_rest = main_arm.data.bones["pelvis"].head_local.copy()
+    keep_xy_actions = {'Death01', 'LayToIdle'}
+    cleaned_actions = []
+    for act in list(bpy.data.actions):
+        if act.name in keep_xy_actions:
+            cleaned_actions.append(act)
+            continue
+        f0 = int(round(act.frame_range[0]))
+        f1 = int(round(act.frame_range[1]))
+        main_arm.animation_data.action = act
+        if hasattr(act, "slots") and len(act.slots) > 0:
+            main_arm.animation_data.action_slot = act.slots[0]
+        pb_pelvis = main_arm.pose.bones["pelvis"]
+        samples = []
+        for f in range(f0, f1 + 1):
+            bpy.context.scene.frame_set(f)
+            m = pb_pelvis.matrix.copy()
+            m.translation = (pelvis_rest.x, pelvis_rest.y, m.translation.z)
+            samples.append((f, m))
+        for f, m in samples:
+            bpy.context.scene.frame_set(f)
+            pb_pelvis.matrix = m
+            bpy.context.view_layer.update()
+            pb_pelvis.keyframe_insert(data_path="location", frame=f)
         cleaned_actions.append(act)
-        continue
-    # Sample pelvis Z first, then re-bake with zeroed horizontal X/Y drift in armature space
-    f0 = int(round(act.frame_range[0]))
-    f1 = int(round(act.frame_range[1]))
-    main_arm.animation_data.action = act
-    pb_pelvis = main_arm.pose.bones["pelvis"]
-    samples = []
-    for f in range(f0, f1 + 1):
-        bpy.context.scene.frame_set(f)
-        m = pb_pelvis.matrix.copy()
-        m.translation = (pelvis_rest.x, pelvis_rest.y, m.translation.z)
-        samples.append((f, m))
-    for f, m in samples:
-        bpy.context.scene.frame_set(f)
-        pb_pelvis.matrix = m
-        bpy.context.view_layer.update()
-        pb_pelvis.keyframe_insert(data_path="location", frame=f)
-    cleaned_actions.append(act)
 
-for track in list(main_arm.animation_data.nla_tracks):
-    main_arm.animation_data.nla_tracks.remove(track)
+    main_arm.animation_data.action = None
+    for track in list(main_arm.animation_data.nla_tracks):
+        main_arm.animation_data.nla_tracks.remove(track)
 
-for act in cleaned_actions:
-    track = main_arm.animation_data.nla_tracks.new()
-    track.name = act.name
-    strip = track.strips.new(act.name, int(act.frame_range[0]), act)
-    strip.name = act.name
-    if hasattr(strip, "action_slot") and hasattr(act, "slots") and len(act.slots) > 0:
-        strip.action_slot = act.slots[0]
+    for act in cleaned_actions:
+        # Remove extra action slots so glTF exporter never appends "-Armature.001"
+        if hasattr(act, "slots") and len(act.slots) > 1:
+            for extra_slot in list(act.slots)[1:]:
+                act.slots.remove(extra_slot)
+        track = main_arm.animation_data.nla_tracks.new()
+        track.name = act.name
+        strip = track.strips.new(act.name, int(act.frame_range[0]), act)
+        strip.name = act.name
+        if hasattr(strip, "action_slot") and hasattr(act, "slots") and len(act.slots) > 0:
+            strip.action_slot = act.slots[0]
 
-# Ensure no stray action slot suffix appears in glTF animation names
-export_glb(os.path.join(OUT_DIR, "animations_arpg.glb"), export_animations=True, strip_loc_except=("pelvis",))
+    export_glb(os.path.join(OUT_DIR, "animations_arpg.glb"), export_animations=True, strip_loc_except=("pelvis",))
 
 # ==============================================================================
-# 2. BUILD 4 PLAYABLE HERO CLASSES (WITH BLENDER KITBASHING & PBR ENHANCEMENTS)
+# 2. HEROES & TOWN NPCS HELPERS (WITH BLENDER KITBASHING & PBR ENHANCEMENTS)
 # ==============================================================================
 outfits_dir = os.path.join(ROOT, "Modular Character Outfits - Fantasy[Standard]", "Modular Character Outfits - Fantasy[Standard]", "Exports", "glTF (Godot-Unreal)")
 hair_dir = os.path.join(ROOT, "Universal Base Characters[Standard]", "Universal Base Characters[Standard]", "Hairstyles", "Rigged to Head Bone", "glTF (Godot -Unreal)")
 base_char_dir = os.path.join(ROOT, "Universal Base Characters[Standard]", "Universal Base Characters[Standard]", "Base Characters", "Godot - UE")
+base_tex_dir = os.path.join(ROOT, "Universal Base Characters[Standard]", "Universal Base Characters[Standard]", "Base Characters", "Textures")
+outfit_tex_dir = os.path.join(ROOT, "Modular Character Outfits - Fantasy[Standard]", "Modular Character Outfits - Fantasy[Standard]", "Textures")
 
 def merge_armatures_to_primary():
     arms = [o for o in bpy.data.objects if o.type == 'ARMATURE']
@@ -373,39 +396,54 @@ def merge_armatures_to_primary():
             child.data.name = child.name
     return primary
 
-def prepare_base_character(is_male=True):
+def prepare_base_character(is_male=True, skin_mode="dark", keep_torso_arms=False):
     base_file = "Superhero_Male_FullBody.gltf" if is_male else "Superhero_Female_FullBody.gltf"
     bpy.ops.import_scene.gltf(filepath=os.path.join(base_char_dir, base_file))
     relink_missing_textures()
     body_name = "SuperHero_Male" if is_male else "Superhero_Female"
     body = bpy.data.objects.get(body_name)
     if body and body.type == 'MESH':
-        skin_tex_dir = os.path.join(ROOT, "Modular Character Outfits - Fantasy[Standard]", "Modular Character Outfits - Fantasy[Standard]", "Textures", "Base")
-        bc_file = "T_Regular_Male_Dark_BaseColor.png" if is_male else "T_Regular_Female_Dark_BaseColor.png"
-        nrm_file = "T_Regular_Male_Normal.png" if is_male else "T_Regular_Female_Normal.png"
-        rgh_file = "T_Regular_Male_Roughness.png" if is_male else "T_Regular_Female_Roughness.png"
+        if skin_mode == "light":
+            bc_path = os.path.join(base_tex_dir, "T_Superhero_Male_Ligh.png" if is_male else "T_Superhero_Female_Light_BaseColor.png")
+            nrm_path = os.path.join(base_tex_dir, "T_Superhero_Male_Normal.png" if is_male else "T_Superhero_Female_Normal.png")
+            rgh_path = os.path.join(base_tex_dir, "T_Superhero_Male_Roughness.png" if is_male else "T_Superhero_Female_Roughness.png")
+        else:
+            skin_dir = os.path.join(outfit_tex_dir, "Base")
+            bc_path = os.path.join(skin_dir, "T_Regular_Male_Dark_BaseColor.png" if is_male else "T_Regular_Female_Dark_BaseColor.png")
+            nrm_path = os.path.join(skin_dir, "T_Regular_Male_Normal.png" if is_male else "T_Regular_Female_Normal.png")
+            rgh_path = os.path.join(skin_dir, "T_Regular_Male_Roughness.png" if is_male else "T_Regular_Female_Roughness.png")
+
         for mat in body.data.materials:
             if mat and mat.node_tree:
                 for node in mat.node_tree.nodes:
                     if node.type == 'TEX_IMAGE' and node.image:
                         iname = node.image.name.lower()
-                        if "dark" in iname or "basecolor" in iname:
-                            node.image.filepath = os.path.join(skin_tex_dir, bc_file)
-                            node.image.name = bc_file.replace(".png", "")
+                        if "dark" in iname or "basecolor" in iname or "ligh" in iname:
+                            node.image.filepath = bc_path
+                            node.image.name = os.path.splitext(os.path.basename(bc_path))[0]
                             node.image.reload()
                         elif "normal" in iname:
-                            node.image.filepath = os.path.join(skin_tex_dir, nrm_file)
-                            node.image.name = nrm_file.replace(".png", "")
+                            node.image.filepath = nrm_path
+                            node.image.name = os.path.splitext(os.path.basename(nrm_path))[0]
                             node.image.reload()
                         elif "roughness" in iname:
-                            node.image.filepath = os.path.join(skin_tex_dir, rgh_file)
-                            node.image.name = rgh_file.replace(".png", "")
+                            node.image.filepath = rgh_path
+                            node.image.name = os.path.splitext(os.path.basename(rgh_path))[0]
                             node.image.reload()
-        keep_vgs = {body.vertex_groups[vg_name].index for vg_name in ("Head", "neck_01") if vg_name in body.vertex_groups}
-        verts_to_delete = [
-            v.index for v in body.data.vertices
-            if sum(g.weight for g in v.groups if g.group in keep_vgs) <= 0.05
-        ]
+
+        if keep_torso_arms:
+            # Keep Head, neck, torso, arms, hands; delete lower pelvis/legs/feet vertices hidden by pants
+            leg_vgs = {body.vertex_groups[g].index for g in ("thigh_l", "calf_l", "foot_l", "ball_l", "thigh_r", "calf_r", "foot_r", "ball_r") if g in body.vertex_groups}
+            verts_to_delete = [
+                v.index for v in body.data.vertices
+                if v.co.z < 0.965 or sum(g.weight for g in v.groups if g.group in leg_vgs) > 0.25
+            ]
+        else:
+            keep_vgs = {body.vertex_groups[vg_name].index for vg_name in ("Head", "neck_01") if vg_name in body.vertex_groups}
+            verts_to_delete = [
+                v.index for v in body.data.vertices
+                if sum(g.weight for g in v.groups if g.group in keep_vgs) <= 0.05
+            ]
         bm = bmesh.new()
         bm.from_mesh(body.data)
         bm.verts.ensure_lookup_table()
@@ -414,57 +452,613 @@ def prepare_base_character(is_male=True):
         bm.free()
         body.data.update()
 
-# 2A. Vanguard Knight
-print("=== Building hero_vanguard.glb ===")
-clear_scene()
-prepare_base_character(is_male=True)
-bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Outfits", "Male_Ranger.gltf"))
-bpy.ops.import_scene.gltf(filepath=os.path.join(hair_dir, "Hair_Beard.gltf"))
-arm = merge_armatures_to_primary()
-export_glb(os.path.join(OUT_DIR, "heroes", "hero_vanguard.glb"), export_animations=False)
+def swap_outfit_basecolor(mat_substr, tex_path, tint_rgb=None, metallic=None, roughness=None, max_dim=512):
+    """Replace BaseColor texture on materials matching mat_substr and optionally tint pixels cleanly for Three.js."""
+    src_img = bpy.data.images.load(tex_path, check_existing=False)
+    if src_img.size[0] > max_dim or src_img.size[1] > max_dim:
+        src_img.scale(min(src_img.size[0], max_dim), min(src_img.size[1], max_dim))
+    if tint_rgb is not None:
+        arr = np.array(src_img.pixels[:], dtype=np.float32).reshape((-1, 4))
+        arr[:, 0] = np.clip(arr[:, 0] * tint_rgb[0], 0.0, 1.0)
+        arr[:, 1] = np.clip(arr[:, 1] * tint_rgb[1], 0.0, 1.0)
+        arr[:, 2] = np.clip(arr[:, 2] * tint_rgb[2], 0.0, 1.0)
+        src_img.pixels.foreach_set(arr.ravel())
+        src_img.update()
+    src_img.pack()
+    for mat in bpy.data.materials:
+        if mat_substr.lower() not in mat.name.lower():
+            continue
+        if mat.node_tree:
+            bsdf = next((n for n in mat.node_tree.nodes if n.type == 'BSDF_PRINCIPLED'), None)
+            if bsdf:
+                if metallic is not None:
+                    for lk in list(bsdf.inputs["Metallic"].links):
+                        mat.node_tree.links.remove(lk)
+                    bsdf.inputs["Metallic"].default_value = metallic
+                if roughness is not None:
+                    for lk in list(bsdf.inputs["Roughness"].links):
+                        mat.node_tree.links.remove(lk)
+                    bsdf.inputs["Roughness"].default_value = roughness
+            for node in mat.node_tree.nodes:
+                if node.type == 'TEX_IMAGE' and node.image:
+                    iname = node.image.name.lower()
+                    if "basecolor" in iname or "ranger" in iname and "normal" not in iname and "orm" not in iname or "peasant" in iname and "normal" not in iname and "orm" not in iname:
+                        node.image = src_img
 
-# 2B. Shadow Ranger
-print("=== Building hero_ranger.glb ===")
-clear_scene()
-prepare_base_character(is_male=False)
-bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Outfits", "Female_Ranger.gltf"))
-bpy.ops.import_scene.gltf(filepath=os.path.join(hair_dir, "Hair_Buns.gltf"))
-arm = merge_armatures_to_primary()
-export_glb(os.path.join(OUT_DIR, "heroes", "hero_ranger.glb"), export_animations=False)
+def tint_material_tex(mat_substr, rgb_mult=(1.0, 1.0, 1.0), metallic=None, roughness=None, max_dim=512):
+    for mat in bpy.data.materials:
+        if mat_substr.lower() not in mat.name.lower():
+            continue
+        if mat.node_tree:
+            bsdf = next((n for n in mat.node_tree.nodes if n.type == 'BSDF_PRINCIPLED'), None)
+            if bsdf:
+                if metallic is not None:
+                    for lk in list(bsdf.inputs["Metallic"].links):
+                        mat.node_tree.links.remove(lk)
+                    bsdf.inputs["Metallic"].default_value = metallic
+                if roughness is not None:
+                    for lk in list(bsdf.inputs["Roughness"].links):
+                        mat.node_tree.links.remove(lk)
+                    bsdf.inputs["Roughness"].default_value = roughness
+            for node in mat.node_tree.nodes:
+                if node.type == 'TEX_IMAGE' and node.image:
+                    iname = node.image.name.lower()
+                    if "normal" in iname or "orm" in iname or "roughness" in iname:
+                        continue
+                    img = node.image
+                    if img.size[0] > max_dim or img.size[1] > max_dim:
+                        img.scale(min(img.size[0], max_dim), min(img.size[1], max_dim))
+                    arr = np.array(img.pixels[:], dtype=np.float32).reshape((-1, 4))
+                    arr[:, 0] = np.clip(arr[:, 0] * rgb_mult[0], 0.0, 1.0)
+                    arr[:, 1] = np.clip(arr[:, 1] * rgb_mult[1], 0.0, 1.0)
+                    arr[:, 2] = np.clip(arr[:, 2] * rgb_mult[2], 0.0, 1.0)
+                    img.pixels.foreach_set(arr.ravel())
+                    img.update()
+                    img.pack()
 
-# 2C. Reaper Arcanist (Custom Blender Kitbash + Arcane Halo)
-print("=== Building hero_arcanist.glb ===")
-clear_scene()
-prepare_base_character(is_male=False)
-bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Outfits", "Female_Peasant.gltf"))
-bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Modular Parts", "Female_Ranger_Head_Hood.gltf"))
-bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Modular Parts", "Female_Ranger_Acc_Pauldrons.gltf"))
-bpy.ops.import_scene.gltf(filepath=os.path.join(hair_dir, "Hair_Long.gltf"))
-arm = merge_armatures_to_primary()
+def create_pbr_mat(name, base_color=(0.8, 0.8, 0.8, 1.0), metallic=0.2, roughness=0.45, emit_color=(0, 0, 0, 1), emit_strength=0.0):
+    mat = bpy.data.materials.new(name=name)
+    mat.use_nodes = True
+    bsdf = mat.node_tree.nodes.get("Principled BSDF")
+    if bsdf:
+        bsdf.inputs["Base Color"].default_value = base_color
+        bsdf.inputs["Metallic"].default_value = metallic
+        bsdf.inputs["Roughness"].default_value = roughness
+        if "Emission Color" in bsdf.inputs:
+            bsdf.inputs["Emission Color"].default_value = emit_color
+        if "Emission Strength" in bsdf.inputs:
+            bsdf.inputs["Emission Strength"].default_value = emit_strength
+    return mat
 
-bpy.ops.mesh.primitive_torus_add(major_radius=0.38, minor_radius=0.022, major_segments=32, minor_segments=12, location=(0, -0.22, 1.38), rotation=(math.radians(90), 0, 0))
-halo = bpy.context.active_object
-halo.name = "Arcanist_Halo"
-halo.data.name = "Arcanist_Halo"
-halo.data.materials.append(create_emissive_mat("M_Arcane_Halo", (0.4, 0.1, 0.9, 1.0), (0.55, 0.2, 1.0, 1.0), 5.0))
-halo.parent = arm
-vg = halo.vertex_groups.new(name="spine_03")
-vg.add([v.index for v in halo.data.vertices], 1.0, 'REPLACE')
-mod = halo.modifiers.new(name="Armature", type='ARMATURE')
-mod.object = arm
-export_glb(os.path.join(OUT_DIR, "heroes", "hero_arcanist.glb"), export_animations=False)
+def bind_to_bone(obj, arm, bone_name):
+    obj.parent = arm
+    vg = obj.vertex_groups.get(bone_name) or obj.vertex_groups.new(name=bone_name)
+    vg.add([v.index for v in obj.data.vertices], 1.0, 'REPLACE')
+    mod = obj.modifiers.new(name="Armature", type='ARMATURE')
+    mod.object = arm
+    if obj.data:
+        obj.data.name = obj.name
 
-# 2D. Berserker Warlord (Custom Blender Kitbash)
-print("=== Building hero_berserker.glb ===")
-clear_scene()
-prepare_base_character(is_male=True)
-bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Outfits", "Male_Peasant.gltf"))
-bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Modular Parts", "Male_Ranger_Acc_Pauldron.gltf"))
-bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Modular Parts", "Male_Ranger_Feet_Boots.gltf"))
-bpy.ops.import_scene.gltf(filepath=os.path.join(hair_dir, "Hair_Beard.gltf"))
-bpy.ops.import_scene.gltf(filepath=os.path.join(hair_dir, "Hair_SimpleParted.gltf"))
-arm = merge_armatures_to_primary()
-export_glb(os.path.join(OUT_DIR, "heroes", "hero_berserker.glb"), export_animations=False)
+def remove_objs_by_prefix(prefixes):
+    for obj in list(bpy.data.objects):
+        if any(obj.name.startswith(p) for p in prefixes):
+            bpy.data.objects.remove(obj, do_unlink=True)
+
+def build_cloak_mesh(name, mat, arm):
+    """Build a sculpted flowing knight cape with folds, rigged smoothly across spine_03 -> spine_02 -> pelvis."""
+    mesh = bpy.data.meshes.new(name)
+    bm = bmesh.new()
+    cols, rows = 9, 8
+    verts = []
+    for r in range(rows):
+        t = r / (rows - 1)  # 0 = top shoulder, 1 = bottom hem
+        w = 0.17 + 0.19 * (t ** 0.85)
+        z = 1.52 - 1.24 * t
+        y = 0.145 + 0.16 * (t ** 1.15)
+        row_v = []
+        for c in range(cols):
+            u = (c / (cols - 1)) * 2.0 - 1.0  # -1..1
+            x = u * w
+            # Gentle curved shoulder wrap + vertical cape pleats
+            arch_y = -0.04 * (u * u) * (1.0 - 0.5 * t)
+            ripple = 0.018 * math.sin(u * math.pi * 3.0) * (0.3 + 0.7 * t)
+            v = bm.verts.new((x, y + arch_y + ripple, z))
+            row_v.append(v)
+        verts.append(row_v)
+    for r in range(rows - 1):
+        for c in range(cols - 1):
+            bm.faces.new((verts[r][c], verts[r][c+1], verts[r+1][c+1], verts[r+1][c]))
+    bm.normal_update()
+    bm.to_mesh(mesh)
+    bm.free()
+
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    obj.data.materials.append(mat)
+    # Give cape physical thickness so back-face is solid from every camera angle
+    sol = obj.modifiers.new(name="Solidify", type='SOLIDIFY')
+    sol.thickness = 0.014
+    sol.offset = 0.0
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.modifier_apply(modifier=sol.name)
+
+    obj.parent = arm
+    vg_s3 = obj.vertex_groups.new(name="spine_03")
+    vg_s2 = obj.vertex_groups.new(name="spine_02")
+    vg_pel = obj.vertex_groups.new(name="pelvis")
+    for v in obj.data.vertices:
+        if v.co.z >= 1.25:
+            vg_s3.add([v.index], 1.0, 'REPLACE')
+        elif v.co.z >= 0.90:
+            w3 = (v.co.z - 0.90) / 0.35
+            vg_s3.add([v.index], w3, 'REPLACE')
+            vg_s2.add([v.index], 1.0 - w3, 'REPLACE')
+        else:
+            w2 = max(0.0, (v.co.z - 0.55) / 0.35)
+            if w2 > 0.01:
+                vg_s2.add([v.index], w2, 'REPLACE')
+            vg_pel.add([v.index], 1.0 - w2, 'REPLACE')
+    mod = obj.modifiers.new(name="Armature", type='ARMATURE')
+    mod.object = arm
+    return obj
+
+if should_run("heroes"):
+    # --------------------------------------------------------------------------
+    # 2A. Vanguard Knight — Golden Paladin
+    # --------------------------------------------------------------------------
+    print("=== Building hero_vanguard.glb ===")
+    clear_scene()
+    prepare_base_character(is_male=True, skin_mode="dark")
+    bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Outfits", "Male_Ranger.gltf"))
+    bpy.ops.import_scene.gltf(filepath=os.path.join(hair_dir, "Hair_Beard.gltf"))
+    arm = merge_armatures_to_primary()
+
+    # Golden-steel Paladin material tint on Male_Ranger armor
+    swap_outfit_basecolor(
+        "MI_Ranger",
+        os.path.join(outfit_tex_dir, "Ranger", "T_Ranger_BaseColor.png"),
+        tint_rgb=(1.42, 1.12, 0.52),
+        metallic=0.58,
+        roughness=0.30,
+    )
+    paladin_gold = create_emissive_mat("M_Paladin_Gold", (1.0, 0.78, 0.22, 1.0), (1.0, 0.65, 0.12, 1.0), 0.7, metallic=0.94, roughness=0.20)
+    paladin_crimson = create_pbr_mat("M_Paladin_Crimson", (0.68, 0.08, 0.10, 1.0), metallic=0.12, roughness=0.62)
+
+    # Knight Greathelm Crest & Golden Visor Band (Head)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=16, radius=0.118, depth=0.045, location=(0, 0.012, 1.755))
+    brow = bpy.context.active_object
+    brow.name = "Vanguard_Helm_Crown"
+    brow.scale = (0.96, 1.14, 1.0)
+    brow.data.materials.append(paladin_gold)
+    bind_to_bone(brow, arm, "Head")
+
+    for i in range(6):
+        ang = math.radians(-22 + i * 18)
+        py = -0.05 + math.sin(ang) * 0.14
+        pz = 1.88 + math.cos(ang) * 0.09 - (i * 0.012)
+        bpy.ops.mesh.primitive_cone_add(vertices=8, radius1=0.036, radius2=0.01, depth=0.14, location=(0, py, pz), rotation=(ang, 0, 0))
+        plume = bpy.context.active_object
+        plume.name = f"Vanguard_Plume_{i}"
+        plume.scale = (0.55, 1.35, 1.0)
+        plume.data.materials.append(paladin_crimson if i > 0 else paladin_gold)
+        bind_to_bone(plume, arm, "Head")
+
+    # Broad Golden Shoulder Pauldrons (clavicle_l / clavicle_r)
+    for side, bname, sname in [(1, "clavicle_l", "L"), (-1, "clavicle_r", "R")]:
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=14, ring_count=8, radius=0.125, location=(0.225 * side, 0.045, 1.49))
+        pauld = bpy.context.active_object
+        pauld.name = f"Vanguard_Pauldron_{sname}"
+        pauld.scale = (1.18, 1.08, 0.85)
+        pauld.rotation_euler = (0, math.radians(-18 * side), 0)
+        pauld.data.materials.append(paladin_gold)
+        bind_to_bone(pauld, arm, bname)
+
+        bpy.ops.mesh.primitive_torus_add(major_radius=0.105, minor_radius=0.018, major_segments=18, minor_segments=8, location=(0.245 * side, 0.045, 1.47), rotation=(0, math.radians(-25 * side), 0))
+        rim = bpy.context.active_object
+        rim.name = f"Vanguard_PauldronRim_{sname}"
+        rim.data.materials.append(paladin_crimson)
+        bind_to_bone(rim, arm, bname)
+
+    # Flowing Crimson-Gold Back Cloak
+    build_cloak_mesh("Vanguard_Paladin_Cloak", paladin_crimson, arm)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=12, radius=0.024, depth=0.34, location=(0, 0.145, 1.525), rotation=(0, math.radians(90), 0))
+    clasp = bpy.context.active_object
+    clasp.name = "Vanguard_Cloak_Clasp"
+    clasp.data.materials.append(paladin_gold)
+    bind_to_bone(clasp, arm, "spine_03")
+
+    export_glb(os.path.join(OUT_DIR, "heroes", "hero_vanguard.glb"), export_animations=False)
+
+    # --------------------------------------------------------------------------
+    # 2B. Shadow Ranger — Emerald Woodland Tracker
+    # --------------------------------------------------------------------------
+    print("=== Building hero_ranger.glb ===")
+    clear_scene()
+    prepare_base_character(is_male=False, skin_mode="dark")
+    bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Outfits", "Female_Ranger.gltf"))
+    bpy.ops.import_scene.gltf(filepath=os.path.join(hair_dir, "Hair_Buns.gltf"))
+    remove_objs_by_prefix(["Female_Ranger_Head_Hood"])
+    arm = merge_armatures_to_primary()
+
+    # Distinct T_Ranger_3_BaseColor.png with emerald woodland leather enrichment
+    swap_outfit_basecolor(
+        "MI_Ranger",
+        os.path.join(outfit_tex_dir, "Ranger", "T_Ranger_3_BaseColor.png"),
+        tint_rgb=(0.86, 1.32, 0.88),
+        metallic=0.18,
+        roughness=0.58,
+    )
+    tint_material_tex("MI_Hair", rgb_mult=(0.68, 0.38, 0.22))
+
+    quiver_leather = create_pbr_mat("M_Ranger_QuiverLeather", (0.24, 0.14, 0.07, 1.0), metallic=0.08, roughness=0.68)
+    quiver_emerald = create_emissive_mat("M_Ranger_EmeraldTrim", (0.10, 0.72, 0.36, 1.0), (0.12, 0.85, 0.42, 1.0), 1.4, metallic=0.35, roughness=0.32)
+    arrow_shaft = create_pbr_mat("M_Ranger_ArrowWood", (0.55, 0.36, 0.18, 1.0), metallic=0.05, roughness=0.65)
+
+    # Diagonal Leather Quiver + 5 Fletched Arrows strapped to spine_03 (+Y back!)
+    q_rot = (math.radians(8), math.radians(-28), 0)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=14, radius=0.052, depth=0.44, location=(0.04, 0.185, 1.31), rotation=q_rot)
+    quiver = bpy.context.active_object
+    quiver.name = "Ranger_Quiver"
+    quiver.data.materials.append(quiver_leather)
+    bind_to_bone(quiver, arm, "spine_03")
+
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.054, minor_radius=0.011, major_segments=16, minor_segments=8, location=(0.135, 0.16, 1.495), rotation=q_rot)
+    q_rim = bpy.context.active_object
+    q_rim.name = "Ranger_Quiver_Rim"
+    q_rim.data.materials.append(quiver_emerald)
+    bind_to_bone(q_rim, arm, "spine_03")
+
+    for i, (ox, oy) in enumerate([(-0.02, -0.015), (0.02, -0.015), (0.0, 0.018), (-0.022, 0.014), (0.022, 0.014)]):
+        bpy.ops.mesh.primitive_cylinder_add(vertices=6, radius=0.007, depth=0.22, location=(0.145 + ox, 0.16 + oy, 1.54), rotation=q_rot)
+        ash = bpy.context.active_object
+        ash.name = f"Ranger_QuiverArrow_{i}"
+        ash.data.materials.append(arrow_shaft)
+        bind_to_bone(ash, arm, "spine_03")
+
+        bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=0.022, radius2=0.004, depth=0.06, location=(0.18 + ox, 0.148 + oy, 1.615), rotation=q_rot)
+        fletch = bpy.context.active_object
+        fletch.name = f"Ranger_ArrowFletch_{i}"
+        fletch.data.materials.append(quiver_emerald)
+        bind_to_bone(fletch, arm, "spine_03")
+
+    export_glb(os.path.join(OUT_DIR, "heroes", "hero_ranger.glb"), export_animations=False)
+
+    # --------------------------------------------------------------------------
+    # 2C. Reaper Arcanist — Cosmic Violet Archmage
+    # --------------------------------------------------------------------------
+    print("=== Building hero_arcanist.glb ===")
+    clear_scene()
+    prepare_base_character(is_male=False, skin_mode="light")
+    bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Outfits", "Female_Peasant.gltf"))
+    bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Modular Parts", "Female_Ranger_Acc_Pauldrons.gltf"))
+    bpy.ops.import_scene.gltf(filepath=os.path.join(hair_dir, "Hair_Long.gltf"))
+    arm = merge_armatures_to_primary()
+
+    # T_Peasant_2_BaseColor.png with rich cosmic violet-indigo archmage tint
+    swap_outfit_basecolor(
+        "MI_Peasant",
+        os.path.join(outfit_tex_dir, "Peasant", "T_Peasant_2_BaseColor.png"),
+        tint_rgb=(1.05, 0.72, 1.55),
+        metallic=0.15,
+        roughness=0.52,
+    )
+    swap_outfit_basecolor(
+        "MI_Ranger",
+        os.path.join(outfit_tex_dir, "Ranger", "T_Ranger_3_BaseColor.png"),
+        tint_rgb=(0.95, 0.65, 1.45),
+        metallic=0.65,
+        roughness=0.28,
+    )
+
+    arc_hat_mat = create_pbr_mat("M_Arcanist_Hat", (0.18, 0.08, 0.34, 1.0), metallic=0.22, roughness=0.42)
+    arc_gold_mat = create_emissive_mat("M_Arcanist_AstralGold", (1.0, 0.78, 0.25, 1.0), (0.85, 0.55, 1.0, 1.0), 1.6, metallic=0.92, roughness=0.18)
+    arc_halo_mat = create_emissive_mat("M_Arcane_Halo", (0.45, 0.15, 1.0, 1.0), (0.55, 0.22, 1.0, 1.0), 5.0, metallic=0.2, roughness=0.15)
+    arc_cyan_mat = create_emissive_mat("M_Arcane_CyanRune", (0.15, 0.90, 1.0, 1.0), (0.20, 0.95, 1.0, 1.0), 5.5, metallic=0.15, roughness=0.12)
+
+    # Pointed Archmage Hat / Astral Crown (Head, sitting cleanly above eyes & Hair_Long)
+    hat_tilt = (math.radians(8), 0, 0)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=0.225, depth=0.018, location=(0, 0.015, 1.745), rotation=hat_tilt)
+    brim = bpy.context.active_object
+    brim.name = "Arcanist_Hat_Brim"
+    brim.data.materials.append(arc_hat_mat)
+    bind_to_bone(brim, arm, "Head")
+
+    bpy.ops.mesh.primitive_cone_add(vertices=18, radius1=0.115, radius2=0.015, depth=0.34, location=(0, 0.035, 1.91), rotation=(math.radians(16), 0, 0))
+    spire = bpy.context.active_object
+    spire.name = "Arcanist_Hat_Spire"
+    spire.data.materials.append(arc_hat_mat)
+    bind_to_bone(spire, arm, "Head")
+
+    bpy.ops.mesh.primitive_cone_add(vertices=12, radius1=0.032, radius2=0.003, depth=0.14, location=(0, 0.095, 2.09), rotation=(math.radians(36), 0, 0))
+    tip = bpy.context.active_object
+    tip.name = "Arcanist_Hat_Tip"
+    tip.data.materials.append(arc_hat_mat)
+    bind_to_bone(tip, arm, "Head")
+
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.112, minor_radius=0.014, major_segments=22, minor_segments=8, location=(0, 0.018, 1.775), rotation=hat_tilt)
+    band = bpy.context.active_object
+    band.name = "Arcanist_Crown_Band"
+    band.data.materials.append(arc_gold_mat)
+    bind_to_bone(band, arm, "Head")
+
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=0.024, location=(0, -0.102, 1.785))
+    gem = bpy.context.active_object
+    gem.name = "Arcanist_Crown_Gem"
+    gem.scale = (0.7, 0.5, 1.35)
+    gem.data.materials.append(arc_cyan_mat)
+    bind_to_bone(gem, arm, "Head")
+
+    # Floating Violet-Cyan Arcane Halo BEHIND back (+Y = +0.24!)
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.37, minor_radius=0.020, major_segments=32, minor_segments=10, location=(0, 0.24, 1.40), rotation=(math.radians(90), 0, 0))
+    halo = bpy.context.active_object
+    halo.name = "Arcanist_Halo"
+    halo.data.materials.append(arc_halo_mat)
+    bind_to_bone(halo, arm, "spine_03")
+
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.24, minor_radius=0.012, major_segments=24, minor_segments=8, location=(0, 0.24, 1.40), rotation=(math.radians(90), 0, 0))
+    inner_halo = bpy.context.active_object
+    inner_halo.name = "Arcanist_InnerHalo"
+    inner_halo.data.materials.append(arc_cyan_mat)
+    bind_to_bone(inner_halo, arm, "spine_03")
+
+    # 2 Glowing Shoulder Rune Orbs (spine_03)
+    for side, sname in [(1, "L"), (-1, "R")]:
+        bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=0.044, location=(0.245 * side, 0.01, 1.51))
+        orb = bpy.context.active_object
+        orb.name = f"Arcanist_RuneOrb_{sname}"
+        orb.data.materials.append(arc_cyan_mat)
+        bind_to_bone(orb, arm, "spine_03")
+
+        bpy.ops.mesh.primitive_torus_add(major_radius=0.068, minor_radius=0.008, major_segments=18, minor_segments=6, location=(0.245 * side, 0.01, 1.51), rotation=(math.radians(55), math.radians(25 * side), 0))
+        oring = bpy.context.active_object
+        oring.name = f"Arcanist_OrbRing_{sname}"
+        oring.data.materials.append(arc_gold_mat)
+        bind_to_bone(oring, arm, "spine_03")
+
+    export_glb(os.path.join(OUT_DIR, "heroes", "hero_arcanist.glb"), export_animations=False)
+
+    # --------------------------------------------------------------------------
+    # 2D. Berserker Warlord — Crimson Iron Juggernaut
+    # --------------------------------------------------------------------------
+    print("=== Building hero_berserker.glb ===")
+    clear_scene()
+    # Keep bare muscular chest, shoulders, arms & head; delete legs under pants
+    prepare_base_character(is_male=True, skin_mode="light", keep_torso_arms=True)
+    bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Modular Parts", "Male_Peasant_Legs.gltf"))
+    bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Modular Parts", "Male_Peasant_Feet.gltf"))
+    bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Outfits", "Male_Ranger.gltf"))
+    for obj in list(bpy.data.objects):
+        if obj.name in {"Male_Ranger_Body", "Male_Ranger_Legs", "Male_Ranger_Feet_Boots", "Male_Ranger_Head_Hood", "Male_Ranger_Arms", "Male_Ranger_Acc_Pauldron"}:
+            bpy.data.objects.remove(obj, do_unlink=True)
+    bpy.ops.import_scene.gltf(filepath=os.path.join(hair_dir, "Hair_Beard.gltf"))
+    bpy.ops.import_scene.gltf(filepath=os.path.join(hair_dir, "Hair_Buzzed.gltf"))
+    arm = merge_armatures_to_primary()
+
+    swap_outfit_basecolor(
+        "MI_Peasant",
+        os.path.join(outfit_tex_dir, "Peasant", "T_Peasant_2_BaseColor.png"),
+        tint_rgb=(1.35, 0.65, 0.62),
+        metallic=0.18,
+        roughness=0.58,
+    )
+    swap_outfit_basecolor(
+        "MI_Ranger",
+        os.path.join(outfit_tex_dir, "Ranger", "T_Ranger_3_BaseColor.png"),
+        tint_rgb=(1.35, 0.55, 0.50),
+        metallic=0.72,
+        roughness=0.30,
+    )
+
+    bers_iron = create_pbr_mat("M_Berserker_DarkIron", (0.16, 0.16, 0.19, 1.0), metallic=0.88, roughness=0.28)
+    bers_crimson = create_emissive_mat("M_Berserker_Crimson", (0.72, 0.08, 0.10, 1.0), (0.95, 0.12, 0.15, 1.0), 0.9, metallic=0.65, roughness=0.26)
+    bers_horn = create_pbr_mat("M_Berserker_HornBone", (0.86, 0.80, 0.66, 1.0), metallic=0.08, roughness=0.45)
+
+    # Heavy War-Belt around waist seam (pelvis, Z=0.98)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=18, radius=0.175, depth=0.12, location=(0, 0.015, 0.98))
+    wbelt = bpy.context.active_object
+    wbelt.name = "Berserker_WarBelt"
+    wbelt.scale = (1.05, 0.84, 1.0)
+    wbelt.data.materials.append(bers_iron)
+    bind_to_bone(wbelt, arm, "pelvis")
+
+    bpy.ops.mesh.primitive_cube_add(size=0.09, location=(0, -0.145, 0.98))
+    buckle = bpy.context.active_object
+    buckle.name = "Berserker_BeltSkull"
+    buckle.scale = (1.1, 0.45, 1.1)
+    buckle.data.materials.append(bers_crimson)
+    bind_to_bone(buckle, arm, "pelvis")
+
+    # Horned Iron War-Helm (Head)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=10, radius=0.112, location=(0, 0.014, 1.755))
+    hcap = bpy.context.active_object
+    hcap.name = "Berserker_WarHelm"
+    hcap.scale = (0.96, 1.12, 0.92)
+    bpy.context.view_layer.update()
+    # Trim lower half of sphere above eyes (Z >= 1.74)
+    bm = bmesh.new()
+    bm.from_mesh(hcap.data)
+    bm.verts.ensure_lookup_table()
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if (hcap.matrix_world @ v.co).z < 1.74], context='VERTS')
+    bm.to_mesh(hcap.data)
+    bm.free()
+    hcap.data.materials.append(bers_iron)
+    bind_to_bone(hcap, arm, "Head")
+
+    bpy.ops.mesh.primitive_cylinder_add(vertices=16, radius=0.114, depth=0.032, location=(0, 0.014, 1.748))
+    hbrow = bpy.context.active_object
+    hbrow.name = "Berserker_HelmRim"
+    hbrow.scale = (0.98, 1.14, 1.0)
+    hbrow.data.materials.append(bers_crimson)
+    bind_to_bone(hbrow, arm, "Head")
+
+    for side, sname in [(1, "L"), (-1, "R")]:
+        bpy.ops.mesh.primitive_cone_add(vertices=10, radius1=0.036, radius2=0.018, depth=0.11, location=(0.125 * side, 0.01, 1.79), rotation=(0, math.radians(65 * side), 0))
+        h1 = bpy.context.active_object
+        h1.name = f"Berserker_HornBase_{sname}"
+        h1.data.materials.append(bers_horn)
+        bind_to_bone(h1, arm, "Head")
+
+        bpy.ops.mesh.primitive_cone_add(vertices=10, radius1=0.020, radius2=0.003, depth=0.15, location=(0.205 * side, 0.02, 1.88), rotation=(0, math.radians(22 * side), 0))
+        h2 = bpy.context.active_object
+        h2.name = f"Berserker_HornTip_{sname}"
+        h2.data.materials.append(bers_horn)
+        bind_to_bone(h2, arm, "Head")
+
+    # Spiked Crimson-Iron Pauldrons (clavicle_l / clavicle_r)
+    for side, bname, sname in [(1, "clavicle_l", "L"), (-1, "clavicle_r", "R")]:
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=12, ring_count=8, radius=0.13, location=(0.23 * side, 0.04, 1.50))
+        sp = bpy.context.active_object
+        sp.name = f"Berserker_Pauldron_{sname}"
+        sp.scale = (1.15, 1.08, 0.85)
+        sp.rotation_euler = (0, math.radians(-18 * side), 0)
+        sp.data.materials.append(bers_iron)
+        bind_to_bone(sp, arm, bname)
+
+        for k, (dy, dz, rx, ry) in enumerate([(-0.04, 0.08, -0.3, -0.5), (0.0, 0.10, 0.0, -0.35), (0.04, 0.08, 0.3, -0.5)]):
+            bpy.ops.mesh.primitive_cone_add(vertices=6, radius1=0.022, radius2=0.002, depth=0.14, location=(0.27 * side, 0.04 + dy, 1.51 + dz), rotation=(rx, ry * side, 0))
+            spk = bpy.context.active_object
+            spk.name = f"Berserker_Spike_{sname}_{k}"
+            spk.data.materials.append(bers_crimson if k == 1 else bers_iron)
+            bind_to_bone(spk, arm, bname)
+
+    export_glb(os.path.join(OUT_DIR, "heroes", "hero_berserker.glb"), export_animations=False)
+
+if should_run("npcs"):
+    # ==========================================================================
+    # 2E. BUILD 3 DISTINCT TOWN NPCS (public/assets/models/npcs/)
+    # ==========================================================================
+    # NPC 1: Blacksmith Kaelen
+    print("=== Building npc_blacksmith.glb ===")
+    clear_scene()
+    prepare_base_character(is_male=True, skin_mode="dark")
+    bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Outfits", "Male_Peasant.gltf"))
+    bpy.ops.import_scene.gltf(filepath=os.path.join(hair_dir, "Hair_Beard.gltf"))
+    bpy.ops.import_scene.gltf(filepath=os.path.join(hair_dir, "Hair_Buzzed.gltf"))
+    arm = merge_armatures_to_primary()
+
+    apron_mat = create_pbr_mat("M_Smith_LeatherApron", (0.20, 0.10, 0.05, 1.0), metallic=0.08, roughness=0.72)
+    brass_mat = create_pbr_mat("M_Smith_Brass", (0.92, 0.68, 0.22, 1.0), metallic=0.88, roughness=0.25)
+    steel_mat = create_pbr_mat("M_Smith_Steel", (0.70, 0.74, 0.80, 1.0), metallic=0.92, roughness=0.24)
+
+    # Heavy Leather Forge Apron (bib + skirt)
+    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0, -0.125, 1.24))
+    bib = bpy.context.active_object
+    bib.name = "Blacksmith_Apron_Bib"
+    bib.scale = (0.28, 0.035, 0.36)
+    bib.data.materials.append(apron_mat)
+    bind_to_bone(bib, arm, "spine_02")
+
+    bpy.ops.mesh.primitive_cylinder_add(vertices=12, radius=0.17, depth=0.38, location=(0, -0.02, 0.86))
+    skirt = bpy.context.active_object
+    skirt.name = "Blacksmith_Apron_Skirt"
+    skirt.scale = (1.02, 0.86, 1.0)
+    skirt.data.materials.append(apron_mat)
+    bind_to_bone(skirt, arm, "pelvis")
+
+    bpy.ops.mesh.primitive_cube_add(size=0.07, location=(0, -0.155, 1.04))
+    abuckle = bpy.context.active_object
+    abuckle.name = "Blacksmith_Belt_Buckle"
+    abuckle.scale = (1.3, 0.35, 0.8)
+    abuckle.data.materials.append(brass_mat)
+    bind_to_bone(abuckle, arm, "pelvis")
+
+    # Forge Hammer strapped at right hip
+    bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=0.016, depth=0.34, location=(-0.21, -0.02, 0.90), rotation=(math.radians(15), 0, 0))
+    h_handle = bpy.context.active_object
+    h_handle.name = "Blacksmith_Hammer_Handle"
+    h_handle.data.materials.append(apron_mat)
+    bind_to_bone(h_handle, arm, "pelvis")
+
+    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(-0.21, -0.06, 1.04), rotation=(math.radians(15), 0, 0))
+    h_head = bpy.context.active_object
+    h_head.name = "Blacksmith_Hammer_Head"
+    h_head.scale = (0.065, 0.13, 0.065)
+    h_head.data.materials.append(steel_mat)
+    bind_to_bone(h_head, arm, "pelvis")
+
+    export_glb(os.path.join(OUT_DIR, "npcs", "npc_blacksmith.glb"), export_animations=False)
+
+    # NPC 2: High Cleric Seraphina
+    print("=== Building npc_cleric.glb ===")
+    clear_scene()
+    prepare_base_character(is_male=False, skin_mode="light")
+    bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Outfits", "Female_Peasant.gltf"))
+    bpy.ops.import_scene.gltf(filepath=os.path.join(hair_dir, "Hair_Long.gltf"))
+    arm = merge_armatures_to_primary()
+
+    swap_outfit_basecolor(
+        "MI_Peasant",
+        os.path.join(outfit_tex_dir, "Peasant", "T_Peasant_2_BaseColor.png"),
+        tint_rgb=(1.45, 1.38, 1.22),
+        metallic=0.10,
+        roughness=0.52,
+    )
+    cleric_gold = create_emissive_mat("M_Cleric_SunGold", (1.0, 0.82, 0.28, 1.0), (1.0, 0.72, 0.20, 1.0), 1.4, metallic=0.95, roughness=0.18)
+    cleric_halo = create_emissive_mat("M_Cleric_SunGem", (1.0, 0.94, 0.55, 1.0), (1.0, 0.90, 0.45, 1.0), 4.0, metallic=0.2, roughness=0.15)
+
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.105, minor_radius=0.011, major_segments=24, minor_segments=8, location=(0, 0.01, 1.72), rotation=(math.radians(8), 0, 0))
+    circlet = bpy.context.active_object
+    circlet.name = "Cleric_Golden_Circlet"
+    circlet.data.materials.append(cleric_gold)
+    bind_to_bone(circlet, arm, "Head")
+
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=0.022, location=(0, -0.095, 1.73))
+    sungem = bpy.context.active_object
+    sungem.name = "Cleric_Sun_Gem"
+    sungem.scale = (0.8, 0.4, 1.2)
+    sungem.data.materials.append(cleric_halo)
+    bind_to_bone(sungem, arm, "Head")
+
+    for side, sname in [(1, "L"), (-1, "R")]:
+        bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0.075 * side, -0.115, 1.26), rotation=(math.radians(-6), 0, 0))
+        stole = bpy.context.active_object
+        stole.name = f"Cleric_Stole_{sname}"
+        stole.scale = (0.045, 0.018, 0.34)
+        stole.data.materials.append(cleric_gold)
+        bind_to_bone(stole, arm, "spine_02")
+
+    export_glb(os.path.join(OUT_DIR, "npcs", "npc_cleric.glb"), export_animations=False)
+
+    # NPC 3: Lorekeeper Aldous
+    print("=== Building npc_scholar.glb ===")
+    clear_scene()
+    prepare_base_character(is_male=True, skin_mode="light")
+    bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Outfits", "Male_Ranger.gltf"))
+    bpy.ops.import_scene.gltf(filepath=os.path.join(hair_dir, "Hair_Beard.gltf"))
+    bpy.ops.import_scene.gltf(filepath=os.path.join(hair_dir, "Hair_SimpleParted.gltf"))
+    remove_objs_by_prefix(["Male_Ranger_Head_Hood"])
+    arm = merge_armatures_to_primary()
+
+    swap_outfit_basecolor(
+        "MI_Ranger",
+        os.path.join(outfit_tex_dir, "Ranger", "T_Ranger_3_BaseColor.png"),
+        tint_rgb=(0.95, 1.02, 1.32),
+        metallic=0.22,
+        roughness=0.55,
+    )
+    tome_leather = create_pbr_mat("M_Scholar_Tome", (0.36, 0.14, 0.12, 1.0), metallic=0.1, roughness=0.58)
+    tome_gold = create_emissive_mat("M_Scholar_Brass", (0.95, 0.78, 0.32, 1.0), (0.35, 0.75, 1.0, 1.0), 0.9, metallic=0.88, roughness=0.22)
+
+    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0.19, 0.01, 0.96), rotation=(0, math.radians(10), 0))
+    tome = bpy.context.active_object
+    tome.name = "Scholar_Tome"
+    tome.scale = (0.055, 0.14, 0.19)
+    tome.data.materials.append(tome_leather)
+    bind_to_bone(tome, arm, "pelvis")
+
+    bpy.ops.mesh.primitive_cylinder_add(vertices=12, radius=0.025, depth=0.26, location=(-0.18, 0.03, 0.98), rotation=(math.radians(28), 0, 0))
+    scroll = bpy.context.active_object
+    scroll.name = "Scholar_ScrollCase"
+    scroll.data.materials.append(tome_gold)
+    bind_to_bone(scroll, arm, "pelvis")
+
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.105, minor_radius=0.008, major_segments=22, minor_segments=6, location=(0, 0.012, 1.745), rotation=(math.radians(6), 0, 0))
+    scirc = bpy.context.active_object
+    scirc.name = "Scholar_Circlet"
+    scirc.data.materials.append(tome_gold)
+    bind_to_bone(scirc, arm, "Head")
+
+    export_glb(os.path.join(OUT_DIR, "npcs", "npc_scholar.glb"), export_animations=False)
 
 # ==============================================================================
 # 3. BUILD BESTIARY, ALIENS & CUSTOM BLENDER RAID BOSS
@@ -662,155 +1256,156 @@ def build_alien_animations(arm, lift_z):
         if hasattr(st, "action_slot") and hasattr(act, "slots") and len(act.slots) > 0:
             st.action_slot = act.slots[0]
 
-# 3A. Imp
-print("=== Building monster_imp.glb ===")
-clear_scene()
-bpy.ops.import_scene.gltf(filepath=os.path.join(bestiary_dir, "Exports", "GLB (Godot-Unreal)", "Imp.glb"))
-arm = merge_armatures_to_primary()
-bake_retargeted_monster_clips(arm)
-export_glb(os.path.join(OUT_DIR, "monsters", "monster_imp.glb"), export_animations=True, strip_loc_except=("pelvis",))
-
-# 3B. Frost-Rift Imp
-print("=== Building monster_imp_frost.glb ===")
-clear_scene()
-bpy.ops.import_scene.gltf(filepath=os.path.join(bestiary_dir, "Exports", "GLB (Godot-Unreal)", "Imp.glb"))
-arm = merge_armatures_to_primary()
-for img in bpy.data.images:
-    if "BaseColor" in img.name:
-        img.filepath = os.path.join(bestiary_dir, "Textures", "T_Imp_BaseColor_2.png")
-        img.reload()
-cryo_mat = create_emissive_mat("M_Cryo_Crystal", (0.1, 0.85, 1.0, 1.0), (0.1, 0.9, 1.0, 1.0), 4.0, metallic=0.2, roughness=0.1)
-for idx, (ox, oz, rx, ry) in enumerate([(-0.12, 0.98, 0.45, -0.3), (0.12, 0.98, 0.45, 0.3), (0.0, 1.12, 0.55, 0.0)]):
-    bpy.ops.mesh.primitive_cone_add(vertices=5, radius1=0.055, radius2=0.0, depth=0.28, location=(ox, 0.11, oz), rotation=(rx, ry, 0))
-    spike = bpy.context.active_object
-    spike.name = f"CryoSpike_{idx}"
-    spike.data.materials.append(cryo_mat)
-    spike.parent = arm
-    vg = spike.vertex_groups.new(name="spine_02")
-    vg.add([v.index for v in spike.data.vertices], 1.0, 'REPLACE')
-    mod = spike.modifiers.new(name="Armature", type='ARMATURE')
-    mod.object = arm
-bake_retargeted_monster_clips(arm)
-export_glb(os.path.join(OUT_DIR, "monsters", "monster_imp_frost.glb"), export_animations=True, strip_loc_except=("pelvis",))
-
-# 3C. Puglin
-print("=== Building monster_puglin.glb ===")
-clear_scene()
-bpy.ops.import_scene.gltf(filepath=os.path.join(bestiary_dir, "Exports", "GLB (Godot-Unreal)", "Puglin.glb"))
-arm = merge_armatures_to_primary()
-bake_retargeted_monster_clips(arm)
-export_glb(os.path.join(OUT_DIR, "monsters", "monster_puglin.glb"), export_animations=True, strip_loc_except=("pelvis",))
-
-# 3D. Puglin Warlord Chieftain
-print("=== Building monster_puglin_chieftain.glb ===")
-clear_scene()
-bpy.ops.import_scene.gltf(filepath=os.path.join(bestiary_dir, "Exports", "GLB (Godot-Unreal)", "Puglin.glb"))
-arm = merge_armatures_to_primary()
-for img in bpy.data.images:
-    if "BaseColor" in img.name:
-        img.filepath = os.path.join(bestiary_dir, "Textures", "T_Puglin_BaseColor_3.png")
-        img.reload()
-crown_mat = create_emissive_mat("M_Warlord_Crown", (1.0, 0.78, 0.15, 1.0), (1.0, 0.45, 0.05, 1.0), 2.5, metallic=0.95, roughness=0.18)
-bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=0.15, depth=0.10, location=(0, -0.22, 0.90))
-crown = bpy.context.active_object
-crown.name = "Warlord_Crown"
-crown.data.materials.append(crown_mat)
-crown.parent = arm
-vg = crown.vertex_groups.new(name="Head")
-vg.add([v.index for v in crown.data.vertices], 1.0, 'REPLACE')
-mod = crown.modifiers.new(name="Armature", type='ARMATURE')
-mod.object = arm
-bake_retargeted_monster_clips(arm)
-export_glb(os.path.join(OUT_DIR, "monsters", "monster_puglin_chieftain.glb"), export_animations=True, strip_loc_except=("pelvis",))
-
-# 3E. Sci-Fi Rift Aliens
-scifi_dir = os.path.join(ROOT, "Modular SciFi MegaKit[Standard]", "Modular SciFi MegaKit[Standard]")
-for alien_file, out_name, emit_col, lift_z in [
-    ("Alien_Scolitex.gltf", "monster_alien_scolitex.glb", (0.1, 1.0, 0.55, 1.0), 1.40),
-    ("Alien_Oculichrysalis.gltf", "monster_alien_oculichrysalis.glb", (1.0, 0.15, 0.35, 1.0), 1.10),
-    ("Alien_Cyclop.gltf", "monster_alien_cyclop.glb", (0.15, 0.75, 1.0, 1.0), 1.15),
-]:
-    print(f"=== Building {out_name} ===")
+if should_run("monsters"):
+    # 3A. Imp
+    print("=== Building monster_imp.glb ===")
     clear_scene()
-    bpy.ops.import_scene.gltf(filepath=os.path.join(scifi_dir, "glTF", "Aliens", alien_file))
-    remove_icospheres()
-    arm = next(o for o in bpy.data.objects if o.type == 'ARMATURE')
-    arm.location.z = lift_z
-    build_alien_animations(arm, lift_z)
-    for mat in bpy.data.materials:
-        if mat.use_nodes:
-            bsdf = mat.node_tree.nodes.get("Principled BSDF")
-            if bsdf:
-                if "Eye" in mat.name or "Light" in mat.name:
-                    if "Emission Color" in bsdf.inputs:
-                        bsdf.inputs["Emission Color"].default_value = emit_col
-                    if "Emission Strength" in bsdf.inputs:
-                        bsdf.inputs["Emission Strength"].default_value = 6.0
-                else:
-                    bsdf.inputs["Metallic"].default_value = 0.65
-                    bsdf.inputs["Roughness"].default_value = 0.28
-    export_glb(os.path.join(OUT_DIR, "monsters", out_name), export_animations=True, strip_loc_except=None)
+    bpy.ops.import_scene.gltf(filepath=os.path.join(bestiary_dir, "Exports", "GLB (Godot-Unreal)", "Imp.glb"))
+    arm = merge_armatures_to_primary()
+    bake_retargeted_monster_clips(arm)
+    export_glb(os.path.join(OUT_DIR, "monsters", "monster_imp.glb"), export_animations=True, strip_loc_except=("pelvis",))
 
-# 3F. CUSTOM BLENDER RAID BOSS: Malakor, The Chrono-Fused Archon
-print("=== Building Custom Blender Raid Boss: boss_chrono_archon.glb ===")
-clear_scene()
-bpy.ops.import_scene.gltf(filepath=os.path.join(base_char_dir, "Superhero_Male_FullBody.gltf"))
-bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Modular Parts", "Male_Ranger_Acc_Pauldron.gltf"))
-bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Modular Parts", "Male_Ranger_Feet_Boots.gltf"))
-bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Modular Parts", "Male_Ranger_Arms.gltf"))
-arm = merge_armatures_to_primary()
+    # 3B. Frost-Rift Imp
+    print("=== Building monster_imp_frost.glb ===")
+    clear_scene()
+    bpy.ops.import_scene.gltf(filepath=os.path.join(bestiary_dir, "Exports", "GLB (Godot-Unreal)", "Imp.glb"))
+    arm = merge_armatures_to_primary()
+    for img in bpy.data.images:
+        if "BaseColor" in img.name:
+            img.filepath = os.path.join(bestiary_dir, "Textures", "T_Imp_BaseColor_2.png")
+            img.reload()
+    cryo_mat = create_emissive_mat("M_Cryo_Crystal", (0.1, 0.85, 1.0, 1.0), (0.1, 0.9, 1.0, 1.0), 4.0, metallic=0.2, roughness=0.1)
+    for idx, (ox, oz, rx, ry) in enumerate([(-0.12, 0.98, 0.45, -0.3), (0.12, 0.98, 0.45, 0.3), (0.0, 1.12, 0.55, 0.0)]):
+        bpy.ops.mesh.primitive_cone_add(vertices=5, radius1=0.055, radius2=0.0, depth=0.28, location=(ox, 0.11, oz), rotation=(rx, ry, 0))
+        spike = bpy.context.active_object
+        spike.name = f"CryoSpike_{idx}"
+        spike.data.materials.append(cryo_mat)
+        spike.parent = arm
+        vg = spike.vertex_groups.new(name="spine_02")
+        vg.add([v.index for v in spike.data.vertices], 1.0, 'REPLACE')
+        mod = spike.modifiers.new(name="Armature", type='ARMATURE')
+        mod.object = arm
+    bake_retargeted_monster_clips(arm)
+    export_glb(os.path.join(OUT_DIR, "monsters", "monster_imp_frost.glb"), export_animations=True, strip_loc_except=("pelvis",))
 
-boss_armor_mat = create_emissive_mat("M_Archon_Obsidian", (0.08, 0.05, 0.14, 1.0), (0.45, 0.1, 0.95, 1.0), 1.8, metallic=0.92, roughness=0.2)
-boss_gold_mat = create_emissive_mat("M_Archon_Gold", (1.0, 0.78, 0.22, 1.0), (1.0, 0.55, 0.1, 1.0), 3.2, metallic=0.98, roughness=0.15)
-boss_core_mat = create_emissive_mat("M_Archon_Core", (0.2, 0.95, 1.0, 1.0), (0.2, 0.95, 1.0, 1.0), 8.0, metallic=0.1, roughness=0.1)
+    # 3C. Puglin
+    print("=== Building monster_puglin.glb ===")
+    clear_scene()
+    bpy.ops.import_scene.gltf(filepath=os.path.join(bestiary_dir, "Exports", "GLB (Godot-Unreal)", "Puglin.glb"))
+    arm = merge_armatures_to_primary()
+    bake_retargeted_monster_clips(arm)
+    export_glb(os.path.join(OUT_DIR, "monsters", "monster_puglin.glb"), export_animations=True, strip_loc_except=("pelvis",))
 
-for obj in bpy.data.objects:
-    if obj.type == 'MESH' and "superhero" in obj.name.lower():
-        obj.data.materials.clear()
-        obj.data.materials.append(boss_armor_mat)
+    # 3D. Puglin Warlord Chieftain
+    print("=== Building monster_puglin_chieftain.glb ===")
+    clear_scene()
+    bpy.ops.import_scene.gltf(filepath=os.path.join(bestiary_dir, "Exports", "GLB (Godot-Unreal)", "Puglin.glb"))
+    arm = merge_armatures_to_primary()
+    for img in bpy.data.images:
+        if "BaseColor" in img.name:
+            img.filepath = os.path.join(bestiary_dir, "Textures", "T_Puglin_BaseColor_3.png")
+            img.reload()
+    crown_mat = create_emissive_mat("M_Warlord_Crown", (1.0, 0.78, 0.15, 1.0), (1.0, 0.45, 0.05, 1.0), 2.5, metallic=0.95, roughness=0.18)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=0.15, depth=0.10, location=(0, -0.22, 0.90))
+    crown = bpy.context.active_object
+    crown.name = "Warlord_Crown"
+    crown.data.materials.append(crown_mat)
+    crown.parent = arm
+    vg = crown.vertex_groups.new(name="Head")
+    vg.add([v.index for v in crown.data.vertices], 1.0, 'REPLACE')
+    mod = crown.modifiers.new(name="Armature", type='ARMATURE')
+    mod.object = arm
+    bake_retargeted_monster_clips(arm)
+    export_glb(os.path.join(OUT_DIR, "monsters", "monster_puglin_chieftain.glb"), export_animations=True, strip_loc_except=("pelvis",))
 
-bpy.ops.mesh.primitive_cone_add(vertices=6, radius1=0.16, radius2=0.24, depth=0.22, location=(0, 0, 1.78))
-helm = bpy.context.active_object
-helm.name = "Archon_Crown"
-helm.data.materials.append(boss_gold_mat)
-helm.parent = arm
-vg = helm.vertex_groups.new(name="Head")
-vg.add([v.index for v in helm.data.vertices], 1.0, 'REPLACE')
-mod = helm.modifiers.new(name="Armature", type='ARMATURE')
-mod.object = arm
+    # 3E. Sci-Fi Rift Aliens
+    scifi_dir_m = os.path.join(ROOT, "Modular SciFi MegaKit[Standard]", "Modular SciFi MegaKit[Standard]")
+    for alien_file, out_name, emit_col, lift_z in [
+        ("Alien_Scolitex.gltf", "monster_alien_scolitex.glb", (0.1, 1.0, 0.55, 1.0), 1.40),
+        ("Alien_Oculichrysalis.gltf", "monster_alien_oculichrysalis.glb", (1.0, 0.15, 0.35, 1.0), 1.10),
+        ("Alien_Cyclop.gltf", "monster_alien_cyclop.glb", (0.15, 0.75, 1.0, 1.0), 1.15),
+    ]:
+        print(f"=== Building {out_name} ===")
+        clear_scene()
+        bpy.ops.import_scene.gltf(filepath=os.path.join(scifi_dir_m, "glTF", "Aliens", alien_file))
+        remove_icospheres()
+        arm = next(o for o in bpy.data.objects if o.type == 'ARMATURE')
+        arm.location.z = lift_z
+        build_alien_animations(arm, lift_z)
+        for mat in bpy.data.materials:
+            if mat.use_nodes:
+                bsdf = mat.node_tree.nodes.get("Principled BSDF")
+                if bsdf:
+                    if "Eye" in mat.name or "Light" in mat.name:
+                        if "Emission Color" in bsdf.inputs:
+                            bsdf.inputs["Emission Color"].default_value = emit_col
+                        if "Emission Strength" in bsdf.inputs:
+                            bsdf.inputs["Emission Strength"].default_value = 6.0
+                    else:
+                        bsdf.inputs["Metallic"].default_value = 0.65
+                        bsdf.inputs["Roughness"].default_value = 0.28
+        export_glb(os.path.join(OUT_DIR, "monsters", out_name), export_animations=True, strip_loc_except=None)
 
-bpy.ops.mesh.primitive_torus_add(major_radius=0.62, minor_radius=0.035, major_segments=36, minor_segments=12, location=(0, 0.24, 1.48), rotation=(math.radians(90), 0, 0))
-boss_halo = bpy.context.active_object
-boss_halo.name = "Archon_Chrono_Halo"
-boss_halo.data.materials.append(boss_gold_mat)
+    # 3F. CUSTOM BLENDER RAID BOSS: Malakor, The Chrono-Fused Archon
+    print("=== Building Custom Blender Raid Boss: boss_chrono_archon.glb ===")
+    clear_scene()
+    bpy.ops.import_scene.gltf(filepath=os.path.join(base_char_dir, "Superhero_Male_FullBody.gltf"))
+    bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Modular Parts", "Male_Ranger_Acc_Pauldron.gltf"))
+    bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Modular Parts", "Male_Ranger_Feet_Boots.gltf"))
+    bpy.ops.import_scene.gltf(filepath=os.path.join(outfits_dir, "Modular Parts", "Male_Ranger_Arms.gltf"))
+    arm = merge_armatures_to_primary()
 
-wing_objs = [boss_halo]
-for i in range(6):
-    side = 1 if i >= 3 else -1
-    ang = math.radians(25 + (i % 3) * 25)
-    wx = math.cos(ang) * 0.85 * side
-    wz = 1.25 + math.sin(ang) * 0.55
-    bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=0.07, radius2=0.0, depth=0.65, location=(wx, 0.28, wz), rotation=(0, math.radians(-45 * side), 0))
-    w = bpy.context.active_object
-    w.name = f"Archon_Wing_{i}"
-    w.data.materials.append(boss_core_mat if i % 2 == 0 else boss_gold_mat)
-    wing_objs.append(w)
+    boss_armor_mat = create_emissive_mat("M_Archon_Obsidian", (0.08, 0.05, 0.14, 1.0), (0.45, 0.1, 0.95, 1.0), 1.8, metallic=0.92, roughness=0.2)
+    boss_gold_mat = create_emissive_mat("M_Archon_Gold", (1.0, 0.78, 0.22, 1.0), (1.0, 0.55, 0.1, 1.0), 3.2, metallic=0.98, roughness=0.15)
+    boss_core_mat = create_emissive_mat("M_Archon_Core", (0.2, 0.95, 1.0, 1.0), (0.2, 0.95, 1.0, 1.0), 8.0, metallic=0.1, roughness=0.1)
 
-bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=0.11, location=(0, -0.14, 1.32))
-core = bpy.context.active_object
-core.name = "Archon_Chest_Core"
-core.data.materials.append(boss_core_mat)
-wing_objs.append(core)
+    for obj in bpy.data.objects:
+        if obj.type == 'MESH' and "superhero" in obj.name.lower():
+            obj.data.materials.clear()
+            obj.data.materials.append(boss_armor_mat)
 
-for wo in wing_objs:
-    wo.parent = arm
-    vg = wo.vertex_groups.new(name="spine_03")
-    vg.add([v.index for v in wo.data.vertices], 1.0, 'REPLACE')
-    mod = wo.modifiers.new(name="Armature", type='ARMATURE')
+    bpy.ops.mesh.primitive_cone_add(vertices=6, radius1=0.16, radius2=0.24, depth=0.22, location=(0, 0, 1.78))
+    helm = bpy.context.active_object
+    helm.name = "Archon_Crown"
+    helm.data.materials.append(boss_gold_mat)
+    helm.parent = arm
+    vg = helm.vertex_groups.new(name="Head")
+    vg.add([v.index for v in helm.data.vertices], 1.0, 'REPLACE')
+    mod = helm.modifiers.new(name="Armature", type='ARMATURE')
     mod.object = arm
 
-bake_retargeted_monster_clips(arm)
-export_glb(os.path.join(OUT_DIR, "monsters", "boss_chrono_archon.glb"), export_animations=True, strip_loc_except=("pelvis",))
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.62, minor_radius=0.035, major_segments=36, minor_segments=12, location=(0, 0.24, 1.48), rotation=(math.radians(90), 0, 0))
+    boss_halo = bpy.context.active_object
+    boss_halo.name = "Archon_Chrono_Halo"
+    boss_halo.data.materials.append(boss_gold_mat)
+
+    wing_objs = [boss_halo]
+    for i in range(6):
+        side = 1 if i >= 3 else -1
+        ang = math.radians(25 + (i % 3) * 25)
+        wx = math.cos(ang) * 0.85 * side
+        wz = 1.25 + math.sin(ang) * 0.55
+        bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=0.07, radius2=0.0, depth=0.65, location=(wx, 0.28, wz), rotation=(0, math.radians(-45 * side), 0))
+        w = bpy.context.active_object
+        w.name = f"Archon_Wing_{i}"
+        w.data.materials.append(boss_core_mat if i % 2 == 0 else boss_gold_mat)
+        wing_objs.append(w)
+
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=0.11, location=(0, -0.14, 1.32))
+    core = bpy.context.active_object
+    core.name = "Archon_Chest_Core"
+    core.data.materials.append(boss_core_mat)
+    wing_objs.append(core)
+
+    for wo in wing_objs:
+        wo.parent = arm
+        vg = wo.vertex_groups.new(name="spine_03")
+        vg.add([v.index for v in wo.data.vertices], 1.0, 'REPLACE')
+        mod = wo.modifiers.new(name="Armature", type='ARMATURE')
+        mod.object = arm
+
+    bake_retargeted_monster_clips(arm)
+    export_glb(os.path.join(OUT_DIR, "monsters", "boss_chrono_archon.glb"), export_animations=True, strip_loc_except=("pelvis",))
 
 # ==============================================================================
 # 4. EXPORT 12 WEAPONS & SHIELDS FROM BLEND FILES
@@ -838,30 +1433,32 @@ pbr_presets = {
     "White": ((0.92, 0.94, 0.98, 1.0), 0.1, 0.4, (0.2, 0.2, 0.3, 1.0), 0.3),
 }
 
-for wname in weapons_list:
-    blend_path = os.path.join(ROOT, "Weapons", "Blends", f"{wname}.blend")
-    if os.path.exists(blend_path):
-        bpy.ops.wm.open_mainfile(filepath=blend_path)
-        for obj in list(bpy.data.objects):
-            if obj.type not in {'MESH'}:
-                bpy.data.objects.remove(obj, do_unlink=True)
-        for mat in bpy.data.materials:
-            mat.use_nodes = True
-            bsdf = mat.node_tree.nodes.get("Principled BSDF")
-            if bsdf and mat.name in pbr_presets:
-                bc, met, rgh, emc, ems = pbr_presets[mat.name]
-                bsdf.inputs["Base Color"].default_value = bc
-                bsdf.inputs["Metallic"].default_value = met
-                bsdf.inputs["Roughness"].default_value = rgh
-                if "Emission Color" in bsdf.inputs:
-                    bsdf.inputs["Emission Color"].default_value = emc
-                if "Emission Strength" in bsdf.inputs:
-                    bsdf.inputs["Emission Strength"].default_value = ems
-        export_glb(os.path.join(OUT_DIR, "weapons", f"{wname}.glb"), export_animations=False)
+if should_run("weapons"):
+    for wname in weapons_list:
+        blend_path = os.path.join(ROOT, "Weapons", "Blends", f"{wname}.blend")
+        if os.path.exists(blend_path):
+            bpy.ops.wm.open_mainfile(filepath=blend_path)
+            for obj in list(bpy.data.objects):
+                if obj.type not in {'MESH'}:
+                    bpy.data.objects.remove(obj, do_unlink=True)
+            for mat in bpy.data.materials:
+                mat.use_nodes = True
+                bsdf = mat.node_tree.nodes.get("Principled BSDF")
+                if bsdf and mat.name in pbr_presets:
+                    bc, met, rgh, emc, ems = pbr_presets[mat.name]
+                    bsdf.inputs["Base Color"].default_value = bc
+                    bsdf.inputs["Metallic"].default_value = met
+                    bsdf.inputs["Roughness"].default_value = rgh
+                    if "Emission Color" in bsdf.inputs:
+                        bsdf.inputs["Emission Color"].default_value = emc
+                    if "Emission Strength" in bsdf.inputs:
+                        bsdf.inputs["Emission Strength"].default_value = ems
+            export_glb(os.path.join(OUT_DIR, "weapons", f"{wname}.glb"), export_animations=False)
 
 # ==============================================================================
 # 5. EXPORT ENVIRONMENT PROPS & CUSTOM BLENDER CENTERPIECE STRUCTURES
 # ==============================================================================
+scifi_dir = os.path.join(ROOT, "Modular SciFi MegaKit[Standard]", "Modular SciFi MegaKit[Standard]")
 fantasy_gltf_dir = os.path.join(ROOT, "Fantasy Props MegaKit[Standard]", "Exports", "glTF")
 village_gltf_dir = os.path.join(ROOT, "Medieval Village MegaKit[Standard]", "Medieval Village MegaKit[Standard]", "glTF")
 scifi_tex_dir = os.path.join(scifi_dir, "Textures")
@@ -983,69 +1580,70 @@ def optimize_scene_for_static_prop(max_dim=256):
         if img not in used_images:
             bpy.data.images.remove(img)
 
-for src_path, out_name, tex_dirs in prop_jobs:
-    if os.path.exists(src_path):
-        clear_scene()
-        bpy.ops.import_scene.gltf(filepath=src_path)
-        remove_icospheres()
-        relink_missing_textures(tex_dirs)
-        optimize_scene_for_static_prop(256)
-        export_glb(os.path.join(OUT_DIR, "props", out_name), export_animations=False, max_tex=256)
+if should_run("props"):
+    for src_path, out_name, tex_dirs in prop_jobs:
+        if os.path.exists(src_path):
+            clear_scene()
+            bpy.ops.import_scene.gltf(filepath=src_path)
+            remove_icospheres()
+            relink_missing_textures(tex_dirs)
+            optimize_scene_for_static_prop(256)
+            export_glb(os.path.join(OUT_DIR, "props", out_name), export_animations=False, max_tex=256)
 
-# 5B. Custom Blender Centerpiece 1: Astral Co-Op Rift Portal (prop_astral_portal.glb)
-print("=== Building Custom Blender Astral Portal: prop_astral_portal.glb ===")
-clear_scene()
-col_path = os.path.join(scifi_dir, "glTF", "Columns", "Column_Astra.gltf")
-bpy.ops.import_scene.gltf(filepath=col_path)
-for obj in bpy.context.selected_objects:
-    obj.location.x -= 1.85
-bpy.ops.import_scene.gltf(filepath=col_path)
-for obj in bpy.context.selected_objects:
-    obj.location.x += 1.85
-relink_missing_textures([scifi_tex_dir])
-
-ped_mat = create_emissive_mat("M_Portal_Obsidian", (0.09, 0.08, 0.15, 1.0), (0.2, 0.05, 0.4, 1.0), 0.6, metallic=0.8, roughness=0.3)
-ring_mat = create_emissive_mat("M_Portal_GoldRing", (1.0, 0.78, 0.25, 1.0), (1.0, 0.6, 0.1, 1.0), 3.0, metallic=0.95, roughness=0.15)
-vortex_mat = create_emissive_mat("M_Portal_Vortex", (0.15, 0.85, 1.0, 1.0), (0.35, 0.65, 1.0, 1.0), 6.5, metallic=0.1, roughness=0.1)
-
-bpy.ops.mesh.primitive_cylinder_add(vertices=12, radius=2.6, depth=0.28, location=(0, 0, 0.14))
-bpy.context.active_object.data.materials.append(ped_mat)
-
-bpy.ops.mesh.primitive_torus_add(major_radius=1.65, minor_radius=0.12, major_segments=32, minor_segments=12, location=(0, 0, 2.15), rotation=(math.radians(90), 0, 0))
-bpy.context.active_object.data.materials.append(ring_mat)
-
-bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=1.52, depth=0.06, location=(0, 0, 2.15), rotation=(math.radians(90), 0, 0))
-bpy.context.active_object.data.materials.append(vortex_mat)
-
-optimize_scene_for_static_prop(256)
-export_glb(os.path.join(OUT_DIR, "props", "prop_astral_portal.glb"), export_animations=False, max_tex=256)
-
-# 5C. Custom Blender Centerpiece 2: Sanctuary Revival & Blessing Shrine (prop_revive_shrine.glb)
-print("=== Building Custom Blender Sanctuary Shrine: prop_revive_shrine.glb ===")
-clear_scene()
-chalice_path = os.path.join(fantasy_gltf_dir, "Chalice.gltf")
-if os.path.exists(chalice_path):
-    bpy.ops.import_scene.gltf(filepath=chalice_path)
+    # 5B. Custom Blender Centerpiece 1: Astral Co-Op Rift Portal (prop_astral_portal.glb)
+    print("=== Building Custom Blender Astral Portal: prop_astral_portal.glb ===")
+    clear_scene()
+    col_path = os.path.join(scifi_dir, "glTF", "Columns", "Column_Astra.gltf")
+    bpy.ops.import_scene.gltf(filepath=col_path)
     for obj in bpy.context.selected_objects:
-        obj.location = (0, 0, 1.05)
-        obj.scale = (1.8, 1.8, 1.8)
-relink_missing_textures([fantasy_gltf_dir])
+        obj.location.x -= 1.85
+    bpy.ops.import_scene.gltf(filepath=col_path)
+    for obj in bpy.context.selected_objects:
+        obj.location.x += 1.85
+    relink_missing_textures([scifi_tex_dir])
 
-shrine_stone = create_emissive_mat("M_Shrine_Stone", (0.24, 0.26, 0.32, 1.0), (0.05, 0.25, 0.35, 1.0), 0.4, metallic=0.3, roughness=0.6)
-shrine_crystal = create_emissive_mat("M_Shrine_Crystal", (0.2, 1.0, 0.75, 1.0), (0.2, 1.0, 0.75, 1.0), 7.0, metallic=0.2, roughness=0.1)
-shrine_gold = create_emissive_mat("M_Shrine_GoldRing", (1.0, 0.78, 0.25, 1.0), (1.0, 0.6, 0.1, 1.0), 3.0, metallic=0.95, roughness=0.15)
+    ped_mat = create_emissive_mat("M_Portal_Obsidian", (0.09, 0.08, 0.15, 1.0), (0.2, 0.05, 0.4, 1.0), 0.6, metallic=0.8, roughness=0.3)
+    ring_mat = create_emissive_mat("M_Portal_GoldRing", (1.0, 0.78, 0.25, 1.0), (1.0, 0.6, 0.1, 1.0), 3.0, metallic=0.95, roughness=0.15)
+    vortex_mat = create_emissive_mat("M_Portal_Vortex", (0.15, 0.85, 1.0, 1.0), (0.35, 0.65, 1.0, 1.0), 6.5, metallic=0.1, roughness=0.1)
 
-bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=1.25, depth=0.25, location=(0, 0, 0.125))
-bpy.context.active_object.data.materials.append(shrine_stone)
-bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=0.75, depth=0.8, location=(0, 0, 0.65))
-bpy.context.active_object.data.materials.append(shrine_stone)
-bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=0.32, location=(0, 0, 2.15))
-crys = bpy.context.active_object
-crys.scale = (0.75, 0.75, 1.45)
-crys.data.materials.append(shrine_crystal)
-bpy.ops.mesh.primitive_torus_add(major_radius=0.58, minor_radius=0.03, major_segments=24, minor_segments=10, location=(0, 0, 2.15), rotation=(math.radians(35), math.radians(20), 0))
-bpy.context.active_object.data.materials.append(shrine_gold)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=12, radius=2.6, depth=0.28, location=(0, 0, 0.14))
+    bpy.context.active_object.data.materials.append(ped_mat)
 
-optimize_scene_for_static_prop(256)
-export_glb(os.path.join(OUT_DIR, "props", "prop_revive_shrine.glb"), export_animations=False, max_tex=256)
+    bpy.ops.mesh.primitive_torus_add(major_radius=1.65, minor_radius=0.12, major_segments=32, minor_segments=12, location=(0, 0, 2.15), rotation=(math.radians(90), 0, 0))
+    bpy.context.active_object.data.materials.append(ring_mat)
+
+    bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=1.52, depth=0.06, location=(0, 0, 2.15), rotation=(math.radians(90), 0, 0))
+    bpy.context.active_object.data.materials.append(vortex_mat)
+
+    optimize_scene_for_static_prop(256)
+    export_glb(os.path.join(OUT_DIR, "props", "prop_astral_portal.glb"), export_animations=False, max_tex=256)
+
+    # 5C. Custom Blender Centerpiece 2: Sanctuary Revival & Blessing Shrine (prop_revive_shrine.glb)
+    print("=== Building Custom Blender Sanctuary Shrine: prop_revive_shrine.glb ===")
+    clear_scene()
+    chalice_path = os.path.join(fantasy_gltf_dir, "Chalice.gltf")
+    if os.path.exists(chalice_path):
+        bpy.ops.import_scene.gltf(filepath=chalice_path)
+        for obj in bpy.context.selected_objects:
+            obj.location = (0, 0, 1.05)
+            obj.scale = (1.8, 1.8, 1.8)
+    relink_missing_textures([fantasy_gltf_dir])
+
+    shrine_stone = create_emissive_mat("M_Shrine_Stone", (0.24, 0.26, 0.32, 1.0), (0.05, 0.25, 0.35, 1.0), 0.4, metallic=0.3, roughness=0.6)
+    shrine_crystal = create_emissive_mat("M_Shrine_Crystal", (0.2, 1.0, 0.75, 1.0), (0.2, 1.0, 0.75, 1.0), 7.0, metallic=0.2, roughness=0.1)
+    shrine_gold = create_emissive_mat("M_Shrine_GoldRing", (1.0, 0.78, 0.25, 1.0), (1.0, 0.6, 0.1, 1.0), 3.0, metallic=0.95, roughness=0.15)
+
+    bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=1.25, depth=0.25, location=(0, 0, 0.125))
+    bpy.context.active_object.data.materials.append(shrine_stone)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=0.75, depth=0.8, location=(0, 0, 0.65))
+    bpy.context.active_object.data.materials.append(shrine_stone)
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=0.32, location=(0, 0, 2.15))
+    crys = bpy.context.active_object
+    crys.scale = (0.75, 0.75, 1.45)
+    crys.data.materials.append(shrine_crystal)
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.58, minor_radius=0.03, major_segments=24, minor_segments=10, location=(0, 0, 2.15), rotation=(math.radians(35), math.radians(20), 0))
+    bpy.context.active_object.data.materials.append(shrine_gold)
+
+    optimize_scene_for_static_prop(256)
+    export_glb(os.path.join(OUT_DIR, "props", "prop_revive_shrine.glb"), export_animations=False, max_tex=256)
 print("=== ALL BLENDER 5.2 ASSET ENHANCEMENTS COMPLETE ===")
