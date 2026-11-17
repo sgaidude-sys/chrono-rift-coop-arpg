@@ -663,7 +663,7 @@
             float innerCurb = smoothstep(0.36, 0.05, abs(dPlaza - 7.4));
             plazaCol = mix(plazaCol, vec3(0.76, 0.72, 0.64), clamp(outerCurb * 0.65 + innerCurb * 0.55, 0.0, 0.75));
             float townW = smoothstep(70.0, 48.0, length(gUv));
-            col = mix(col, mix(col, plazaCol, smoothstep(0.26, 0.76, townRoad)), townW);
+            col = mix(col, mix(col, plazaCol * 0.84, smoothstep(0.26, 0.76, townRoad)), townW);
             float scifiW = cb.b / wsum;
             float lava = smoothstep(0.08, 0.16, ca.r - ca.g) * smoothstep(0.32, 0.22, ca.g);
             diffuseColor.rgb *= col;`)
@@ -685,7 +685,7 @@
             totalEmissiveRadiance += vec3(1.0, 0.32, 0.06) * lava * cracks * (0.7 + 0.3 * sin(uTime * 1.7 + gUv.x * 0.1));
             float dPlr = length(gUv - uPlayerPos.xz);
             float torchGlow = max(0.0, 1.0 - dPlr * 0.075);
-            totalEmissiveRadiance += vec3(0.11, 0.075, 0.03) * (torchGlow * torchGlow);`);
+            totalEmissiveRadiance += vec3(0.05, 0.034, 0.014) * (torchGlow * torchGlow);`);
       };
       this.groundMesh.material.dispose();
       this.groundMesh.material = mat;

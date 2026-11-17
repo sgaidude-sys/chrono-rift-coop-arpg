@@ -18,7 +18,7 @@
 
   // Cinematic grade: contrast, saturation, warm highlights / cool shadows, vignette
   const GradeShader = {
-    uniforms: { tDiffuse: { value: null }, uVignette: { value: 0.32 }, uSat: { value: 1.12 }, uContrast: { value: 1.06 } },
+    uniforms: { tDiffuse: { value: null }, uVignette: { value: 0.32 }, uSat: { value: 1.1 }, uContrast: { value: 1.03 } },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
     fragmentShader: `
       uniform sampler2D tDiffuse; uniform float uVignette; uniform float uSat; uniform float uContrast; varying vec2 vUv;
@@ -77,7 +77,7 @@
           const w = window.innerWidth, h = window.innerHeight;
           this.composer = new THREE.EffectComposer(this.renderer);
           this.composer.addPass(new THREE.RenderPass(this.scene, this.camera));
-          this.bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(w * 0.5, h * 0.5), 0.62, 0.42, 0.78);
+          this.bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(w * 0.5, h * 0.5), 0.48, 0.35, 0.93);
           this.composer.addPass(this.bloomPass);
           this.gradePass = new THREE.ShaderPass(GradeShader);
           this.composer.addPass(this.gradePass);
@@ -276,8 +276,59 @@
       if (idx >= 3) this.spawnLightPillar(ld.pos, col, 1.6, 0.5, 14);
     },
 
+    // ---- see-through cutout: props between the camera and the hero become transparent
+    patchOccluderMaterial(mat) {
+      if (Array.isArray(mat)) { mat.forEach(m => this.patchOccluderMaterial(m)); return; }
+      if (!mat || !mat.userData || mat.userData.occPatched || mat.isShaderMaterial) return;
+      mat.userData.occPatched = true;
+      const U = this._occU || (this._occU = { uOccA: { value: new THREE.Vector3() }, uOccB: { value: new THREE.Vector3() } });
+      const prev = mat.onBeforeCompile;
+      mat.onBeforeCompile = (shader, r) => {
+        if (prev) prev(shader, r);
+        shader.uniforms.uOccA = U.uOccA;
+        shader.uniforms.uOccB = U.uOccB;
+        shader.vertexShader = shader.vertexShader
+          .replace('#include <common>', '#include <common>\nvarying vec3 vOccW;')
+          .replace('#include <project_vertex>', `#include <project_vertex>
+            vec4 occW = vec4(transformed, 1.0);
+            #ifdef USE_INSTANCING
+              occW = instanceMatrix * occW;
+            #endif
+            vOccW = (modelMatrix * occW).xyz;`);
+        shader.fragmentShader = shader.fragmentShader
+          .replace('#include <common>', '#include <common>\nvarying vec3 vOccW; uniform vec3 uOccA; uniform vec3 uOccB;')
+          .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+            {
+              vec3 ab = uOccB - uOccA;
+              float t = clamp(dot(vOccW - uOccA, ab) / max(dot(ab, ab), 0.0001), 0.0, 1.0);
+              float d = length(vOccW - (uOccA + ab * t));
+              if (t > 0.06 && vOccW.y > 0.9) {
+                float dither = mod(floor(gl_FragCoord.x) + floor(gl_FragCoord.y), 2.0);
+                if (d < 2.6 || (d < 3.6 && dither > 0.5)) discard;
+              }
+            }`);
+      };
+      mat.needsUpdate = true;
+    },
+
+    updateOccluders() {
+      if (!this._occU) this._occU = { uOccA: { value: new THREE.Vector3() }, uOccB: { value: new THREE.Vector3() } };
+      this._occU.uOccA.value.set(this.player.pos.x, this.player.pos.y + 1.2, this.player.pos.z);
+      this._occU.uOccB.value.copy(this.camera.position);
+      if (!this._occInit && this.propInst) {
+        this._occInit = true;
+        Object.values(this.propInst).forEach(inst => this.patchOccluderMaterial(inst.material));
+      }
+      // buildings / outpost props stream in over time
+      this._occScan = (this._occScan || 0) + 1;
+      if (this._occScan % 90 === 0) {
+        (this.worldProps || []).forEach((o) => o.traverse((n) => { if (n.isMesh) this.patchOccluderMaterial(n.material); }));
+      }
+    },
+
     updateMMOWorld(dt) {
       origUpdate.call(this, dt);
+      this.updateOccluders();
       this.updateZoneParticles(dt);
       this.updateAuras(dt);
       this.updatePillars(dt);

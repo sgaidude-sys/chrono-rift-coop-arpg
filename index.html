@@ -2945,7 +2945,7 @@
           win.rotation.y = Math.PI;
           castleBase.add(win);
         });
-        this.scene.add(castleBase);
+        if (!window.MMO) this.scene.add(castleBase);
 
         // 4. Batched 3D Pine & Autumn Forest Ring + Perimeter Boulders (radius 24–42 for rich framing!)
         const treePlacements = [];
@@ -3548,28 +3548,6 @@
           { file: 'prop_torch.glb', x: -5.5, z: 4, scale: 1.4, yaw: 0 },
           { file: 'prop_torch.glb', x: 5.5, z: 4, scale: 1.4, yaw: 0 },
 
-          // Catacombs of the Bestiary (Complete Dungeon Cage Archways & Ruin Colonnades)
-          { file: 'bg_dungeon_cage_arch.glb', x: -14, z: -14, scale: 1.35, yaw: 0.5 },
-          { file: 'bg_dungeon_cage_arch.glb', x: -28, z: -18, scale: 1.35, yaw: 1.1 },
-          { file: 'bg_dungeon_cage_arch.glb', x: -30, z: -32, scale: 1.35, yaw: 0.8 },
-          { file: 'bg_dungeon_cage_arch.glb', x: -16, z: -38, scale: 1.35, yaw: 0.1 },
-          { file: 'prop_wall_arch.glb', x: -24, z: -24, scale: 1.45, yaw: 0.4 },
-
-          // The Astral Sci-Fi Breach & Boss Citadel Walls
-          { file: 'bg_scifi_citadel_wall.glb', x: 30, z: -18, scale: 1.3, yaw: -Math.PI / 2 },
-          { file: 'bg_scifi_citadel_wall.glb', x: 30, z: -30, scale: 1.3, yaw: -Math.PI / 2 },
-          { file: 'bg_scifi_citadel_wall.glb', x: 22, z: -40, scale: 1.3, yaw: 0 },
-          { file: 'bg_scifi_citadel_wall.glb', x: -12, z: -60, scale: 1.4, yaw: 0 },
-          { file: 'bg_scifi_citadel_wall.glb', x: 0, z: -62, scale: 1.4, yaw: 0 },
-          { file: 'bg_scifi_citadel_wall.glb', x: 12, z: -60, scale: 1.4, yaw: 0 },
-          { file: 'prop_column_astra.glb', x: 20, z: -18, scale: 1.25, yaw: 0 },
-          { file: 'prop_column_astra.glb', x: 28, z: -26, scale: 1.25, yaw: 0 },
-          { file: 'prop_column_pipes.glb', x: 16, z: -30, scale: 1.25, yaw: 0.5 },
-          { file: 'prop_access_point.glb', x: 24, z: -22, scale: 1.35, yaw: -0.6 },
-          { file: 'prop_column_astra.glb', x: -10, z: -44, scale: 1.4, yaw: 0 },
-          { file: 'prop_column_astra.glb', x: 10, z: -44, scale: 1.4, yaw: 0 },
-          { file: 'prop_column_astra.glb', x: -10, z: -56, scale: 1.4, yaw: 0 },
-          { file: 'prop_column_astra.glb', x: 10, z: -56, scale: 1.4, yaw: 0 }
         ];
 
         const obstacleRadiusByFile = {
@@ -3684,11 +3662,7 @@
         // Destructible Barrels, Crates & Loot Chests (also deduplicated & shadow-disabled)
         const destructibleCoords = [
           { type: 'prop_barrel.glb', x: -6, z: 12, hp: 40 },
-          { type: 'prop_crate.glb', x: 6, z: 12, hp: 40 },
-          { type: 'prop_chest.glb', x: -16, z: -16, hp: 60, isChest: true },
-          { type: 'prop_chest.glb', x: 22, z: -16, hp: 60, isChest: true },
-          { type: 'prop_barrel.glb', x: -20, z: -26, hp: 40 },
-          { type: 'prop_crate.glb', x: 18, z: -26, hp: 40 }
+          { type: 'prop_crate.glb', x: 6, z: 12, hp: 40 }
         ];
         destructibleCoords.forEach((d, idx) => {
           const group = new THREE.Group();
@@ -5009,14 +4983,14 @@
           if (len > 0.25) {
             const clamped = Math.min(len, maxRange);
             const target = ent.pos.clone().add(delta.normalize().multiplyScalar(clamped));
-            target.x = Math.max(-74, Math.min(74, target.x));
-            target.z = Math.max(-74, Math.min(44, target.z));
+            target.x = Math.max(-1590, Math.min(1590, target.x));
+            target.z = Math.max(-1590, Math.min(1590, target.z));
             return target;
           }
         }
         const fallback = ent.pos.clone().add(forward.multiplyScalar(defaultDist));
-        fallback.x = Math.max(-74, Math.min(74, fallback.x));
-        fallback.z = Math.max(-74, Math.min(44, fallback.z));
+        fallback.x = Math.max(-1590, Math.min(1590, fallback.x));
+        fallback.z = Math.max(-1590, Math.min(1590, fallback.z));
         return fallback;
       }
 
@@ -5245,6 +5219,7 @@
               ent.leapEnd.copy(dest);
               ent.leapDuration = 0.38;
               ent.leapTimer = 0.38;
+              ent.leapHeight = 3.1;
             }
             this.spawnVFXFlipbook('charged', ent.pos, 2.8, 0.32, 0xff3b5c);
             setTimeout(() => {
@@ -5268,11 +5243,32 @@
             const originPos = ent.pos.clone();
             this.spawnShadowDecoy(originPos, ent.yaw, Math.round(wStats.dmg * 1.45), ent, canDealLocalDamage);
             if (!isRemotePeer) {
-              const vaultDir = (ent === this.player && this.keys['s']) ? forward.clone().negate() : forward.clone();
-              ent.pos.add(vaultDir.multiplyScalar(4.8));
-              ent.pos.x = Math.max(-1590, Math.min(1590, ent.pos.x));
-              ent.pos.z = Math.max(-1590, Math.min(1590, ent.pos.z));
-              this.resolveObstacleCollisions(ent.pos, 0.55);
+              let vaultDir = forward.clone().negate();
+              if (ent === this.player) {
+                // follow the movement input if the player is steering, otherwise back-flip away from the target
+                let ix = this.touchVec.x, iz = this.touchVec.y;
+                if (this.keys['w'] || this.keys['arrowup']) iz -= 1;
+                if (this.keys['s'] || this.keys['arrowdown']) iz += 1;
+                if (this.keys['a'] || this.keys['arrowleft']) ix -= 1;
+                if (this.keys['d'] || this.keys['arrowright']) ix += 1;
+                const ml = Math.hypot(ix, iz);
+                if (ml > 0.2) {
+                  ix /= ml; iz /= ml;
+                  const cy = Math.cos(this.cameraYaw), sy = Math.sin(this.cameraYaw);
+                  vaultDir.set(ix * cy + iz * sy, 0, -ix * sy + iz * cy);
+                }
+              }
+              const vaultEnd = ent.pos.clone().add(vaultDir.multiplyScalar(5.2));
+              if (ent.leapStart && ent.leapEnd) {
+                ent.leapStart.copy(ent.pos);
+                ent.leapEnd.copy(vaultEnd);
+                ent.leapDuration = 0.3;
+                ent.leapTimer = 0.3;
+                ent.leapHeight = 0.9;
+              } else {
+                ent.pos.copy(vaultEnd);
+                this.resolveObstacleCollisions(ent.pos, 0.55);
+              }
             }
             this.spawnVFXFlipbook('charged', ent.pos, 2.6, 0.32, 0x2ee68a);
           } else {
@@ -8513,16 +8509,20 @@
         if (p.leapTimer > 0) {
           p.leapTimer = Math.max(0, p.leapTimer - dt);
           const leapFrac = 1 - (p.leapTimer / (p.leapDuration || 0.38));
+          const _lpx = p.pos.x, _lpz = p.pos.z;
           p.pos.lerpVectors(p.leapStart, p.leapEnd, leapFrac);
           this.resolveObstacleCollisions(p.pos, 0.55);
-          leapY = Math.sin(leapFrac * Math.PI) * 3.1;
+          if (this.worldClampMove) this.worldClampMove(p.pos, _lpx, _lpz);
+          leapY = Math.sin(leapFrac * Math.PI) * (p.leapHeight || 3.1);
           // Fiery comet trail during Crusher Leap
+          if ((p.leapHeight || 3.1) > 2) {
           if (!this._cometGeo) this._cometGeo = new THREE.SphereGeometry(0.32, 8, 6);
           const cMat = new THREE.MeshBasicMaterial({ color: leapFrac > 0.5 ? 0xff3b5c : 0xffaa22, transparent: true, opacity: 0.78, blending: THREE.AdditiveBlending, depthWrite: false });
           const cMesh = new THREE.Mesh(this._cometGeo, cMat);
           cMesh.position.set(p.pos.x, leapY + 0.9, p.pos.z);
           this.scene.add(cMesh);
           this.vfxSprites.push({ mesh: cMesh, isMesh: true, isCometTrail: true, elapsed: 0, duration: 0.28 });
+          }
         }
 
         if (this.cutsceneActive) {
@@ -9365,7 +9365,7 @@
               this.vfxSprites.splice(i, 1);
             }
           } else if (v.isWhirlRing) {
-            v.mesh.rotation.z += dt * 14;
+            v.mesh.rotation.y += dt * 14;
             v.mesh.material.opacity = (1 - t) * 0.95;
             v.mesh.scale.setScalar(0.85 + t * 0.32);
             if (t >= 1) {
@@ -9720,11 +9720,11 @@
       window.game = new ChronoRiftCoOpGame();
     });
   </script>
-  <script src="public/assets/js/mmo_data.js?v=5"></script>
-  <script src="public/assets/js/mmo_world.js?v=5"></script>
-  <script src="public/assets/js/mmo_rpg.js?v=5"></script>
-  <script src="public/assets/js/mmo_audio.js?v=5"></script>
-  <script src="public/assets/js/mmo_vfx.js?v=5"></script>
-  <script src="public/assets/js/mmo_mobile.js?v=5"></script>
+  <script src="public/assets/js/mmo_data.js?v=6"></script>
+  <script src="public/assets/js/mmo_world.js?v=6"></script>
+  <script src="public/assets/js/mmo_rpg.js?v=6"></script>
+  <script src="public/assets/js/mmo_audio.js?v=6"></script>
+  <script src="public/assets/js/mmo_vfx.js?v=6"></script>
+  <script src="public/assets/js/mmo_mobile.js?v=6"></script>
 </body>
 </html>
