@@ -41,3 +41,19 @@ All voice acting is pre-rendered offline with **Kokoro-82M** (`kokoro-onnx`) —
 - **SFX**: per-class skill layers (fire, ice, blink, summon, rock), monster-type death sounds, alternating footstep variants per surface, and distance falloff for other heroes' skills.
 
 Rebuild the audio with `python scripts/build_audio.py [voice|music|sfx] [--force]` (needs `pip install kokoro-onnx soundfile` and ffmpeg).
+
+---
+
+## 🌍 MMO World (v3): procedural realm, zones, bosses, loot & quests
+
+- **A 3.2 × 3.2 km procedural world** (`public/assets/js/mmo_world.js`, seeded, so every client builds the same world). There are 8 large zones around the Ashenvale Bastion hub. Mountain ridges separate them, and you cross only at road passes:
+  Meadows (Lv 1–6) → Whisperwood (6–12) → Catacombs (12–18) → Badlands (18–25) → Frostpeak (25–32) → Astral Breach (32–39) → Infernal Rift (39–46) → Chrono Citadel (46–50).
+  - Terrain blends per biome. Trees, rocks, cacti, graves, crystals, ice and lava rocks are instanced and stream in around you. Each zone has its own sky, fog, music and ambience.
+  - About 2,400 monster camps get harder the deeper you go into a zone. Each zone has named elites, and waypoint outposts give fast travel ([M] world map).
+- **60+ monster types**, including about 50 new Quaternius rigs (`scripts/blender_build_monsters.py` → `public/assets/models/monsters/qm/`). Camps simulate only near heroes and respawn on timers. In co-op the host runs the AI, and clients rebuild monsters from their network IDs.
+- **Bosses you have to learn.** Every zone boss and world boss has HP phases and a fixed ability rotation (cleave cone, slam, jump-over shockwaves, charge line, meteors, "get in close" nova, radial barrage, spin, summon adds). A cast bar tells you what is coming. Bosses enrage at low HP and reset if everyone leaves the arena.
+  - **World bosses**: Ignaroth (Badlands), Hywirl (Frostpeak), the Abyssal Leviathan (Infernal). They respawn on long timers. Bring a party.
+- **Slower MMO leveling** to a level cap of 50. Mob XP falls off for grey (much lower-level) monsters, higher-level monsters hit harder and resist your damage, and you regenerate health out of combat.
+- **Gear**: 9 slots (weapon, off-hand, head, chest, hands, legs, feet, amulet, ring) and 6 rarities from Common to Mythic. Items have random affixes (Vitality, Power, Crit, Crit Damage, Haste, Lifesteal, Move Speed, Armor %). Armor reduces damage taken. Loot is personal, rolled per hero. Kaelen's forge tempers weapons and crafts Rare or Epic gear.
+- **103 quests**: kill, collect, explore, elite bounty, zone boss and travel quests, unlocked in tiers per zone. There's a quest log on [O], a HUD tracker, and map markers (! available, ? turn in, ✦ objective).
+- Each class keeps its own MMO character progress, saved locally per browser.
