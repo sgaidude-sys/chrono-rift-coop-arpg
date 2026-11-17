@@ -1912,17 +1912,31 @@
     // =========================================================================
     class ChronoAudioEngine {
       constructor() {
+        this.base = 'public/assets/audio/';
         this.ctx = null;
         this.muted = false;
         this.masterGain = null;
         this.lowpassNode = null;
         this.musicGain = null;
+        this.ambGain = null;
         this.sfxGain = null;
-        this.musicTimer = null;
-        this.stepIndex = 0;
+        this.voiceGain = null;
         this.combatIntensity = 0;
         this.bossActive = false;
         this.buffers = {};
+        this._loading = {};
+        this.emitterGain = 1;
+        this.zone = null;
+        this.music = { els: {}, gains: {}, current: null };
+        this.amb = { current: null, src: null, gain: null };
+        this.voice = { src: null, gain: null, id: null, priority: 0, endsAt: 0 };
+        this._barkCooldownUntil = 0;
+        this._lastStepIdx = {};
+        this.voiceManifest = {};
+        this.manifestReady = fetch(this.base + 'voice/manifest.json')
+          .then(r => r.ok ? r.json() : {})
+          .then(m => { this.voiceManifest = m || {}; })
+          .catch(() => {});
       }
 
       init() {
@@ -1939,123 +1953,186 @@
         this.lowpassNode.frequency.value = 18000;
 
         const comp = this.ctx.createDynamicsCompressor();
-        comp.threshold.value = -16;
-        comp.ratio.value = 4;
+        comp.threshold.value = -14;
+        comp.ratio.value = 3.5;
+        comp.attack.value = 0.004;
+        comp.release.value = 0.2;
 
         this.masterGain = this.ctx.createGain();
-        this.masterGain.gain.value = 0.75;
+        this.masterGain.gain.value = 0.85;
 
         this.musicGain = this.ctx.createGain();
-        this.musicGain.gain.value = 0.24;
-
+        this.musicGain.gain.value = 0.32;
+        this.ambGain = this.ctx.createGain();
+        this.ambGain.gain.value = 0.5;
         this.sfxGain = this.ctx.createGain();
-        this.sfxGain.gain.value = 0.68;
+        this.sfxGain.gain.value = 0.7;
+        this.voiceGain = this.ctx.createGain();
+        this.voiceGain.gain.value = 1.0;
 
+        // Music, ambience and SFX get muffled at low HP; voices stay clear.
         this.musicGain.connect(this.lowpassNode);
+        this.ambGain.connect(this.lowpassNode);
         this.sfxGain.connect(this.lowpassNode);
         this.lowpassNode.connect(comp);
+        this.voiceGain.connect(comp);
         comp.connect(this.masterGain);
         this.masterGain.connect(this.ctx.destination);
 
         this.preloadSamples();
-        this.startAdaptiveSoundtrack();
+        this.setZone(this.zone || 'ashenvale_bastion', true);
+      }
+
+      setMuted(m) {
+        this.muted = m;
+        if (!this.ctx) return;
+        this.masterGain.gain.setTargetAtTime(m ? 0 : 0.85, this.ctx.currentTime, 0.05);
+        if (m) this.stopVoice();
       }
 
       preloadSamples() {
-        const sampleFiles = {
-          step_stone: 'public/assets/audio/step_stone_1.mp3',
-          step_grass: 'public/assets/audio/step_grass_1.mp3',
-          step_metal: 'public/assets/audio/step_metal_1.mp3',
-          ui_select: 'public/assets/audio/ui_select.mp3',
-          ui_open: 'public/assets/audio/ui_open.mp3',
-          sfx_swipe: 'public/assets/audio/sfx_swipe.mp3',
-          sfx_fire: 'public/assets/audio/sfx_fire_burst.wav',
-          sfx_impact: 'public/assets/audio/sfx_heavy_impact.wav'
+        const b = this.base;
+        const files = {
+          ui_select: b + 'ui_select.mp3',
+          ui_open: b + 'ui_open.mp3',
+          ui_close: b + 'ui_close.mp3',
+          sfx_swipe: b + 'sfx_swipe.mp3',
+          sfx_fire: b + 'sfx/fire_burst.mp3',
+          sfx_impact: b + 'sfx/heavy_impact.mp3'
         };
-        Object.entries(sampleFiles).forEach(([key, url]) => {
-          fetch(url)
-            .then(r => r.ok ? r.arrayBuffer() : Promise.reject())
-            .then(buf => this.ctx.decodeAudioData(buf))
-            .then(decoded => { this.buffers[key] = decoded; })
-            .catch(() => {});
+        ['grass', 'stone', 'metal', 'gravel'].forEach(s => {
+          files[`step_${s}_1`] = `${b}step/${s}_1.mp3`;
+          files[`step_${s}_2`] = `${b}step/${s}_2.mp3`;
         });
+        ['fire_sizzle', 'fire_impact', 'fire_whoosh', 'ice_freeze', 'mecha_impact', 'rock_crumble', 'summon',
+          'blink', 'arcane_orb', 'xeno_death', 'chime', 'goo_death', 'ult_swell'].forEach(k => {
+          files[k] = `${b}sfx/${k}.mp3`;
+        });
+        Object.entries(files).forEach(([key, url]) => this.loadBuffer(key, url));
+      }
+
+      loadBuffer(key, url) {
+        if (this.buffers[key]) return Promise.resolve(this.buffers[key]);
+        if (this._loading[key]) return this._loading[key];
+        this._loading[key] = fetch(url)
+          .then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error(url)))
+          .then(buf => new Promise((res, rej) => this.ctx.decodeAudioData(buf, res, rej)))
+          .then(decoded => { this.buffers[key] = decoded; return decoded; })
+          .catch(() => { delete this._loading[key]; return null; });
+        return this._loading[key];
+      }
+
+      // Output node for one-shot SFX, scaled by the current emitter (distance) gain.
+      _out() {
+        if (this.emitterGain >= 0.99) return this.sfxGain;
+        const g = this.ctx.createGain();
+        g.gain.value = Math.max(0, this.emitterGain);
+        g.connect(this.sfxGain);
+        return g;
+      }
+
+      // Run fn with SFX attenuated by listener distance (for remote peers / AI allies).
+      withEmitter(gain, fn) {
+        const prev = this.emitterGain;
+        this.emitterGain = gain;
+        try { fn(); } finally { this.emitterGain = prev; }
       }
 
       setLowHpMuffle(isLowHp) {
         if (!this.ctx || !this.lowpassNode) return;
-        const targetFreq = isLowHp ? 520 : 18000;
+        const targetFreq = isLowHp ? 650 : 18000;
         this.lowpassNode.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 0.25);
+      }
+
+      _musicLevel() {
+        const base = this.bossActive ? 0.42 : 0.26 + Math.min(1, this.combatIntensity) * 0.1;
+        return this.voice.src ? base * 0.35 : base;
       }
 
       duckMusic(durationSec = 2.2) {
         if (!this.ctx || !this.musicGain) return;
         const now = this.ctx.currentTime;
-        this.musicGain.gain.setTargetAtTime(0.07, now, 0.1);
-        this.musicGain.gain.setTargetAtTime(0.24, now + durationSec, 0.4);
+        this.musicGain.gain.cancelScheduledValues(now);
+        this.musicGain.gain.setTargetAtTime(this._musicLevel() * 0.35, now, 0.12);
+        this.ambGain.gain.setTargetAtTime(0.25, now, 0.12);
+        this.musicGain.gain.setTargetAtTime(this.bossActive ? 0.42 : 0.3, now + durationSec, 0.5);
+        this.ambGain.gain.setTargetAtTime(0.5, now + durationSec, 0.5);
       }
 
-      startAdaptiveSoundtrack() {
-        if (this.musicTimer) clearInterval(this.musicTimer);
-        const scale = [146.83, 164.81, 174.61, 196.00, 220.00, 246.94, 261.63, 293.66, 329.63, 349.23, 440.00];
-        const bassRoots = [73.42, 65.41, 58.27, 82.41];
+      // Called every frame-ish from the game loop to follow combat intensity.
+      updateMix() {
+        if (!this.ctx || this.voice.src) return;
+        this.musicGain.gain.setTargetAtTime(this._musicLevel(), this.ctx.currentTime, 0.8);
+        const wantBossTrack = this.bossActive ? 'town' : this._zoneTrack(this.zone);
+        if (wantBossTrack !== this.music.current) this._crossfadeMusic(wantBossTrack);
+      }
 
-        this.musicTimer = setInterval(() => {
-          if (!this.ctx || this.muted || this.ctx.state !== 'running') return;
+      _zoneTrack(zone) {
+        return (zone === 'bestiary_catacombs' || zone === 'astral_breach') ? 'catacombs' : 'town';
+      }
+
+      _crossfadeMusic(track) {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        if (!this.music.els[track]) {
+          const el = new Audio(`${this.base}music/${track}.mp3`);
+          el.loop = true;
+          el.preload = 'auto';
+          el.crossOrigin = 'anonymous';
+          const g = this.ctx.createGain();
+          g.gain.value = 0;
+          try {
+            this.ctx.createMediaElementSource(el).connect(g);
+          } catch (e) { return; }
+          g.connect(this.musicGain);
+          this.music.els[track] = el;
+          this.music.gains[track] = g;
+        }
+        Object.keys(this.music.els).forEach(k => {
+          const g = this.music.gains[k];
+          const el = this.music.els[k];
+          g.gain.cancelScheduledValues(now);
+          if (k === track) {
+            if (el.paused) el.play().catch(() => {});
+            g.gain.setTargetAtTime(1, now, 0.9);
+          } else {
+            g.gain.setTargetAtTime(0, now, 0.7);
+            setTimeout(() => { if (this.music.current !== k) el.pause(); }, 4000);
+          }
+        });
+        this.music.current = track;
+      }
+
+      setZone(zone, force = false) {
+        if (!force && zone === this.zone) return;
+        this.zone = zone;
+        if (!this.ctx) return;
+        this._crossfadeMusic(this.bossActive ? 'town' : this._zoneTrack(zone));
+        const ambKey = { ashenvale_bastion: 'town', bestiary_catacombs: 'catacombs', astral_breach: 'breach', boss_citadel: 'citadel' }[zone] || 'town';
+        if (this.amb.current === ambKey) return;
+        this.amb.current = ambKey;
+        this.loadBuffer('amb_' + ambKey, `${this.base}ambience/${ambKey}.mp3`).then(buf => {
+          if (!buf || this.amb.current !== ambKey) return;
           const now = this.ctx.currentTime;
-          const step = this.stepIndex++;
-
-          if (step % 8 === 0) {
-            const root = bassRoots[(step / 8) % bassRoots.length];
-            const osc = this.ctx.createOscillator();
-            const g = this.ctx.createGain();
-            const flt = this.ctx.createBiquadFilter();
-            osc.type = this.bossActive ? 'sawtooth' : 'triangle';
-            osc.frequency.setValueAtTime(root, now);
-            flt.type = 'lowpass';
-            flt.frequency.setValueAtTime(this.bossActive ? 360 : 210, now);
-            g.gain.setValueAtTime(0.001, now);
-            g.gain.linearRampToValueAtTime(0.26, now + 0.35);
-            g.gain.exponentialRampToValueAtTime(0.001, now + 2.3);
-            osc.connect(flt);
-            flt.connect(g);
-            g.connect(this.musicGain);
-            osc.start(now);
-            osc.stop(now + 2.35);
+          if (this.amb.src) {
+            const old = this.amb;
+            old.gain.gain.setTargetAtTime(0, now, 0.8);
+            setTimeout(() => { try { old.src.stop(); } catch (e) {} }, 4000);
           }
-
-          const noteIdx = (step * 3 + ((step >> 2) & 3)) % scale.length;
-          const freq = scale[noteIdx] * (this.bossActive && step % 2 === 0 ? 1.5 : 1.0);
-          const arp = this.ctx.createOscillator();
-          const arpGain = this.ctx.createGain();
-          arp.type = 'sine';
-          arp.frequency.setValueAtTime(freq, now);
-          arpGain.gain.setValueAtTime(0.001, now);
-          arpGain.gain.linearRampToValueAtTime(0.11, now + 0.02);
-          arpGain.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
-          arp.connect(arpGain);
-          arpGain.connect(this.musicGain);
-          arp.start(now);
-          arp.stop(now + 0.45);
-
-          if (this.combatIntensity > 0.2 || this.bossActive) {
-            if (step % 2 === 0 || (this.bossActive && step % 4 === 3)) {
-              const drum = this.ctx.createOscillator();
-              const dGain = this.ctx.createGain();
-              drum.type = 'sine';
-              drum.frequency.setValueAtTime(115, now);
-              drum.frequency.exponentialRampToValueAtTime(36, now + 0.16);
-              dGain.gain.setValueAtTime(0.25 * Math.min(1, this.combatIntensity + 0.3), now);
-              dGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-              drum.connect(dGain);
-              dGain.connect(this.musicGain);
-              drum.start(now);
-              drum.stop(now + 0.2);
-            }
-          }
-        }, 280);
+          const src = this.ctx.createBufferSource();
+          src.buffer = buf;
+          src.loop = true;
+          const g = this.ctx.createGain();
+          g.gain.value = 0;
+          g.gain.setTargetAtTime(1, now, 1.2);
+          src.connect(g);
+          g.connect(this.ambGain);
+          src.start();
+          this.amb = { current: ambKey, src, gain: g };
+        });
       }
 
-      playSample(key, rate = 1.0, vol = 0.5) {
+      playSample(key, rate = 1.0, vol = 0.5, delay = 0) {
         if (!this.ctx || this.muted || !this.buffers[key]) return false;
         const src = this.ctx.createBufferSource();
         src.buffer = this.buffers[key];
@@ -2063,133 +2140,155 @@
         const g = this.ctx.createGain();
         g.gain.value = vol;
         src.connect(g);
-        g.connect(this.sfxGain);
-        src.start();
+        g.connect(this._out());
+        src.start(this.ctx.currentTime + delay);
         return true;
       }
 
       playFootstep(zone) {
         if (!this.ctx || this.muted) return;
-        const rate = 0.88 + Math.random() * 0.26;
-        const key = zone === 'astral_breach' ? 'step_metal' : (zone === 'bestiary_catacombs' ? 'step_stone' : 'step_grass');
-        this.playSample(key, rate, 0.22);
+        const surface = { astral_breach: 'metal', bestiary_catacombs: 'stone', boss_citadel: 'gravel' }[zone] || 'grass';
+        // alternate variants so consecutive steps never repeat the same sample
+        const idx = this._lastStepIdx[surface] === 1 ? 2 : 1;
+        this._lastStepIdx[surface] = idx;
+        this.playSample(`step_${surface}_${idx}`, 0.92 + Math.random() * 0.16, 0.3 + Math.random() * 0.06);
+      }
 
+      _thump(type, f0, f1, len, vol) {
         const now = this.ctx.currentTime;
         const osc = this.ctx.createOscillator();
         const g = this.ctx.createGain();
-        osc.type = 'triangle';
-        const baseF = zone === 'astral_breach' ? 320 : 130;
-        osc.frequency.setValueAtTime(baseF * rate, now);
-        osc.frequency.exponentialRampToValueAtTime(45, now + 0.055);
-        g.gain.setValueAtTime(0.09, now);
-        g.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+        osc.type = type;
+        osc.frequency.setValueAtTime(f0, now);
+        osc.frequency.exponentialRampToValueAtTime(f1, now + len);
+        g.gain.setValueAtTime(vol, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + len + 0.01);
         osc.connect(g);
-        g.connect(this.sfxGain);
+        g.connect(this._out());
         osc.start(now);
-        osc.stop(now + 0.065);
+        osc.stop(now + len + 0.02);
       }
 
       playSwing(isHeavy = false) {
         if (!this.ctx || this.muted) return;
-        this.playSample('sfx_swipe', isHeavy ? 0.78 : 1.08 + Math.random() * 0.15, 0.35);
-        const now = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const g = this.ctx.createGain();
-        osc.type = isHeavy ? 'sawtooth' : 'sine';
-        osc.frequency.setValueAtTime(isHeavy ? 260 : 420, now);
-        osc.frequency.exponentialRampToValueAtTime(isHeavy ? 65 : 110, now + (isHeavy ? 0.22 : 0.12));
-        g.gain.setValueAtTime(isHeavy ? 0.28 : 0.18, now);
-        g.gain.exponentialRampToValueAtTime(0.001, now + (isHeavy ? 0.24 : 0.13));
-        osc.connect(g);
-        g.connect(this.sfxGain);
-        osc.start(now);
-        osc.stop(now + 0.25);
+        this.playSample('sfx_swipe', isHeavy ? 0.8 + Math.random() * 0.06 : 1.05 + Math.random() * 0.18, isHeavy ? 0.42 : 0.34);
       }
 
       playHit(isCrit = false, isHeavy = false) {
         if (!this.ctx || this.muted) return;
-        if (isHeavy || isCrit) this.playSample('sfx_impact', 0.9 + Math.random() * 0.2, 0.35);
-        const now = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const g = this.ctx.createGain();
-        osc.type = isCrit ? 'square' : 'triangle';
-        osc.frequency.setValueAtTime(isCrit ? 580 : 190, now);
-        osc.frequency.exponentialRampToValueAtTime(42, now + 0.15);
-        g.gain.setValueAtTime(isCrit ? 0.34 : 0.24, now);
-        g.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
-        osc.connect(g);
-        g.connect(this.sfxGain);
-        osc.start(now);
-        osc.stop(now + 0.17);
+        if (isHeavy || isCrit) this.playSample('sfx_impact', 0.92 + Math.random() * 0.16, isCrit ? 0.42 : 0.32);
+        else this.playSample('sfx_impact', 1.45 + Math.random() * 0.2, 0.16);
+        // short low body thump gives weight without the old "beep"
+        this._thump('sine', isCrit ? 150 : 110, 40, 0.09, isCrit ? 0.22 : 0.14);
       }
 
       playSpell(type = 'arcane') {
         if (!this.ctx || this.muted) return;
-        if (type === 'fire' || type === 'ult') this.playSample('sfx_fire', 1.0, 0.32);
-        const now = this.ctx.currentTime;
-        [330, 495, 660, 880].forEach((f, idx) => {
-          const osc = this.ctx.createOscillator();
-          const g = this.ctx.createGain();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(f, now + idx * 0.035);
-          osc.frequency.exponentialRampToValueAtTime(f * 1.4, now + idx * 0.035 + 0.28);
-          g.gain.setValueAtTime(0.12, now + idx * 0.035);
-          g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.035 + 0.3);
-          osc.connect(g);
-          g.connect(this.sfxGain);
-          osc.start(now + idx * 0.035);
-          osc.stop(now + idx * 0.035 + 0.32);
-        });
+        if (type === 'fire') this.playSample('sfx_fire', 1.0, 0.36);
+        else if (type === 'ult') {
+          this.playSample('ult_swell', 1.0, 0.45);
+          this.playSample('sfx_fire', 0.85, 0.3, 0.15);
+        } else if (type === 'warp') this.playSample('summon', 1.0, 0.4);
+        else this.playSample('arcane_orb', 1.0 + Math.random() * 0.1, 0.32);
+      }
+
+      // Signature layer per class ability (slots 2-4).
+      playSkillSfx(classId, slot) {
+        if (!this.ctx || this.muted) return;
+        const map = {
+          vanguard: { 2: [['sfx_impact', 0.8, 0.45], ['rock_crumble', 1.0, 0.4, 0.05]], 3: [['fire_whoosh', 1.25, 0.25]], 4: [['summon', 1.1, 0.35], ['chime', 1.0, 0.3, 0.2]] },
+          ranger: { 2: [['sfx_swipe', 1.4, 0.3], ['sfx_swipe', 1.55, 0.25, 0.06], ['sfx_swipe', 1.7, 0.2, 0.12]], 3: [['blink', 1.1, 0.35]], 4: [['summon', 1.25, 0.35], ['ult_swell', 1.2, 0.25, 0.3]] },
+          arcanist: { 2: [['arcane_orb', 0.85, 0.42]], 3: [['blink', 1.0, 0.42]], 4: [['ice_freeze', 1.0, 0.46]] },
+          berserker: { 2: [['fire_whoosh', 1.0, 0.4]], 3: [['fire_sizzle', 1.0, 0.3], ['fire_impact', 1.0, 0.45, 0.42]], 4: [['sfx_fire', 0.9, 0.4], ['fire_sizzle', 0.8, 0.25, 0.1]] }
+        };
+        const layers = (map[classId] || {})[slot] || [];
+        layers.forEach(([k, r, v, d]) => this.playSample(k, r, v, d || 0));
+      }
+
+      playMonsterDeath(modelKey = '', isBig = false) {
+        if (!this.ctx || this.muted) return;
+        if (modelKey.includes('alien')) {
+          this.playSample('xeno_death', 1.0 + Math.random() * 0.15, 0.32);
+          this.playSample('mecha_impact', 0.9, 0.3, 0.1);
+        } else if (modelKey.includes('imp')) {
+          this.playSample('goo_death', 0.9 + Math.random() * 0.2, 0.35);
+        } else {
+          this.playSample('rock_crumble', 1.0 + Math.random() * 0.15, 0.3);
+        }
+        if (isBig) this.playSample('sfx_impact', 0.7, 0.45);
       }
 
       playLootChime() {
         if (!this.ctx || this.muted) return;
-        this.playSample('ui_select', 1.15, 0.35);
-        const now = this.ctx.currentTime;
-        [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
-          const osc = this.ctx.createOscillator();
-          const g = this.ctx.createGain();
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(f, now + i * 0.055);
-          g.gain.setValueAtTime(0.16, now + i * 0.055);
-          g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.055 + 0.32);
-          osc.connect(g);
-          g.connect(this.sfxGain);
-          osc.start(now + i * 0.055);
-          osc.stop(now + i * 0.055 + 0.35);
-        });
+        this.playSample('ui_select', 1.1, 0.32);
+        this.playSample('chime', 1.0 + Math.random() * 0.08, 0.28, 0.04);
       }
 
       playJump() {
         if (!this.ctx || this.muted) return;
-        this.playSample('sfx_swipe', 1.35, 0.24);
-        const now = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const g = this.ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(175, now);
-        osc.frequency.exponentialRampToValueAtTime(430, now + 0.14);
-        g.gain.setValueAtTime(0.18, now);
-        g.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
-        osc.connect(g);
-        g.connect(this.sfxGain);
-        osc.start(now);
-        osc.stop(now + 0.17);
+        this.playSample('sfx_swipe', 1.35, 0.22);
       }
 
-      speakVoiceLine(text, pitch = 0.9, rate = 1.0) {
-        if (this.muted) return;
-        this.duckMusic(2.6);
-        if ('speechSynthesis' in window) {
-          try {
-            window.speechSynthesis.cancel();
-            const utter = new SpeechSynthesisUtterance(text);
-            utter.pitch = pitch;
-            utter.rate = rate;
-            utter.volume = 0.85;
-            window.speechSynthesis.speak(utter);
-          } catch (e) {}
-        }
+      // ---------------------------------------------------------------------
+      // VOICE — pre-rendered Kokoro clips (scripts/build_audio.py)
+      // priority: 1 = combat bark, 2 = NPC / boss / announcer, 3 = cutscene
+      // ---------------------------------------------------------------------
+      hasVoice(id) { return !!this.voiceManifest[id]; }
+      voiceDuration(id) { return (this.voiceManifest[id] && this.voiceManifest[id].dur) || 0; }
+
+      preloadVoice(ids) {
+        if (!this.ctx) return;
+        ids.forEach(id => { if (this.hasVoice(id)) this.loadBuffer('vo_' + id, `${this.base}voice/${id}.mp3`); });
+      }
+
+      isVoiceBusy(minPriority = 1) {
+        if (this._pendingVoice && this._pendingVoice.priority >= minPriority) return true;
+        return !!this.voice.src && this.voice.priority >= minPriority && this.ctx && this.ctx.currentTime < this.voice.endsAt;
+      }
+
+      stopVoice(maxPriority = 99) {
+        if (this._pendingVoice && this._pendingVoice.priority <= maxPriority) this._pendingVoice = null;
+        if (!this.voice.src || this.voice.priority > maxPriority) return;
+        const v = this.voice;
+        this.voice = { src: null, gain: null, id: null, priority: 0, endsAt: 0 };
+        try {
+          v.gain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.04);
+          v.src.stop(this.ctx.currentTime + 0.2);
+        } catch (e) {}
+        this.duckMusic(0.2);
+      }
+
+      playVoice(id, priority = 2, vol = 1.0) {
+        if (!this.ctx || this.muted || !this.hasVoice(id)) return false;
+        if (this.isVoiceBusy(priority + (priority === 1 ? 0 : 1))) return false; // lower-or-equal barks never interrupt
+        if (priority === 1 && this.ctx.currentTime < this._barkCooldownUntil) return false;
+        const token = { priority };
+        this._pendingVoice = token;
+        this.loadBuffer('vo_' + id, `${this.base}voice/${id}.mp3`).then(buf => {
+          if (this._pendingVoice !== token) return;
+          this._pendingVoice = null;
+          if (!buf || this.muted) return;
+          if (this.isVoiceBusy(priority + (priority === 1 ? 0 : 1))) return;
+          this.stopVoice();
+          const src = this.ctx.createBufferSource();
+          src.buffer = buf;
+          const g = this.ctx.createGain();
+          g.gain.value = vol;
+          src.connect(g);
+          g.connect(this.voiceGain);
+          const now = this.ctx.currentTime;
+          src.start(now);
+          this.voice = { src, gain: g, id, priority, endsAt: now + buf.duration };
+          if (priority === 1) this._barkCooldownUntil = now + buf.duration + 5.0;
+          src.onended = () => { if (this.voice.src === src) this.voice = { src: null, gain: null, id: null, priority: 0, endsAt: 0 }; };
+          this.duckMusic(buf.duration + 0.2);
+        });
+        return true;
+      }
+
+      // Back-compat shim: legacy callers pass text; map to a clip id when possible.
+      speakVoiceLine(textOrId) {
+        if (this.hasVoice(textOrId)) this.playVoice(textOrId, 2);
       }
     }
 
@@ -4914,6 +5013,18 @@
       useSkill(slot, isRemoteOrAI = false, actor = null) {
         this.audio.init();
         const ent = actor || this.player;
+        if (ent !== this.player && !this._skillEmitterWrap) {
+          // other heroes' skills fall off with distance so a full party doesn't wall-of-sound you
+          const d = ent.pos ? Math.hypot(ent.pos.x - this.player.pos.x, ent.pos.z - this.player.pos.z) : 0;
+          const gain = Math.max(0, 1 - d / 36) * 0.7;
+          this._skillEmitterWrap = true;
+          try {
+            this.audio.withEmitter(gain, () => this.useSkill(slot, isRemoteOrAI, actor));
+          } finally {
+            this._skillEmitterWrap = false;
+          }
+          return;
+        }
         const isRemotePeer = !!(actor && actor !== this.player && !actor.isAI);
         const canDealLocalDamage = !isRemotePeer;
         if (!isRemoteOrAI) {
@@ -4948,6 +5059,11 @@
             setTimeout(() => slotEl.classList.remove('triggered'), 140);
           }
           this.broadcastCombatAction(slot);
+        }
+
+        if (slot >= 2 && slot <= 4) this.audio.playSkillSfx(ent.classId, slot);
+        if (slot === 4 && ent === this.player && Math.random() < 0.65) {
+          this.audio.playVoice(`hero_${ent.classId}_sig_${Math.random() < 0.5 ? 0 : 1}`, 1);
         }
 
         if (slot === 1) {
@@ -5053,7 +5169,6 @@
           } else if (ent.classId === 'arcanist') {
             this.playEntityAnim(ent, 'Spell_Simple_Shoot', true);
             const targetPos = this.getClampedAimPos(ent, 10.5, 5.5);
-            this.audio.playSpell('arcane');
             this.spawnVFXFlipbook('vortex', targetPos, 5.8, 0.75, 0xb266ff, true);
             this.spawnAnimaVortexOrb(targetPos, Math.round(wStats.dmg * 2.05), ent, canDealLocalDamage);
           } else if (ent.classId === 'berserker') {
@@ -5178,7 +5293,6 @@
           }
         }
         else if (slot === 4) {
-          this.audio.playSpell(ent.classId === 'berserker' ? 'fire' : 'arcane');
           if (ent.classId === 'ranger') {
             this.playEntityAnim(ent, 'Spell_Simple_Shoot', true);
             const targetPos = this.getClampedAimPos(ent, 11.5, 6.0);
@@ -5273,7 +5387,7 @@
           if (ent === this.player) this.player.synergy = 0;
           this.playEntityAnim(ent, 'Shield_OneShot', true);
           this.audio.playSpell('ult');
-          this.audio.speakVoiceLine('Astral Convergence unleashed!', 0.95, 1.05);
+          if (ent === this.player) this.audio.playVoice(`hero_${ent.classId}_ult`, 2);
           this.screenShake = 0.75;
           if (!isRemotePeer) this.hitStopTimer = 0.065;
 
@@ -5548,6 +5662,9 @@
         }
 
         const isAlien = (mob.modelKey || '').includes('alien');
+        this.audio.playMonsterDeath(mob.modelKey || '', mob.isBoss || mob.isElite);
+        if (mob.isElite && (mob.name || '').includes('Gronk')) this.audio.playVoice('gronk_death', 2);
+        else if ((mob.name || '').includes('Juggernaut')) this.audio.playVoice('xeno_death', 2);
         mob.deathDuration = mob.isBoss ? 2.85 : (isAlien ? 1.95 : 2.35);
         mob.deathTimer = mob.deathDuration;
         mob.deathElapsed = 0.03;
@@ -5643,13 +5760,14 @@
           this.audio.playLootChime();
           this.spawnVFXFlipbook('eldenring', this.player.pos, 4.5, 0.7, 0xf3c86b);
           this.spawnFloatingText(this.player.pos, `LEVEL UP! Lv.${this.player.level}`, '#ffe599', 22);
+          this.audio.playVoice(`hero_${this.player.classId}_levelup`, 1);
           this.saveHeroToSupabase();
         }
 
         this.checkStoryMilestonesOnDeath(mob);
 
         if (mob.isBoss) {
-          this.audio.speakVoiceLine('Impossible! The Chrono Rift will consume all timelines!', 0.65, 0.92);
+          this.audio.playVoice('malakor_death', 2);
           this.addChatMessage('Raid Victory', `🏆 ${this.player.name}'s Party vanquished ${mob.name} on Rift Wave ${this.riftWave}!`, 'sys-boss');
           if (!fromNetwork) this.recordLeaderboardVictory();
           this.triggerStoryChapter('ch5');
@@ -5727,14 +5845,14 @@
         this.activeInteractable.action();
       }
 
-      activateSanctuaryShrine() {
+      activateSanctuaryShrine(silent = false) {
         this.player.hp = this.player.maxHp;
         this.player.mp = this.player.maxMp;
         this.player.potions = 3;
         document.getElementById('potion-count').textContent = 3;
         this.aiAllies.forEach(a => { a.hp = a.maxHp; });
         this.audio.playLootChime();
-        this.audio.speakVoiceLine('Sanctuary blessing restored your party.', 1.1, 1.0);
+        if (!silent) this.audio.playVoice('seraphina_sanctuary', 2);
         this.spawnVFXFlipbook('eldenring', this.player.pos, 5.0, 0.7, 0x2ee68a);
         this.spawnFloatingText(this.player.pos, 'SANCTUARY BLESSING RESTORED!', '#2ee68a', 19);
       }
@@ -5752,8 +5870,8 @@
         }
         this.riftWave++;
         this.spawnZoneMonsters();
-        this.audio.playSpell('ult');
-        this.audio.speakVoiceLine(`Astral Rift Wave ${this.riftWave} awakened!`, 0.85, 1.0);
+        this.audio.playSpell('warp');
+        this.audio.playVoice('lyra_wave', 2);
         this.addChatMessage('Astral Gate', `🌀 Rift Wave ${this.riftWave} opened! Fresh Bestiary & Xeno-Constructs spawned!`, 'sys-synergy');
         this.broadcastGameEvent('portal_wave', { riftWave: this.riftWave, byName: this.player.name });
         this.sendWaveSync(true);
@@ -5763,7 +5881,7 @@
 
       readChronicleLore() {
         const msg = 'The Chrono-Rifts tore open above Ashenvale Bastion, fusing medieval stone with future Xeno-citadels. Forge Mythic weapons and strike down Archon Malakor!';
-        this.audio.speakVoiceLine(msg, 1.0, 1.02);
+        this.audio.playVoice('aldous_tome', 2);
         this.addChatMessage('Chronicle Tome', `📜 "${msg}"`, 'sys-loot');
       }
 
@@ -5824,7 +5942,8 @@
         this.skyUniforms.uNebulaColor.value.setHex(t.nebula);
         this.scene.fog.color.setHex(t.fog);
 
-        this.audio.playSpell('arcane');
+        this.audio.playSpell('warp');
+        this.audio.setZone(zoneId);
         this.spawnVFXFlipbook('vortex', this.player.pos, 4.0, 0.5, 0x38e8ff);
         this.broadcastPlayerState(true);
 
@@ -6264,6 +6383,9 @@
           this._receivedWaveSyncOnce = false;
           this._awaitingInitialWaveSyncUntil = performance.now() + 2000;
           this.triggerStoryChapter('ch1');
+          setTimeout(() => {
+            if (!this.cutsceneActive) this.audio.playVoice(`hero_${this.player.classId}_spawn`, 1);
+          }, 1400);
         }
         this.updateStoryTrackerUI();
         await this.hydrateRoomWorldState(this.roomCode);
@@ -7204,6 +7326,7 @@
       closeModals(fromOpenModal = false) {
         document.querySelectorAll('.modal-backdrop').forEach(el => el.classList.remove('active'));
         this.isAnyModalOpen = false;
+        this.audio.stopVoice(2);
         if (!fromOpenModal && !this.isInWorld) {
           this.enterWorld();
         }
@@ -7211,7 +7334,7 @@
 
       toggleAudio() {
         this.audio.init();
-        this.audio.muted = !this.audio.muted;
+        this.audio.setMuted(!this.audio.muted);
         document.getElementById('btn-mute').textContent = this.audio.muted ? '🔇 Muted' : '🔊 Audio';
       }
 
@@ -7362,6 +7485,9 @@
         this.activeNpcId = npcId;
         this.openModal('npc-modal');
         this.renderNPCModal(npcId);
+        const greet = { blacksmith: 'kaelen_greet', cleric: 'seraphina_greet', gatekeeper: 'lyra_greet' }[npcId]
+          || `aldous_lore_${this.activeLoreChapter || 0}`;
+        this.audio.playVoice(greet, 2);
       }
 
       renderNPCModal(npcId = this.activeNpcId) {
@@ -7484,6 +7610,7 @@
       selectLoreChapter(idx) {
         this.activeLoreChapter = idx;
         this.renderNPCModal('scholar');
+        this.audio.playVoice(`aldous_lore_${idx}`, 2);
       }
 
       acceptQuest(questKey) {
@@ -7512,7 +7639,8 @@
       }
 
       clericPartyHeal() {
-        this.activateSanctuaryShrine();
+        this.activateSanctuaryShrine(true);
+        this.audio.playVoice('seraphina_heal', 2);
         this.renderNPCModal('cleric');
       }
 
@@ -7521,6 +7649,7 @@
         document.getElementById('potion-count').textContent = '3';
         this.audio.playLootChime();
         this.showLootToast('🧪 Refilled 3 Ashenvale Elixirs!');
+        this.audio.playVoice('seraphina_elixirs', 2);
         this.renderNPCModal('cleric');
       }
 
@@ -7530,6 +7659,7 @@
         this.spawnVFXFlipbook('eldenring', this.player.pos, 4.8, 0.7, 0xf3c86b, true);
         this.spawnFloatingText(this.player.pos, 'SOLAR BLESSING (+20% DMG & REGEN)', '#ffe599', 18);
         this.showLootToast('☀️ Solar Blessing Active (30s): +20% DMG & Regen');
+        this.audio.playVoice('seraphina_blessing', 2);
         this.renderNPCModal('cleric');
       }
 
@@ -7582,6 +7712,7 @@
         if (!w) return;
         if (this.player.gold < w.costGold || this.player.shards < w.costShards) {
           this.spawnFloatingText(this.player.pos, 'NOT ENOUGH GOLD / SHARDS!', '#ff3b5c', 15);
+          this.audio.playVoice('kaelen_broke', 2);
           return;
         }
         this.player.gold -= w.costGold;
@@ -7589,11 +7720,13 @@
         this.player.unlockedWeapons.add(w.id);
         this.equipWeapon(w.id);
         this.spawnFloatingText(this.player.pos, `FORGED ${w.name.toUpperCase()}!`, '#ffe599', 18);
+        this.audio.playVoice('kaelen_forge', 2);
       }
 
       upgradeEquippedWeapon() {
         if (this.player.gold < 80 || this.player.shards < 3) {
           this.spawnFloatingText(this.player.pos, 'NEED 80 GOLD & 3 SHARDS!', '#ff3b5c', 15);
+          this.audio.playVoice('kaelen_broke', 2);
           return;
         }
         this.player.gold -= 80;
@@ -7602,6 +7735,7 @@
         this.audio.playLootChime();
         this.spawnVFXFlipbook('bighit', this.player.pos, 3.5, 0.45, 0xf3c86b);
         this.spawnFloatingText(this.player.pos, `WEAPON TEMPERED TO +${this.player.weaponLevel}!`, '#ffe599', 19);
+        this.audio.playVoice('kaelen_temper', 2);
         this.saveHeroToSupabase();
       }
 
@@ -8114,6 +8248,13 @@
           this.scene.fog.color.setHex(0x2a2438);
         }
 
+        // stretch each shot so its voice line is never cut off
+        chap.shots.forEach((s, i) => {
+          if (s._baseDuration === undefined) s._baseDuration = s.duration;
+          const vDur = this.audio.voiceDuration(`cs_${chap.id}_${i}`);
+          s.duration = Math.max(s._baseDuration, vDur ? vDur + 0.8 : 0);
+        });
+        this.audio.preloadVoice(chap.shots.map((_, i) => `cs_${chap.id}_${i}`));
         const totalDuration = chap.shots.reduce((sum, s) => sum + s.duration, 0);
         this.cutsceneActive = true;
         this.mouseDownLeft = false;
@@ -8151,8 +8292,8 @@
         if (subEl) subEl.textContent = shot.text;
         if (counterEl) counterEl.textContent = `${idx + 1} / ${shots.length}`;
 
-        this.audio.duckMusic(shot.duration);
-        this.audio.speakVoiceLine(shot.text, shot.pitch || 0.95, 1.02);
+        const voiceId = `cs_${this.cutsceneState.chapter.id}_${idx}`;
+        if (!this.audio.playVoice(voiceId, 3)) this.audio.duckMusic(shot.duration);
       }
 
       updateCutscene(dt) {
@@ -8189,13 +8330,63 @@
         }
       }
 
+      detectZoneFromPosition() {
+        const { x, z } = this.player.pos;
+        let zone = null;
+        if (z > -6) zone = 'ashenvale_bastion';
+        else if (x < -8) zone = 'bestiary_catacombs';
+        else if (x > 8) zone = 'astral_breach';
+        else if (z < -32) zone = 'boss_citadel';
+        if (!zone || zone === this.currentZone) return;
+        this.currentZone = zone;
+        this.audio.setZone(zone);
+        const labels = {
+          ashenvale_bastion: '🏰 ASHENVALE BASTION',
+          bestiary_catacombs: '💀 CATACOMBS OF THE BESTIARY',
+          astral_breach: '🛸 THE ASTRAL SCI-FI BREACH',
+          boss_citadel: '⚔️ ARCHON BOSS CITADEL'
+        };
+        const title = document.getElementById('hud-zone-title');
+        if (title) title.textContent = labels[zone];
+        ['ashenvale_bastion', 'bestiary_catacombs', 'astral_breach', 'boss_citadel'].forEach(id => {
+          document.getElementById('warp-btn-' + id)?.classList.toggle('active', id === zone);
+        });
+      }
+
+      updateBossVoiceBarks(boss) {
+        if (this.cutsceneActive || !this.isInWorld || this.audio.isVoiceBusy(1)) return;
+        // named elites taunt once per wave when they engage
+        for (let i = 0; i < this.monsters.length; i++) {
+          const m = this.monsters[i];
+          if (m.dead || m._barkedWave === this.riftWave || !m.name) continue;
+          const id = m.name.includes('Gronk') ? 'gronk_engage' : (m.name.includes('Juggernaut') ? 'xeno_engage' : null);
+          if (!id) continue;
+          const dx = m.pos.x - this.player.pos.x;
+          const dz = m.pos.z - this.player.pos.z;
+          if (dx * dx + dz * dz < 196 && (m.aggroTimer > 0 || m.hp < m.maxHp)) {
+            if (this.audio.playVoice(id, 2)) m._barkedWave = this.riftWave;
+          }
+        }
+        if (!boss || boss.dead) return;
+        const key = `${boss.id}:${this.riftWave}`;
+        const st = this._bossBarkState && this._bossBarkState.key === key
+          ? this._bossBarkState
+          : (this._bossBarkState = { key, engage: false, half: false, quarter: false });
+        const frac = boss.hp / Math.max(1, boss.maxHp);
+        if (!st.engage) {
+          if (this.audio.playVoice('malakor_engage', 2)) st.engage = true;
+        } else if (!st.half && frac <= 0.5) {
+          if (this.audio.playVoice('malakor_half', 2)) st.half = true;
+        } else if (!st.quarter && frac <= 0.25) {
+          if (this.audio.playVoice('malakor_quarter', 2)) st.quarter = true;
+        }
+      }
+
       skipCutscene() {
         if (!this.cutsceneActive) return;
         this.cutsceneActive = false;
         this.cutsceneState = null;
-        if ('speechSynthesis' in window) {
-          try { window.speechSynthesis.cancel(); } catch (e) {}
-        }
+        this.audio.stopVoice(3);
         if (this._savedSkyState) {
           this.skyUniforms.uHorizonColor.value.setHex(this._savedSkyState.horizon);
           this.skyUniforms.uZenithColor.value.setHex(this._savedSkyState.zenith);
@@ -8421,6 +8612,7 @@
           if (p.grounded && p.dodgeTimer <= 0) {
             this.playEntityAnim(p, 'Jog_Fwd_Loop');
           }
+          this.detectZoneFromPosition();
           if (p.grounded) {
             p.stepAccum += dt * cls.speed;
             if (p.stepAccum > 2.6) {
@@ -8478,6 +8670,7 @@
         if (this.uiState.isLowHp !== isLow) {
           this.uiState.isLowHp = isLow;
           this.audio.setLowHpMuffle(isLow);
+          if (isLow && p.hp > 0) this.audio.playVoice(`hero_${p.classId}_lowhp`, 1);
           if (this.ui.screenFx) this.ui.screenFx.classList.toggle('low-hp', isLow);
         }
 
@@ -8960,6 +9153,8 @@
 
         this.audio.combatIntensity = Math.min(1, activeCombatCount * 0.25);
         this.audio.bossActive = !!activeBoss;
+        this.audio.updateMix();
+        this.updateBossVoiceBarks(activeBoss);
 
         if (activeBoss) {
           if (!this.uiState.bossVisible) {
@@ -8995,6 +9190,7 @@
             this.player.hp = Math.round(this.player.maxHp * 0.65);
             this.spawnVFXFlipbook('eldenring', this.player.pos, 4.5, 0.6, 0x2ee68a);
             this.spawnFloatingText(this.player.pos, 'CO-OP ALLY REVIVED YOU!', '#2ee68a', 20);
+            this.audio.playVoice(`hero_${this.player.classId}_revived`, 2);
             this.addChatMessage('Co-Op Revive', `✨ An allied hero channeled Soul Revival to bring ${this.player.name} back into battle!`, 'sys-synergy');
           } else {
             this.player.hp = this.player.maxHp;

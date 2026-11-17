@@ -1,0 +1,368 @@
+{
+ "cs_ch1_0": {
+  "file": "assets/audio/voice/cs_ch1_0.mp3",
+  "dur": 8.088,
+  "speaker": "Lorekeeper Aldous",
+  "text": "When the Chrono-Rifts tore open above Ashenvale Bastion, ancient stone and astral steel collided across time."
+ },
+ "cs_ch1_1": {
+  "file": "assets/audio/voice/cs_ch1_1.mp3",
+  "dur": 6.744,
+  "speaker": "Rift Gatekeeper Lyra",
+  "text": "Abyssal Imps and Puglin Marauders are breaching the northern gate! Clear the Outskirts Raiders, and rally your party!"
+ },
+ "cs_ch2_0": {
+  "file": "assets/audio/voice/cs_ch2_0.mp3",
+  "dur": 5.472,
+  "speaker": "Gronk, Puglin Warlord",
+  "text": "Fresh steel wanders into my crypts! Come, heroes... feed your chrono-shards to the Bestiary!"
+ },
+ "cs_ch2_1": {
+  "file": "assets/audio/voice/cs_ch2_1.mp3",
+  "dur": 5.832,
+  "speaker": "Blacksmith Kaelen",
+  "text": "Strike down Gronk and his pack. Their cores will temper your relics for the Astral Breach ahead!"
+ },
+ "cs_ch3_0": {
+  "file": "assets/audio/voice/cs_ch3_0.mp3",
+  "dur": 5.952,
+  "speaker": "Xeno-Harbinger",
+  "text": "Timeline convergence detected. Astral Cyclops Juggernaut... purge all organic anomalies."
+ },
+ "cs_ch3_1": {
+  "file": "assets/audio/voice/cs_ch3_1.mp3",
+  "dur": 4.176,
+  "speaker": "Rift Gatekeeper Lyra",
+  "text": "Press Space to vault over the shockwaves, and focus fire on the Juggernaut!"
+ },
+ "cs_ch4_0": {
+  "file": "assets/audio/voice/cs_ch4_0.mp3",
+  "dur": 6.168,
+  "speaker": "Archon Malakor",
+  "text": "I am the nexus of every broken age! Kneel before the Chrono-Fused Throne, mortals!"
+ },
+ "cs_ch4_1": {
+  "file": "assets/audio/voice/cs_ch4_1.mp3",
+  "dur": 4.824,
+  "speaker": "High Cleric Seraphina",
+  "text": "Charge your Co-Op Synergy, and unleash Astral Convergence together. Now!"
+ },
+ "cs_ch5_0": {
+  "file": "assets/audio/voice/cs_ch5_0.mp3",
+  "dur": 7.584,
+  "speaker": "Lorekeeper Aldous",
+  "text": "Malakor falls, and golden light breaks across Ashenvale. Yet deeper echoes stir, beyond the Endless Rift..."
+ },
+ "cs_ch5_1": {
+  "file": "assets/audio/voice/cs_ch5_1.mp3",
+  "dur": 5.712,
+  "speaker": "Rift Gatekeeper Lyra",
+  "text": "Victory belongs to your party! Prepare yourselves. The Endless Rift escalates to the next tier!"
+ },
+ "kaelen_greet": {
+  "file": "assets/audio/voice/kaelen_greet.mp3",
+  "dur": 7.56,
+  "speaker": "Blacksmith Kaelen",
+  "text": "Hail, hero! The Chrono-Rifts warped steel and starlight alike. Bring me your blades, and I'll temper them hot enough to cleave an Archon."
+ },
+ "kaelen_temper": {
+  "file": "assets/audio/voice/kaelen_temper.mp3",
+  "dur": 2.568,
+  "speaker": "Blacksmith Kaelen",
+  "text": "Hah! Feel that edge? That'll bite."
+ },
+ "kaelen_forge": {
+  "file": "assets/audio/voice/kaelen_forge.mp3",
+  "dur": 2.832,
+  "speaker": "Blacksmith Kaelen",
+  "text": "A fine relic. Wield it with pride."
+ },
+ "kaelen_broke": {
+  "file": "assets/audio/voice/kaelen_broke.mp3",
+  "dur": 2.928,
+  "speaker": "Blacksmith Kaelen",
+  "text": "Come back when your purse is heavier, friend."
+ },
+ "seraphina_greet": {
+  "file": "assets/audio/voice/seraphina_greet.mp3",
+  "dur": 6.6,
+  "speaker": "High Cleric Seraphina",
+  "text": "May the Twin Moons shield your spirit. Rest at the Sanctuary Shrine, and let Solaris mend your party's wounds."
+ },
+ "seraphina_heal": {
+  "file": "assets/audio/voice/seraphina_heal.mp3",
+  "dur": 1.704,
+  "speaker": "High Cleric Seraphina",
+  "text": "Be whole again, all of you."
+ },
+ "seraphina_elixirs": {
+  "file": "assets/audio/voice/seraphina_elixirs.mp3",
+  "dur": 2.832,
+  "speaker": "High Cleric Seraphina",
+  "text": "Three elixirs, freshly blessed. Use them well."
+ },
+ "seraphina_blessing": {
+  "file": "assets/audio/voice/seraphina_blessing.mp3",
+  "dur": 2.544,
+  "speaker": "High Cleric Seraphina",
+  "text": "Solaris burns within you. Strike true!"
+ },
+ "seraphina_sanctuary": {
+  "file": "assets/audio/voice/seraphina_sanctuary.mp3",
+  "dur": 3.528,
+  "speaker": "High Cleric Seraphina",
+  "text": "The Sanctuary's blessing restores your party. Fight on."
+ },
+ "lyra_greet": {
+  "file": "assets/audio/voice/lyra_greet.mp3",
+  "dur": 6.048,
+  "speaker": "Rift Gatekeeper Lyra",
+  "text": "The Astral Gate hums with power. Step through when your squad is ready, or shift timelines at once."
+ },
+ "lyra_wave": {
+  "file": "assets/audio/voice/lyra_wave.mp3",
+  "dur": 2.952,
+  "speaker": "Rift Gatekeeper Lyra",
+  "text": "A new Rift Wave has awakened. Steel yourselves!"
+ },
+ "aldous_lore_0": {
+  "file": "assets/audio/voice/aldous_lore_0.mp3",
+  "dur": 15.168,
+  "speaker": "Lorekeeper Aldous",
+  "text": "Before the Chrono-Rifts tore open the northern sky, Ashenvale Bastion stood as the serene frontier of Sunsteel knights and woodland trackers. Now, medieval stone and alien monoliths share one horizon."
+ },
+ "aldous_lore_1": {
+  "file": "assets/audio/voice/aldous_lore_1.mp3",
+  "dur": 12.984,
+  "speaker": "Lorekeeper Aldous",
+  "text": "Beneath the western crypts, Puglin Warlords and Abyssal Imps guard ancient chests, forged in flame and frost. Hunters who clear the catacombs harvest rare relics for Blacksmith Kaelen."
+ },
+ "aldous_lore_2": {
+  "file": "assets/audio/voice/aldous_lore_2.mp3",
+  "dur": 13.296,
+  "speaker": "Lorekeeper Aldous",
+  "text": "In the far northern Citadel hovers Malakor, the Chrono-Fused Archon. Armed with a void scythe and a golden broadsword, only coordinated Convergence can shatter his temporal shield."
+ },
+ "aldous_tome": {
+  "file": "assets/audio/voice/aldous_tome.mp3",
+  "dur": 11.112,
+  "speaker": "Lorekeeper Aldous",
+  "text": "The Chrono-Rifts tore open above Ashenvale Bastion, fusing medieval stone with future citadels. Forge mythic weapons, and strike down Archon Malakor!"
+ },
+ "malakor_engage": {
+  "file": "assets/audio/voice/malakor_engage.mp3",
+  "dur": 4.488,
+  "speaker": "Archon Malakor",
+  "text": "So, the insects crawl to my throne. Your timelines end here!"
+ },
+ "malakor_half": {
+  "file": "assets/audio/voice/malakor_half.mp3",
+  "dur": 4.944,
+  "speaker": "Archon Malakor",
+  "text": "You wound me? I have died a thousand times, in a thousand ages!"
+ },
+ "malakor_quarter": {
+  "file": "assets/audio/voice/malakor_quarter.mp3",
+  "dur": 2.88,
+  "speaker": "Archon Malakor",
+  "text": "Enough! Let every age collapse upon you!"
+ },
+ "malakor_death": {
+  "file": "assets/audio/voice/malakor_death.mp3",
+  "dur": 4.56,
+  "speaker": "Archon Malakor",
+  "text": "Impossible... The Rift... will consume... all timelines!"
+ },
+ "gronk_engage": {
+  "file": "assets/audio/voice/gronk_engage.mp3",
+  "dur": 2.664,
+  "speaker": "Gronk, Puglin Warlord",
+  "text": "Smash the shiny ones! Gronk wants their shards!"
+ },
+ "gronk_death": {
+  "file": "assets/audio/voice/gronk_death.mp3",
+  "dur": 1.632,
+  "speaker": "Gronk, Puglin Warlord",
+  "text": "Gronk... not... finished..."
+ },
+ "xeno_engage": {
+  "file": "assets/audio/voice/xeno_engage.mp3",
+  "dur": 3.264,
+  "speaker": "Xeno-Harbinger",
+  "text": "Organic anomaly located. Commencing purge."
+ },
+ "xeno_death": {
+  "file": "assets/audio/voice/xeno_death.mp3",
+  "dur": 2.616,
+  "speaker": "Xeno-Harbinger",
+  "text": "Critical failure. Timeline... corrupted."
+ },
+ "hero_vanguard_spawn": {
+  "file": "assets/audio/voice/hero_vanguard_spawn.mp3",
+  "dur": 2.112,
+  "speaker": "Vanguard Knight",
+  "text": "Vanguard, ready. Let's move out."
+ },
+ "hero_vanguard_ult": {
+  "file": "assets/audio/voice/hero_vanguard_ult.mp3",
+  "dur": 2.304,
+  "speaker": "Vanguard Knight",
+  "text": "By the Sunsteel oath... converge!"
+ },
+ "hero_vanguard_sig_0": {
+  "file": "assets/audio/voice/hero_vanguard_sig_0.mp3",
+  "dur": 1.512,
+  "speaker": "Vanguard Knight",
+  "text": "Stand behind the banner!"
+ },
+ "hero_vanguard_sig_1": {
+  "file": "assets/audio/voice/hero_vanguard_sig_1.mp3",
+  "dur": 1.032,
+  "speaker": "Vanguard Knight",
+  "text": "Rally to me!"
+ },
+ "hero_vanguard_levelup": {
+  "file": "assets/audio/voice/hero_vanguard_levelup.mp3",
+  "dur": 1.584,
+  "speaker": "Vanguard Knight",
+  "text": "My oath grows stronger."
+ },
+ "hero_vanguard_lowhp": {
+  "file": "assets/audio/voice/hero_vanguard_lowhp.mp3",
+  "dur": 1.608,
+  "speaker": "Vanguard Knight",
+  "text": "I'm hurt... hold the line!"
+ },
+ "hero_vanguard_revived": {
+  "file": "assets/audio/voice/hero_vanguard_revived.mp3",
+  "dur": 2.208,
+  "speaker": "Vanguard Knight",
+  "text": "Back on my feet. For Ashenvale!"
+ },
+ "hero_ranger_spawn": {
+  "file": "assets/audio/voice/hero_ranger_spawn.mp3",
+  "dur": 2.208,
+  "speaker": "Shadow Ranger",
+  "text": "Shadow Ranger, in position."
+ },
+ "hero_ranger_ult": {
+  "file": "assets/audio/voice/hero_ranger_ult.mp3",
+  "dur": 2.352,
+  "speaker": "Shadow Ranger",
+  "text": "Stars above... fall with me!"
+ },
+ "hero_ranger_sig_0": {
+  "file": "assets/audio/voice/hero_ranger_sig_0.mp3",
+  "dur": 1.152,
+  "speaker": "Shadow Ranger",
+  "text": "Rain them down!"
+ },
+ "hero_ranger_sig_1": {
+  "file": "assets/audio/voice/hero_ranger_sig_1.mp3",
+  "dur": 1.224,
+  "speaker": "Shadow Ranger",
+  "text": "Nowhere to hide."
+ },
+ "hero_ranger_levelup": {
+  "file": "assets/audio/voice/hero_ranger_levelup.mp3",
+  "dur": 2.688,
+  "speaker": "Shadow Ranger",
+  "text": "Sharper eyes. Steadier hands."
+ },
+ "hero_ranger_lowhp": {
+  "file": "assets/audio/voice/hero_ranger_lowhp.mp3",
+  "dur": 1.968,
+  "speaker": "Shadow Ranger",
+  "text": "Too close! I need cover!"
+ },
+ "hero_ranger_revived": {
+  "file": "assets/audio/voice/hero_ranger_revived.mp3",
+  "dur": 1.536,
+  "speaker": "Shadow Ranger",
+  "text": "Thanks. I owe you one."
+ },
+ "hero_arcanist_spawn": {
+  "file": "assets/audio/voice/hero_arcanist_spawn.mp3",
+  "dur": 1.752,
+  "speaker": "Reaper Arcanist",
+  "text": "The Reaper walks. Shall we?"
+ },
+ "hero_arcanist_ult": {
+  "file": "assets/audio/voice/hero_arcanist_ult.mp3",
+  "dur": 2.568,
+  "speaker": "Reaper Arcanist",
+  "text": "Time itself bends to us. Converge!"
+ },
+ "hero_arcanist_sig_0": {
+  "file": "assets/audio/voice/hero_arcanist_sig_0.mp3",
+  "dur": 1.56,
+  "speaker": "Reaper Arcanist",
+  "text": "Time... stand still."
+ },
+ "hero_arcanist_sig_1": {
+  "file": "assets/audio/voice/hero_arcanist_sig_1.mp3",
+  "dur": 1.464,
+  "speaker": "Reaper Arcanist",
+  "text": "Freeze, and wither."
+ },
+ "hero_arcanist_levelup": {
+  "file": "assets/audio/voice/hero_arcanist_levelup.mp3",
+  "dur": 2.16,
+  "speaker": "Reaper Arcanist",
+  "text": "The rift whispers new secrets."
+ },
+ "hero_arcanist_lowhp": {
+  "file": "assets/audio/voice/hero_arcanist_lowhp.mp3",
+  "dur": 1.656,
+  "speaker": "Reaper Arcanist",
+  "text": "My aether is fading..."
+ },
+ "hero_arcanist_revived": {
+  "file": "assets/audio/voice/hero_arcanist_revived.mp3",
+  "dur": 1.752,
+  "speaker": "Reaper Arcanist",
+  "text": "Death is merely a pause."
+ },
+ "hero_berserker_spawn": {
+  "file": "assets/audio/voice/hero_berserker_spawn.mp3",
+  "dur": 1.968,
+  "speaker": "Berserker Warlord",
+  "text": "The Warlord has arrived. Who's first?"
+ },
+ "hero_berserker_ult": {
+  "file": "assets/audio/voice/hero_berserker_ult.mp3",
+  "dur": 1.176,
+  "speaker": "Berserker Warlord",
+  "text": "Burn it all! Together!"
+ },
+ "hero_berserker_sig_0": {
+  "file": "assets/audio/voice/hero_berserker_sig_0.mp3",
+  "dur": 0.984,
+  "speaker": "Berserker Warlord",
+  "text": "Blood and fire!"
+ },
+ "hero_berserker_sig_1": {
+  "file": "assets/audio/voice/hero_berserker_sig_1.mp3",
+  "dur": 1.128,
+  "speaker": "Berserker Warlord",
+  "text": "More! Bring me more!"
+ },
+ "hero_berserker_levelup": {
+  "file": "assets/audio/voice/hero_berserker_levelup.mp3",
+  "dur": 1.056,
+  "speaker": "Berserker Warlord",
+  "text": "I grow stronger!"
+ },
+ "hero_berserker_lowhp": {
+  "file": "assets/audio/voice/hero_berserker_lowhp.mp3",
+  "dur": 1.128,
+  "speaker": "Berserker Warlord",
+  "text": "Is that all you've got?"
+ },
+ "hero_berserker_revived": {
+  "file": "assets/audio/voice/hero_berserker_revived.mp3",
+  "dur": 1.296,
+  "speaker": "Berserker Warlord",
+  "text": "Can't kill me that easy!"
+ }
+}

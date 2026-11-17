@@ -28,3 +28,16 @@ A complete, browser-playable **3D Co-Op Action RPG** built from the workspace's 
    - **Live Room Browser & Shareable Invite Links (`?room=CODE`)**: Friends can join public Sanctuary/Raid rooms (`ASHEN-1`, `CATACOMB-7`, `RIFT-OMEGA`) or custom party rooms.
    - **Co-Op Synergy Tethers & Aether Convergence Ultimate**: Fighting near allies links heroes with a glowing resonance tether, charging the party's **Convergence Ultimate (`R`)**.
    - **AI Wingman Companions**: Toggle 0–3 autonomous AI Co-Op heroes who patrol, fight, cast skills, and revive downed players alongside human peers.
+
+---
+
+## 🎙️ Audio & Voice Pipeline (`scripts/build_audio.py`)
+
+All voice acting is pre-rendered offline with **Kokoro-82M** (`kokoro-onnx`) — no browser text-to-speech.
+
+- **61 voiced lines, 11 characters**: each one has its own Kokoro voice plus an ffmpeg effects chain. Malakor gets a lowered pitch, an octave double and hall reverb. The Xeno-Harbinger is robotized. Gronk gets a gritty growl. Each of the 4 hero classes has its own barks (spawn, ultimate, signature skill, level-up, low HP, revive).
+- Cutscene shots stretch to fit their voice line, so dialogue is never cut off. Voices use priorities (cutscene > NPC/boss > combat bark), duck the music, and skip the low-HP muffle.
+- **Zone music & ambience**: seamless loops built from the raw music/Gregor Quendel packs, crossfaded as you walk between Sanctuary, Catacombs, Astral Breach and the Archon Citadel. The boss fight switches to the battle track.
+- **SFX**: per-class skill layers (fire, ice, blink, summon, rock), monster-type death sounds, alternating footstep variants per surface, and distance falloff for other heroes' skills.
+
+Rebuild the audio with `python scripts/build_audio.py [voice|music|sfx] [--force]` (needs `pip install kokoro-onnx soundfile` and ffmpeg).
