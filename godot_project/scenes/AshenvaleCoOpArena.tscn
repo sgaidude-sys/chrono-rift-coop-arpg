@@ -1,0 +1,14 @@
+[gd_scene format=3]
+
+[node name="root" type="Node3D" unique_id=2023427246]
+
+[node name="SunLight" type="DirectionalLight3D" parent="." unique_id=1109792002]
+shadow_enabled = true
+
+[node name="IsometricARPGCamera" type="Camera3D" parent="." unique_id=1561276601]
+current = true
+fov = 45.0
+
+[node name="AstralRiftPortal" type="Node3D" parent="." unique_id=964027325]
+
+[node name="SanctuaryReviveShrine" type="Node3D" parent="." unique_id=354908803]

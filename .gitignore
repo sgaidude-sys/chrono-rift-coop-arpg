@@ -1,0 +1,21 @@
+# Ignore raw gigabyte source asset packs (processed & WebP-packed GLBs live in public/assets/)
+Bestiary*
+brackeys_vfx_bundle/
+Fantasy Props*
+Free Pixel Effects Pack/
+Free Smoke Fx Pixel 2/
+Gregor Quendel*
+JDSherbert*
+Medieval Village*
+Modular Character*
+Modular SciFi*
+TheUltimateWeaponsPack/
+Universal Animation*
+Universal Base*
+VFX Free Pack/
+Weapons/
+*.wav
+node_modules/
+.vercel/
+.DS_Store
+.godot/

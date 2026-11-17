@@ -1,0 +1,10 @@
+{
+  "name": "chrono-rift-ashenvale-coop-arpg",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Chrono-Rift: Chronicles of Ashenvale — Blender 5.2 & Godot 4.7 Enhanced 3D Co-Op ARPG with Three.js, Web Audio API & Supabase Realtime",
+  "scripts": {
+    "build": "echo \"Static WebGL + Three.js bundle ready in public/\"",
+    "start": "npx serve public -l 3000"
+  }
+}
