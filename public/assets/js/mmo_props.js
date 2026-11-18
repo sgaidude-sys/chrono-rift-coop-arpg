@@ -496,5 +496,69 @@
     const rm = this.rockMaterial || R.makeRockMaterial();
     swap('pillar', buildPillar(), rm);
     swap('grave', buildGrave(), rm);
+    this.upgradeTownDecor(leafDepth, rm);
+  };
+
+  // The decorative tree ring + perimeter boulders around Ashenvale Bastion were built
+  // from primitives in index.html; re-create them with the stylized pieces.
+  GP.upgradeTownDecor = function (leafDepth, rockMat) {
+    const ring = this.townTreeRing;
+    const PI = this.propInst;
+    if (ring && PI && PI.pine && PI.tree1) {
+      const pines = ring.placements.filter(tp => !tp.isGold);
+      const autumn = ring.placements.filter(tp => tp.isGold);
+      const d = new THREE.Object3D(), c = new THREE.Color();
+      const make = (src, list, colorFn) => {
+        if (!list.length) return null;
+        const inst = new THREE.InstancedMesh(src.geometry, src.material, list.length);
+        list.forEach((tp, i) => {
+          d.position.set(tp.tx, 0, tp.tz);
+          d.rotation.set(0, i * 1.37 + tp.tx * 0.1, 0);
+          d.scale.setScalar(tp.s * 1.05);
+          d.updateMatrix();
+          inst.setMatrixAt(i, d.matrix);
+          inst.setColorAt(i, colorFn(tp, i));
+        });
+        inst.instanceMatrix.needsUpdate = true;
+        if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
+        inst.castShadow = true;
+        inst.receiveShadow = false;
+        if (leafDepth) inst.customDepthMaterial = leafDepth;
+        this.scene.add(inst);
+        return inst;
+      };
+      // evergreen ring -> new conifers; golden ring -> broadleaf trees in autumn colours
+      this.townPines = make(PI.pine, pines, (tp, i) => c.setHex(i % 3 ? 0x2f6e3a : 0x3f7a3a));
+      this.townAutumn = make(PI.tree1, autumn, (tp, i) => c.setHex([0xd9822b, 0xe0a030, 0xc8642a][i % 3]));
+      ring.meshes.forEach((m) => {
+        this.scene.remove(m);
+        m.geometry.dispose();
+        (Array.isArray(m.material) ? m.material : [m.material]).forEach(mt => mt.dispose());
+      });
+      this.townTreeRing = null;
+    }
+    // perimeter boulders -> chiseled rocks, seated on the ground
+    const rk = this.townRockInst;
+    if (rk && PI && PI.boulder) {
+      const old = rk.geometry;
+      rk.geometry = PI.boulder.geometry;
+      const om = rk.material;
+      rk.material = rockMat;
+      if (om && om !== rockMat) om.dispose();
+      old.dispose();
+      const m = new THREE.Matrix4(), p = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3();
+      for (let i = 0; i < rk.count; i++) {
+        rk.getMatrixAt(i, m);
+        m.decompose(p, q, s);
+        p.y = 0;
+        q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), i * 1.1);   // upright: the chiseled shape has a seated base
+        s.set(s.x * 0.62, s.y * 0.75, s.z * 0.62);                 // boulder geometry is ~1.75 m across vs the old 1 m blob
+        m.compose(p, q, s);
+        rk.setMatrixAt(i, m);
+      }
+      rk.instanceMatrix.needsUpdate = true;
+      rk.castShadow = true;
+      this.townRockInst = null;
+    }
   };
 })();

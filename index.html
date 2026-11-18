@@ -3016,6 +3016,8 @@
         this.scene.add(trunkInst);
         this.scene.add(cone1Inst);
         this.scene.add(cone2Inst);
+        // kept so the stylized prop set (mmo_props.js) can swap in the new trees
+        this.townTreeRing = { meshes: [trunkInst, cone1Inst, cone2Inst], placements: treePlacements };
 
         // 4b. Instanced Perimeter Rocks & Mossy Boulders (1 draw call)
         const rockPlacements = [];
@@ -3046,6 +3048,7 @@
           rockInst.instanceMatrix.needsUpdate = true;
           if (rockInst.instanceColor) rockInst.instanceColor.needsUpdate = true;
           this.scene.add(rockInst);
+          this.townRockInst = rockInst;
         }
 
         // 5. Floating Astral Monoliths & Energy Spires in the Northern Sky
@@ -9812,7 +9815,7 @@
   <script src="public/assets/js/mmo_terrain.js?v=16"></script>
   <script src="public/assets/js/mmo_foliage.js?v=24"></script>
   <script src="public/assets/js/mmo_rocks.js?v=4"></script>
-  <script src="public/assets/js/mmo_props.js?v=4"></script>
+  <script src="public/assets/js/mmo_props.js?v=5"></script>
   <script src="public/assets/js/mmo_water.js?v=2"></script>
   <script src="public/assets/js/mmo_music.js?v=1"></script>
   <script src="public/assets/js/mmo_combatfx.js?v=5"></script>
