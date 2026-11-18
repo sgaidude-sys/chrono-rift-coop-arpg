@@ -315,6 +315,7 @@
       if (!this._occU) this._occU = { uOccA: { value: new THREE.Vector3() }, uOccB: { value: new THREE.Vector3() } };
       this._occU.uOccA.value.set(this.player.pos.x, this.player.pos.y + 1.2, this.player.pos.z);
       this._occU.uOccB.value.copy(this.camera.position);
+      this._occU.uOccB.value.y -= (this._camTerrY || 0); // compare in flat logical space (terrain lift is applied on the GPU)
       if (!this._occInit && this.propInst) {
         this._occInit = true;
         Object.values(this.propInst).forEach(inst => this.patchOccluderMaterial(inst.material));

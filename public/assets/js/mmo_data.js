@@ -460,7 +460,7 @@
     citadel: ['Hall of Broken Ages', 'Clocktower Spire']
   };
 
-  window.MMO = {
+  const MMO_EXPORT = {
     WORLD, MOB_TYPES, ABILITIES, ZONES, RARITIES, EQUIP_SLOTS, WEAPON_BASES, ARMOR_BASES,
     CLASS_ARMOR, ARMOR_TYPE_MULT, AFFIXES, PREFIXES, SUFFIXES, QUEST_GIVERS, COLLECT_ITEMS, EXPLORE_SITES,
     // ---- shared stat curves ----
@@ -472,4 +472,6 @@
     armorBudget: (ilvl) => (40 + 22 * ilvl) * 0.45,
     heroHp: (base, L) => Math.round(base * Math.pow(1.08, L - 1))
   };
+  if (typeof window !== 'undefined') window.MMO = MMO_EXPORT;
+  if (typeof module === 'object' && module.exports) module.exports = MMO_EXPORT;
 })();

@@ -236,6 +236,7 @@
       const target = best
         ? new THREE.Vector3(best.pos.x, 0, best.pos.z)
         : new THREE.Vector3(p.pos.x + Math.sin(p.yaw) * 6, 0, p.pos.z + Math.cos(p.yaw) * 6);
+      if (this.terrainVisualHeight) target.y = this.terrainVisualHeight(target.x, target.z);
       const v = target.project(this.camera);
       this.mouseNDC.set(v.x, v.y);
     },

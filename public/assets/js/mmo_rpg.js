@@ -1096,7 +1096,7 @@
       }
       if (this.minimapCtx && this.worldMapCanvas) this.drawMinimap(this.minimapCtx);
       const z = this.worldGen ? this.currentMMOZone() : null;
-      this.setUI('minimapCoords', ui.minimapCoords, `${z ? (this._mmoZoneKey === 'town' ? 'BASTION' : z.name.toUpperCase()) : ''} • (${Math.round(p.pos.x)}, ${Math.round(p.pos.z)})`);
+      this.setUI('minimapCoords', ui.minimapCoords, `${this.timeLabel ? this.timeLabel + ' • ' : ''}${z ? (this._mmoZoneKey === 'town' ? 'BASTION' : z.name.toUpperCase()) : ''} • (${Math.round(p.pos.x)}, ${Math.round(p.pos.z)})`);
       this.updateRegen(0.1);
       this.updateQuestExplore();
     },

@@ -57,3 +57,16 @@ Rebuild the audio with `python scripts/build_audio.py [voice|music|sfx] [--force
 - **Gear**: 9 slots (weapon, off-hand, head, chest, hands, legs, feet, amulet, ring) and 6 rarities from Common to Mythic. Items have random affixes (Vitality, Power, Crit, Crit Damage, Haste, Lifesteal, Move Speed, Armor %). Armor reduces damage taken. Loot is personal, rolled per hero. Kaelen's forge tempers weapons and crafts Rare or Epic gear.
 - **103 quests**: kill, collect, explore, elite bounty, zone boss and travel quests, unlocked in tiers per zone. There's a quest log on [O], a HUD tracker, and map markers (! available, ? turn in, ✦ objective).
 - Each class keeps its own MMO character progress, saved locally per browser.
+
+---
+
+## 🏔️ Stylized Terrain & Day-Night (v4)
+
+- **Shared terrain math (`public/assets/js/world_core.js`)**: a UMD module with no DOM or Three.js. It holds the seeded world layout plus `getTerrainHeight(x, z)`, built from seeded 2D simplex noise: rolling hills, two-tier plateaus with cliff edges, carved valleys, and mountain ranges on zone borders. Town, roads, outposts and boss arenas stay flat. It's identical in the browser and in Node:
+  ```js
+  const { getTerrainHeight } = require('./public/assets/js/world_core.js');
+  getTerrainHeight(120.5, -340.2);
+  ```
+- **No desync, no floating (`mmo_terrain.js`)**: gameplay and networking keep using flat coordinates, where y is height above ground. The heights are baked into a float heightmap, and a `TERRAIN_DISPLACE` hook in Three.js r128's vertex chunks lifts every mesh, monster, prop, VFX, nameplate and shadow onto that same surface on the GPU.
+- **Cel-shaded ground**: `MeshToonMaterial` with a 3-band gradient (it keeps real shadows), plus rim lighting and procedural blending: emerald grass on flat ground, warm dirt in lowlands and on roads, faceted grey-brown cliff rock on steep slopes and peaks, and flagstones in town. No texture files.
+- **Day-night cycle (`mmo_sky.js`)**: a 20-minute day shared through the wall clock, so everyone in a room sees the same time. The sun and moon move across the sky, with golden dawns and dusks, a starry night, and moonlit shadows. Fog and light follow the time of day, and the clock shows on the minimap. To test, add `?time=0.75` to the URL or call `game.setTimeOfDay(0.5)`.
