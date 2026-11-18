@@ -27,7 +27,7 @@
     meadow_slime:   { model: Q('blob_greenblob'), height: 1.15, speed: 4.2, hp: 0.85, dmg: 0.8 },
     field_rat:      { model: Q('basic_rat'), height: 0.58, speed: 6.2, hp: 0.7, dmg: 0.85, death: 'flop' },
     cluckbeast:     { model: Q('blob_chicken'), height: 1.25, speed: 5.0, hp: 0.9, dmg: 0.9 },
-    bog_hopper:     { model: Q('basic_frog'), height: 1.0, speed: 4.6, hp: 1.0, dmg: 1.0 },
+    bog_hopper:     { model: Q('basic_frog'), height: 1.0, speed: 4.6, hp: 1.0, dmg: 1.0, hop: true },   // no walk clip: procedural hops
     bubble_ooze:    { model: Q('blob_pinkblob'), height: 1.35, speed: 4.0, hp: 1.15, dmg: 0.95 },
     thornwing:      { model: Q('basic_wasp'), height: 1.0, speed: 6.6, hp: 0.75, dmg: 1.05, hover: 1.2, ranged: true },
     sporecap:       { model: Q('blob_mushnub'), height: 1.3, speed: 4.4, hp: 1.1, dmg: 1.0 },

@@ -1020,6 +1020,7 @@
         xp: 0,
         ranged: !!type.ranged && !bossDef,
         isElite: !!spec.elite,
+        hops: !!type.hop && !bossDef,
         isBoss: !!bossDef,
         isWorldBoss: !!spec.worldBoss,
         bossDef,
@@ -1244,6 +1245,7 @@
           m._spinT -= dt;
           m.meshRoot.rotation.y += dt * 14;
         }
+        if (m.hops && m.glbNode) this.updateMobHop(m, dt);
         if (m.nameplateSprite) {
           const d2 = dist2(px, pz, m.pos.x, m.pos.z);
           const show = !m.dead && (d2 < 34 * 34 || (m.isBoss && d2 < 70 * 70));
@@ -1251,6 +1253,43 @@
           if (show && plateTick) this.drawMobNameplate(m);
         }
       }
+    },
+
+    // Procedural hopping for creatures without a walk clip (frogs): driven by the
+    // mob's real ground speed, so it also plays on co-op clients from snapshots.
+    updateMobHop(m, dt) {
+      const node = m.glbNode, root = m.meshRoot;
+      const lx = m._hopLX === undefined ? m.pos.x : m._hopLX, lz = m._hopLZ === undefined ? m.pos.z : m._hopLZ;
+      m._hopLX = m.pos.x; m._hopLZ = m.pos.z;
+      const sp = Math.hypot(m.pos.x - lx, m.pos.z - lz) / Math.max(dt, 1e-3);
+      m._hopSpd = (m._hopSpd || 0) + (Math.min(sp, 20) - (m._hopSpd || 0)) * Math.min(1, dt * 8);
+      const busy = m.dead || m._windup || m.stunTimer > 0 || m.staggerTimer > 0;
+      const moving = !busy && m._hopSpd > 0.6;
+      let ph = m._hopPh || 0;
+      if (moving) ph += dt * Math.max(1.5, Math.min(3.0, m._hopSpd / 2.0));
+      else if (ph % 1 > 0.001 && !m.dead) ph = Math.min(Math.ceil(ph), ph + dt * 2.6);   // finish the current hop, then rest
+      m._hopPh = ph;
+      const f = ph % 1;
+      const H = 0.55 * (m.desiredHeight || 1);
+      const active = !m.dead && (moving || f > 0.001);
+      if (!active) {                                  // resting: hand the transform back (hit bounce etc.)
+        if (m._hopOn) { m._hopOn = false; node.position.y = m.hover ? node.position.y : 0; node.rotation.x = 0; if (!m._windup && root) root.scale.set(1, 1, 1); }
+        return;
+      }
+      m._hopOn = true;
+      let y = 0, sy = 1, tilt = 0;
+      {
+        if (f < 0.16) { const k = f / 0.16; sy = 1 - 0.22 * Math.sin(k * Math.PI * 0.5); }                 // crouch
+        else if (f < 0.84) {                                                                                     // airborne arc
+          const k = (f - 0.16) / 0.68;
+          y = Math.sin(k * Math.PI) * H;
+          sy = 1 + 0.14 * Math.sin(k * Math.PI);
+          tilt = (0.5 - k) * 0.5;                                                                                // nose up on take-off, down on landing
+        } else { const k = (f - 0.84) / 0.16; sy = 1 - 0.2 * Math.sin(k * Math.PI); }                         // landing squash
+      }
+      node.position.y = (m.hover ? node.position.y : 0) + y;
+      node.rotation.x = -tilt;
+      if (!m._windup && root) { const sx = 1 + (1 - sy) * 0.55; root.scale.set(sx, sy, sx); }
     },
 
     // =========================================================================
