@@ -1422,7 +1422,7 @@
 
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.14);">
         <div style="font-size: 11.5px; color: var(--text-main); line-height: 1.5;">
-          <strong>Controls:</strong> <span class="key-cap">WASD</span> Move • <span class="key-cap">Space</span> Dodge Roll • <span class="key-cap">RMB / G</span> Block (tap just before a hit = Perfect Parry) • <span class="key-cap">Alt</span> Jump • <span class="key-cap">Q/E</span> Orbit Camera • <span class="key-cap">Z/X</span> or <span class="key-cap">RMB drag</span> Tilt Camera • <span class="key-cap">LMB / 1 / J</span> Combo Attack • <span class="key-cap">2</span> Heavy Skill • <span class="key-cap">Shift</span> Movement Skill • <span class="key-cap">4</span> Class Skill • <span class="key-cap">H</span> Elixir • <span class="key-cap">R</span> Convergence • <span class="key-cap">I</span> Inventory • <span class="key-cap">F</span> Talk/Interact
+          <strong>Controls:</strong> <span class="key-cap">WASD</span> Move • <span class="key-cap">Space</span> Dodge Roll • <span class="key-cap">RMB / G</span> Block (tap just before a hit = Perfect Parry) • <span class="key-cap">Alt</span> Jump • <span class="key-cap">Q/E</span> Orbit Camera • <span class="key-cap">Z/X</span> or <span class="key-cap">RMB drag</span> Tilt Camera • <span class="key-cap">LMB / 1 / J</span> Combo Attack • <span class="key-cap">2</span> Heavy Skill • <span class="key-cap">Shift</span> Movement Skill • <span class="key-cap">4</span> Class Skill • <span class="key-cap">C</span> Elixir • <span class="key-cap">F1 / H</span> Controls • <span class="key-cap">R</span> Convergence • <span class="key-cap">I</span> Inventory • <span class="key-cap">F</span> Talk/Interact
         </div>
         <button class="cta-btn" onclick="window.game.startOrResumeGame()">⚡ ENTER ASHENVALE REALM</button>
       </div>
@@ -7843,7 +7843,7 @@
           if (k === 'shift' || k === '3' || k === 'l') this.useSkill(3);
           if (k === '4' || k === 'v') this.useSkill(4);
           if (k === 'r' || k === '5') this.useSkill(5);
-          if (k === 'h' || k === 'c') this.usePotion();
+          if (k === 'c') this.usePotion();   // H opens the controls sheet (mmo_tutorial.js)
           if (k === 'i') this.toggleModal('inventory-modal');
           if (k === 'f') this.triggerInteract();
         });
@@ -7969,7 +7969,7 @@
         const tip = document.getElementById('skill-tooltip');
         if (!tip) return;
         const cls = HERO_CLASSES[this.player.classId] || HERO_CLASSES.vanguard;
-        const keyMap = { '1': 'LMB / 1', '2': '2 / K', '3': 'SHIFT / 3', '4': '4 / V', 'jump': 'SPACE', 'potion': 'H / C', '5': 'R / 5' };
+        const keyMap = { '1': 'LMB / 1', '2': '2 / K', '3': 'SHIFT / 3', '4': '4 / V', 'jump': 'SPACE', 'potion': 'C', '5': 'R / 5' };
         let title = '', meta = '', desc = '';
         if (slotKey === 'jump') {
           title = 'Vault Jump';
@@ -9837,5 +9837,7 @@
   <script src="public/assets/js/mmo_combat.js?v=2"></script>
   <script src="public/assets/js/mmo_skillvfx.js?v=1"></script>
   <script src="public/assets/js/mmo_talents.js?v=1"></script>
+  <script src="public/assets/js/mmo_ui.js?v=1"></script>
+  <script src="public/assets/js/mmo_tutorial.js?v=1"></script>
 </body>
 </html>

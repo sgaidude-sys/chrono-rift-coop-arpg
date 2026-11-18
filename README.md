@@ -341,3 +341,37 @@ alter table arpg_heroes add column if not exists talents jsonb default '{}'::jso
   - Tooltips show the rank, current and next effect, and any missing requirement.
   - Unlocking a node plays a radial burst (flash, double ring, 14 light rays), draws the connecting line in, and pulses the point counter.
   - On phones the constellations become swipeable cards: tap a node to inspect it, tap again to buy.
+
+### 🖼️ AAA HUD Design System (`mmo_ui.js`)
+- **Tokens:**
+  - text is warm ivory `#F5F2EB`;
+  - champagne gold `#D4AF37` is used only for 1px hairlines (`rgba(212,175,55,.35)`) and diamond accents;
+  - obsidian glass `rgba(14,17,23,.72)` + `blur(12px)` is used **only** for modal windows (inventory, talents, settings, controls, quests).
+- **Type:** Cinzel for titles (regions, bosses, modal headers) and Plus Jakarta Sans for numbers, labels and tooltips.
+- **No boxes over the viewport.** HUD glyphs and numbers float on the 3D scene with soft text-shadows. Skill emoji are rendered as uniform white glyphs.
+- **Desktop layout:**
+  - **Top-left:** circular minimap with gold compass ticks (N/E/S/W). The circular avatar sits on its edge with an HP ring and a gold level badge. Name, class and currencies sit beside it.
+  - **Top-right:** an icon-only quick menu (Talents, Inventory, Map, Audio, Settings) with hover scale, glow and labels. A diamond marks unspent talent points. A one-line status (room, heroes, FPS) sits underneath.
+  - **Top-centre:** a hairline zone label. The boss bar fades in when you engage a boss: a wide thin HP line under its Cinzel title, with the posture/stagger bar underneath.
+  - **Bottom-centre:** a slim 10-segment HP bar with a damage catch-up trail, plus Aether and Synergy hairlines. Circular skills sit on either side: `1 2 3 4 · R SPACE RMB C`. Each has a keycap badge, a conic cooldown sweep and a gold SVG progress ring, and flashes when ready. The ultimate's ring fills with Synergy.
+  - **Settings (gear icon):** a glass modal that hosts the original network panel. It has Rooms, Invite, AI Squad, Forge, Hall of Legends, Switch Class, Story, Graphics, Audio, Controls and **Replay Tutorial**.
+- **Micro-interactions:**
+  - every modal opens and closes with a 180 ms scale/fade;
+  - **Escape** or clicking the backdrop closes it (except the start screen);
+  - empty HUD wrappers use `pointer-events: none`, so camera drags and combat clicks reach the game (the chat log only takes clicks while you're typing).
+- **Phones:** the touch layout from `mmo_mobile.js` is kept and restyled with the same tokens. Skill buttons are round with white glyphs.
+
+### 🎓 In-Play Tutorial (`mmo_tutorial.js`)
+A glass objective pill under the minimap teaches the game during play. It has animated keycaps and no pauses:
+
+| Step | Prompt | Completes when |
+|---|---|---|
+| 1 | `W A S D` move · `RMB` drag to look | you have walked 10 m |
+| 2 | Hold `W` to break into a sprint (the stamina arc pulses gold) | you have sprinted for 1 s |
+| 3 | `SPACE` dodge roll | you roll |
+| 4 | `RMB` right as it glints | you land a Perfect Parry on the **Training Sentinel**: a local practice dummy that walks into range, winds up, glints 0.25 s before striking, and coaches you when you are early or late |
+| 5 | Cast `1` / `2`, then open `T` Talents | both are done |
+
+- **Progress** is saved in `localStorage` (`cr_tutorial_v1_<hero>`) and mirrored into `mmoState.tutorial`, so reloads resume at the same step. Existing heroes at level 5+ skip it automatically.
+- **Skip ✕** is in the pill. **Replay Tutorial** is in Settings.
+- **[F1] / [H]** opens the Controls sheet at any time. `H` no longer drinks an Elixir; use **C**.
