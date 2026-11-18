@@ -120,7 +120,7 @@
     {
       id: 'meadows', name: 'Ashenvale Meadows', icon: '🌾', lv: [1, 6], center: [40, 330], weight: 1.12,
       ground: [1, 0.05, 0, 0], tint: [0.95, 1.02, 0.86], tint2: [1.06, 1.0, 0.78],
-      sky: { horizon: 0xd97d48, zenith: 0x151e3f, nebula: 0x4b9eff, fog: 0x2a3550, density: 0.0062 },
+      sky: { horizon: 0xffc98a, zenith: 0x2f7fe0, nebula: 0xfff1e0, fog: 0xc9d6df, density: 0.0042 },
       music: 'town', amb: 'town', step: 'grass',
       props: { oak: 0.9, pine: 0.35, rock: 0.5, flower: 1.2, mushroom: 0.25, boulder: 0.12 },
       mobs: [
@@ -146,7 +146,7 @@
     {
       id: 'whisperwood', name: 'Whisperwood Forest', icon: '🌲', lv: [6, 12], center: [-760, 520], weight: 1.0,
       ground: [0.85, 0.25, 0, 0], tint: [0.66, 0.84, 0.62], tint2: [0.58, 0.72, 0.5],
-      sky: { horizon: 0x6f9a5a, zenith: 0x0d1c18, nebula: 0x4bff9e, fog: 0x1b2a22, density: 0.0085 },
+      sky: { horizon: 0xf2d79e, zenith: 0x2d86cc, nebula: 0xf2fff0, fog: 0xb6cfbf, density: 0.0058 },
       music: 'town', amb: 'town', step: 'grass',
       props: { pine: 2.2, oak: 1.2, mushroom: 0.5, rock: 0.4, deadtree: 0.15, boulder: 0.1 },
       mobs: [
@@ -172,7 +172,7 @@
     {
       id: 'catacombs', name: 'Bestiary Catacombs', icon: '💀', lv: [12, 18], center: [-960, -300], weight: 1.0,
       ground: [0.15, 1, 0, 0], tint: [0.74, 0.8, 0.82], tint2: [0.56, 0.66, 0.64],
-      sky: { horizon: 0x1d6b52, zenith: 0x091418, nebula: 0x2ee68a, fog: 0x0c1c1a, density: 0.0095 },
+      sky: { horizon: 0xd2bf94, zenith: 0x3c6390, nebula: 0xe2ebe6, fog: 0x93a7a3, density: 0.0068 },
       music: 'catacombs', amb: 'catacombs', step: 'stone',
       props: { grave: 1.3, deadtree: 0.8, pillar: 0.45, rock: 0.6, boulder: 0.15, crystal: 0.08 },
       mobs: [
@@ -199,7 +199,7 @@
     {
       id: 'badlands', name: 'Scorched Badlands', icon: '🏜️', lv: [18, 25], center: [-330, -920], weight: 1.05,
       ground: [0.1, 0.25, 0, 1], tint: [1.12, 0.9, 0.66], tint2: [1.0, 0.72, 0.5],
-      sky: { horizon: 0xf0a050, zenith: 0x3a1e10, nebula: 0xffc070, fog: 0x4a2e1e, density: 0.0058 },
+      sky: { horizon: 0xffb578, zenith: 0x3b8fe0, nebula: 0xfff1de, fog: 0xe2c6a0, density: 0.0040 },
       music: 'town', amb: 'citadel', step: 'gravel',
       props: { cactus: 1.0, rock: 1.0, boulder: 0.3, deadtree: 0.35, bones: 0.4, mesa: 0.08 },
       mobs: [
@@ -233,7 +233,7 @@
     {
       id: 'frostpeak', name: 'Frostpeak Tundra', icon: '❄️', lv: [25, 32], center: [640, -820], weight: 1.0,
       ground: [0.25, 0.9, 0, 0.2], tint: [1.2, 1.25, 1.35], tint2: [0.92, 1.0, 1.15],
-      sky: { horizon: 0xa8c8ff, zenith: 0x14203c, nebula: 0xbfe6ff, fog: 0x8aa0c0, density: 0.0078 },
+      sky: { horizon: 0xffd9b4, zenith: 0x58a8f2, nebula: 0xffffff, fog: 0xdbe7f3, density: 0.0058 },
       music: 'catacombs', amb: 'town', step: 'stone',
       props: { snowpine: 1.6, icespike: 0.6, rock: 0.6, boulder: 0.2 },
       mobs: [
@@ -267,7 +267,7 @@
     {
       id: 'breach', name: 'The Astral Breach', icon: '🛸', lv: [32, 39], center: [1080, 40], weight: 1.0,
       ground: [0, 0.2, 1, 0], tint: [0.84, 0.92, 1.12], tint2: [0.72, 0.78, 1.0],
-      sky: { horizon: 0x5c248c, zenith: 0x0b102c, nebula: 0x38e8ff, fog: 0x14122e, density: 0.0072 },
+      sky: { horizon: 0xdca8ff, zenith: 0x2c52b4, nebula: 0xeae2ff, fog: 0xa4a4dc, density: 0.0052 },
       music: 'catacombs', amb: 'breach', step: 'metal',
       props: { crystal: 1.2, pylon: 0.25, rock: 0.5, boulder: 0.15 },
       mobs: [
@@ -293,7 +293,7 @@
     {
       id: 'infernal', name: 'Infernal Rift', icon: '🔥', lv: [39, 46], center: [760, 860], weight: 1.0,
       ground: [0, 1, 0.15, 0.25], tint: [0.62, 0.36, 0.32], tint2: [0.42, 0.24, 0.24],
-      sky: { horizon: 0xc23b1a, zenith: 0x1a0606, nebula: 0xff6a2a, fog: 0x2a0d0a, density: 0.0088 },
+      sky: { horizon: 0xff9152, zenith: 0x6a3c8e, nebula: 0xffd4b4, fog: 0xb88070, density: 0.0060 },
       music: 'catacombs', amb: 'citadel', step: 'gravel',
       props: { lavarock: 1.1, deadtree: 0.6, rock: 0.6, crystal: 0.2, boulder: 0.2, bones: 0.3 },
       mobs: [
@@ -328,7 +328,7 @@
     {
       id: 'citadel', name: 'Chrono Citadel', icon: '⏳', lv: [46, 50], center: [60, 1300], weight: 0.85,
       ground: [0, 0.6, 0.6, 0.2], tint: [0.8, 0.72, 0.96], tint2: [0.64, 0.56, 0.82],
-      sky: { horizon: 0x991f44, zenith: 0x120824, nebula: 0xc84bff, fog: 0x1e0d26, density: 0.0082 },
+      sky: { horizon: 0xf2b4da, zenith: 0x4a4cbc, nebula: 0xf6e6ff, fog: 0xbcabd8, density: 0.0054 },
       music: 'town', amb: 'citadel', step: 'stone',
       props: { pillar: 1.0, crystal: 0.8, pylon: 0.25, rock: 0.4, boulder: 0.1 },
       mobs: [

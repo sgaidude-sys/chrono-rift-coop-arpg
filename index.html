@@ -8127,7 +8127,8 @@
         // Only update shadow camera anchor when player moves > 3.0m (9.0 sq meters)
         if (this.player.pos.distanceToSquared(this.lastShadowAnchor) > 9.0) {
           this.lastShadowAnchor.copy(this.player.pos);
-          this.sunLight.position.set(this.player.pos.x + 24, 42, this.player.pos.z + 22);
+          const so = this.sunOffset || { x: 24, y: 42, z: 22 };
+          this.sunLight.position.set(this.player.pos.x + so.x, so.y, this.player.pos.z + so.z);
           this.sunLight.target.position.copy(this.player.pos);
           this.sunLight.target.updateMatrixWorld();
         }
@@ -9720,11 +9721,12 @@
       window.game = new ChronoRiftCoOpGame();
     });
   </script>
-  <script src="public/assets/js/mmo_data.js?v=6"></script>
-  <script src="public/assets/js/mmo_world.js?v=6"></script>
-  <script src="public/assets/js/mmo_rpg.js?v=6"></script>
-  <script src="public/assets/js/mmo_audio.js?v=6"></script>
-  <script src="public/assets/js/mmo_vfx.js?v=6"></script>
-  <script src="public/assets/js/mmo_mobile.js?v=6"></script>
+  <script src="public/assets/js/mmo_data.js?v=7"></script>
+  <script src="public/assets/js/mmo_world.js?v=7"></script>
+  <script src="public/assets/js/mmo_rpg.js?v=7"></script>
+  <script src="public/assets/js/mmo_audio.js?v=7"></script>
+  <script src="public/assets/js/mmo_vfx.js?v=7"></script>
+  <script src="public/assets/js/mmo_mobile.js?v=7"></script>
+  <script src="public/assets/js/mmo_sky.js?v=8"></script>
 </body>
 </html>
