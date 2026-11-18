@@ -544,18 +544,24 @@
         }
         const g = new THREE.Group();
         g.position.set(wp.x, 0, wp.z);
-        const base = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.4, 0.6, 6), obMat);
-        base.position.y = 0.3;
-        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.55, 3.6, 6), obMat);
-        pillar.position.y = 2.2;
-        const rune = new THREE.Mesh(new THREE.OctahedronGeometry(0.55, 0), runeMat);
-        rune.position.y = 4.6;
-        g.add(base, pillar, rune);
+        const zIdx = Math.max(0, wg.zones.findIndex(zz => zz.id === wp.zone));
+        if (this.buildWaypointShrine) {
+          // crystal shrine: floating pillars, rune rings, light beam, pulsing ring (mmo_combatfx.js)
+          this.buildWaypointShrine(wp, g, zIdx);
+        } else {
+          const base = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.4, 0.6, 6), obMat);
+          base.position.y = 0.3;
+          const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.55, 3.6, 6), obMat);
+          pillar.position.y = 2.2;
+          const rune = new THREE.Mesh(new THREE.OctahedronGeometry(0.55, 0), runeMat);
+          rune.position.y = 4.6;
+          g.add(base, pillar, rune);
+          this.waypointMeshes.push(rune);
+          this.addFlameGlowSprite(wp.x, 4.6, wp.z, 2.4, blueTex, wp.x);
+        }
         this.scene.add(g);
         this.worldProps.push(g);
-        this.waypointMeshes.push(rune);
-        this.addFlameGlowSprite(wp.x, 4.6, wp.z, 2.4, blueTex, wp.x);
-        this.worldObstacles.push({ x: wp.x, z: wp.z, r: 1.2 });
+        this.worldObstacles.push({ x: wp.x, z: wp.z, r: 1.6 });
         this.interactables.push({
           id: wp.id, pos: new THREE.Vector3(wp.x, 0, wp.z), radius: 4.0,
           label: `Waypoint: ${wp.name} — Fast Travel`, action: () => this.openWorldMap(true)
@@ -746,8 +752,10 @@
         for (let i = 0; i < this.waypoints.length; i++) {
           const wp = this.waypoints[i];
           if (this.mmoState.waypoints.has(wp.id)) continue;
-          if (dist2(p.x, p.z, wp.x, wp.z) < 18 * 18) {
+          // walk right up to the shrine to attune it
+          if (dist2(p.x, p.z, wp.x, wp.z) < 5 * 5) {
             this.mmoState.waypoints.add(wp.id);
+            if (this.onShrineUnlocked) this.onShrineUnlocked(wp);
             this.showLootToast(`🌀 Waypoint discovered: ${wp.name}`);
             this.addChatMessage('Waypoint', `🌀 ${wp.name} waypoint attuned. Fast travel unlocked!`, 'sys-synergy');
             this.audio.playSpell('warp');

@@ -100,3 +100,30 @@ The game picks one of five songs from `public/assets/audio/music/` based on the 
 - **No lag.** Songs stream through `<audio>` → `MediaElementSource` instead of being decoded into RAM all at once. Each song loads only when first needed, and the next one starts buffering while the previous fades out. Fades are gain ramps scheduled once per transition and run on the audio thread, so nothing is computed per frame. Paused songs stop decoding, and muting pauses the active song.
 - **Files.** The source songs were loudness-normalised to −16 LUFS, trimmed of silence and given click-free loop edges. They are 128 kbps, 44.1 kHz MP3s, 15.6 MB in total (down from 23.6 MB).
 - **Debugging.** `game.audio.musicDebug()` shows the wanted song, the current song, the fade state, and each song's volume, position and buffering.
+
+### ⚡ Combat Feel & Shrines (`mmo_combatfx.js`)
+- **Damage numbers.** A pool of 56 HTML overlay nodes (36 on phones), anchored to the world and moved only with `transform`. There are no per-number animation loops and no DOM churn.
+  - Each number pops upward with a springy bounce, colour-coded and glowing by element.
+  - Crits are bigger and marked ✦. Reactions add a coloured label, and damage the hero takes shows in red.
+- **Elements.** Every skill carries an element (see `SKILL_ELEM`):
+  - **Vanguard:** Electro; Phalanx Banner is Hydro.
+  - **Ranger:** Hydro; Fan of Blades is Cryo and Starfall is Electro.
+  - **Arcanist:** Cryo; Vortex and Blink are Electro.
+  - **Berserker:** Pyro; Crusher Leap is Electro.
+- **Statuses and reactions.** A hit leaves a 9 s element status, shown as a glowing icon above the enemy. Enemies standing in lakes get Hydro automatically. Hitting a second element triggers a reaction burst:
+
+| Elements | Reaction | Effect |
+|---|---|---|
+| Hydro + Electro | Electro-Charged | Lightning chains to 3 nearby enemies |
+| Pyro + Electro | Overloaded | Explosion |
+| Cryo + Electro | Superconduct | AoE; enemies take +25% damage for 8 s |
+| Hydro + Cryo | Frozen | Stun (2.6 s, 0.9 s on bosses) |
+| Pyro + Cryo | Melt | Hit deals ×2 or ×1.5 |
+| Pyro + Hydro | Vaporize | Hit deals ×2 or ×1.5 |
+
+- **Weapon trails.** A ribbon mesh tracks the base and tip of the hero's weapon bone during attacks. It is smoothed with Catmull-Rom curves, tinted by element, drawn additively, and fades over 0.2 s. A pool of 6 trails serves the hero, AI allies and party members within 40 m.
+- **Waypoint shrines.** Each shrine has a hexagonal stone dais, floating crystals, counter-rotating procedural rune rings, a 70 m light beam and a pulsing ground ring.
+  - You unlock a shrine by walking right up to it (5 m; it used to be 18 m), which triggers a beam flare and a burst.
+  - An unlocked shrine blesses you every 90 s: basic attacks take the zone's element for 60 s, and you heal 25% HP.
+- **Hit-stop and camera shake.** Crits, heavy attacks, reactions and boss skills that land freeze the frame for 40 ms, throttled so multi-hit skills stay smooth. They also add smooth camera shake that scales with the square of hit strength (trauma²), with a slight roll. The shake is applied after the camera's smoothing, so it isn't damped away.
+- **Co-op note.** Reactions are calculated by the attacker's client. Damage numbers sync as before, but reaction visuals show only for the player who triggered them.
