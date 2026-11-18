@@ -29,7 +29,7 @@
   const PARRY_WINDOW = 0.18;     // s before impact that a block press counts as a parry
   const PARRY_LOCKOUT = 0.32;    // s before a missed parry press can open a new window
   const IFRAMES = 0.25;
-  const ROLL_DUR = 0.42, ROLL_DIST = 5.2, ROLL_COST = 20;
+  const ROLL_DUR = 0.55, ROLL_DIST = 5.6, ROLL_COST = 20;
   const BUFFER = 0.3;
   const STAGGER = 3.0;
   const GLINT_LEAD = 0.25;
@@ -153,9 +153,15 @@
     // combat clock in game seconds (pauses with hit-stop / frame clamps, unlike wall time)
     cNow() { return this._cTime || 0; },
 
+    // talent modifier lookup (mmo_talents.js fills this._talentMods)
+    tv(k) { return (this._talentMods && this._talentMods[k]) || 0; },
+    hasTalent(id) { return !!(this._talentSet && this._talentSet.has(id)); },
+
     canAct() {
       const p = this.player;
-      return !(this._roll || this._guardBrokenT > 0 || p.dead || p.leapTimer > 0);
+      // the last ~20% of a roll is recovery that attacks / dodges may cancel
+      const rolling = this._roll && this._roll.t < this._roll.dur * 0.8;
+      return !(rolling || this._guardBrokenT > 0 || p.dead || p.leapTimer > 0);
     },
 
     dodgeRoll(fromBuffer) {
@@ -168,32 +174,39 @@
         return;
       }
       const stam = this.stamina === undefined ? 100 : this.stamina;
-      if (stam < ROLL_COST * 0.5) {                                   // not enough: tell the player
+      const cost = ROLL_COST * (1 - this.tv('rollCost'));
+      if (stam < cost * 0.5) {                                   // not enough: tell the player
         this.spawnFloatingText(p.pos, 'NO STAMINA', '#ff8a3c', 13);
         if (this.spendStamina) this.spendStamina(0);
         return;
       }
-      // direction: movement input (camera-relative), else a backstep
+      // direction: movement input (camera-relative), else roll forward the way the hero faces
       let ix = (this.touchVec ? this.touchVec.x : 0), iz = (this.touchVec ? this.touchVec.y : 0);
       if (this.keys['w'] || this.keys['arrowup']) iz -= 1;
       if (this.keys['s'] || this.keys['arrowdown']) iz += 1;
       if (this.keys['a'] || this.keys['arrowleft']) ix -= 1;
       if (this.keys['d'] || this.keys['arrowright']) ix += 1;
-      let dx, dz, back = false;
+      let dx, dz;
       if (Math.hypot(ix, iz) > 0.1) {
         const l = Math.hypot(ix, iz); ix /= l; iz /= l;
         const c = Math.cos(this.cameraYaw), s = Math.sin(this.cameraYaw);
         dx = ix * c + iz * s; dz = -ix * s + iz * c;
       } else {
-        dx = -Math.sin(p.yaw); dz = -Math.cos(p.yaw); back = true;
+        dx = Math.sin(p.yaw); dz = Math.cos(p.yaw);
       }
-      if (this.spendStamina) this.spendStamina(ROLL_COST);
+      if (this.spendStamina) this.spendStamina(cost);
+      const origin = p.pos.clone();
       this.endBlock(true);
-      this._roll = { t: 0, dx, dz, dist: back ? ROLL_DIST * 0.55 : ROLL_DIST, dur: back ? ROLL_DUR * 0.8 : ROLL_DUR, back, ghosts: 0, last: 0 };
-      p.dodgeTimer = Math.max(p.dodgeTimer || 0, IFRAMES);
+      if (this._roll) this.resetRollAnim();
+      this._roll = { t: 0, dx, dz, dist: ROLL_DIST, dur: ROLL_DUR, ghosts: 0, last: 0 };
+      p.dodgeTimer = Math.max(p.dodgeTimer || 0, IFRAMES + this.tv('iframes'));
       this._wasDodging = true;                 // the roll already paid: skip mmo_hud's generic dodge charge
-      if (!back) { p.yaw = Math.atan2(dx, dz); if (p.meshRoot) p.meshRoot.rotation.y = p.yaw; }
+      p.yaw = Math.atan2(dx, dz); if (p.meshRoot) p.meshRoot.rotation.y = p.yaw;
       orig.playEntityAnim.call(this, p, p.actions && p.actions.Roll ? 'Roll' : 'Sword_Dash', true);
+      // the Roll clip is 1.46 s: play the WHOLE tumble (dive, roll, rise) inside the dodge
+      const ra = p.actions && (p.actions.Roll || p.actions.Sword_Dash);
+      if (ra) ra.setEffectiveTimeScale(ra.getClip().duration / (ROLL_DUR + 0.03));
+      if (this.onRollStart) this.onRollStart(origin);
       this.audio && this.audio.playSwing && this.audio.playSwing(false);
       this.spawnShockwaveRing(new THREE.Vector3(p.pos.x, 0.05, p.pos.z), 1.2, 0xbfe6ff, 0.2);
       const slot = document.getElementById('slot-jump');
@@ -213,7 +226,7 @@
       p.pos.z = Math.max(-1590, Math.min(1590, p.pos.z + r.dz * step));
       if (this.worldClampMove) this.worldClampMove(p.pos, px, pz);
       this.resolveObstacleCollisions(p.pos, 0.55);
-      if (!r.back) p.yaw = Math.atan2(r.dx, r.dz);
+      p.yaw = Math.atan2(r.dx, r.dz);
       if (p.meshRoot) { p.meshRoot.position.x = p.pos.x; p.meshRoot.position.z = p.pos.z; p.meshRoot.rotation.y = p.yaw; }
       // motion-trail afterimages
       if (r.ghosts < 3 && r.t >= r.ghosts * 0.08) {
@@ -222,7 +235,12 @@
         const col = cls === 'ranger' ? 0x2ee68a : cls === 'arcanist' ? 0xb266ff : cls === 'berserker' ? 0xff3b5c : 0xf3c86b;
         if (this.spawnHeroAfterimage) this.spawnHeroAfterimage(p, p.pos.clone(), p.yaw, col, 0.32);
       }
-      if (r.t >= r.dur) this._roll = null;
+      if (r.t >= r.dur) { this._roll = null; this.resetRollAnim(); }
+    },
+
+    resetRollAnim() {
+      const p = this.player, a = p && p.actions && (p.actions.Roll || p.actions.Sword_Dash);
+      if (a) a.setEffectiveTimeScale(1);
     },
 
     consumeBuffer() {
@@ -274,8 +292,14 @@
 
     playEntityAnim(entity, name, force) {
       if (entity === this.player) {
-        if (this._roll && name !== 'Roll' && name !== 'Sword_Dash' && name !== 'Death01') return;          // finish the roll
-        if (this._blocking && /^(Idle|Jog_Fwd|Walk|Sprint)/.test(name)) name = entity.actions && entity.actions.Idle_Shield_Loop ? 'Idle_Shield_Loop' : name;
+        // finish the roll (its recovery frames may be cancelled by an attack)
+        if (this._roll && name !== 'Roll' && name !== 'Sword_Dash' && name !== 'Death01') {
+          const loco = name === this.getEntityIdleAnim(entity) || /Idle|Jog|Walk|Sprint/.test(name);
+          if (loco || this._roll.t < this._roll.dur * 0.8) return;
+        }
+        // guard up: idle / locomotion clips (incl. class idles like Sword_Idle) become the block pose
+        if (this._blocking && entity.actions && entity.actions.Sword_Block &&
+            (name === this.getEntityIdleAnim(entity) || /Idle|Jog|Walk|Sprint/.test(name))) name = 'Sword_Block';
       }
       return orig.playEntityAnim.call(this, entity, name, force);
     },
@@ -309,7 +333,7 @@
     },
 
     inParryWindow() {
-      return this._parryPressAt && (this.cNow() - this._parryPressAt) <= PARRY_WINDOW;
+      return this._parryPressAt && (this.cNow() - this._parryPressAt) <= PARRY_WINDOW + this.tv('parryWindow');
     },
 
     // Shared defence for every enemy strike that lands on the local hero.
@@ -318,7 +342,7 @@
       const p = this.player;
       if (this.inParryWindow()) { this.perfectParry(attacker); return 'parry'; }
       if (this._blocking && !(this._guardBrokenT > 0)) {
-        const cost = Math.min(38, Math.max(10, (dmg / Math.max(1, p.maxHp)) * 130));
+        const cost = Math.min(38, Math.max(10, (dmg / Math.max(1, p.maxHp)) * 130)) * (1 - this.tv('blockCost'));
         const stam = this.stamina === undefined ? 100 : this.stamina;
         if (stam >= cost) {
           if (this.spendStamina) this.spendStamina(cost);
@@ -336,7 +360,7 @@
       if (this.player.dodgeTimer > 0) { this.spawnFloatingText(this.player.pos, 'EVADED!', '#38e8ff', 15); return; }
       const r = this.defendStrike(mob, mob.dmg);
       if (r === 'parry') return;
-      const mult = r === 'block' ? 0.25 : (r === 'guardbreak' ? 0.6 : 1);
+      const mult = r === 'block' ? this.blockTakenMult() : (r === 'guardbreak' ? 0.6 : 1);
       this.damagePlayer(Math.max(1, Math.round(mob.dmg * mult)), mob.name, mob.level);
     },
 
@@ -355,7 +379,7 @@
         }
         return;
       }
-      const mult = r === 'block' ? 0.25 : (r === 'guardbreak' ? 0.6 : 1);
+      const mult = r === 'block' ? this.blockTakenMult() : (r === 'guardbreak' ? 0.6 : 1);
       this.damagePlayer(Math.max(1, Math.round(pr.dmg * mult)), 'Projectile', pr.srcLevel);
     },
 
@@ -365,8 +389,10 @@
       if (!(m._meleeLabels && m._meleeLabels.has(label))) return orig.bossHit.call(this, m, mult, label);
       const r = this.defendStrike(m, (m.dmg || 50) * mult);
       if (r === 'parry') return;
-      return orig.bossHit.call(this, m, mult * (r === 'block' ? 0.25 : (r === 'guardbreak' ? 0.6 : 1)), label);
+      return orig.bossHit.call(this, m, mult * (r === 'block' ? this.blockTakenMult() : (r === 'guardbreak' ? 0.6 : 1)), label);
     },
+
+    blockTakenMult() { return 0.25 * (1 - this.tv('blockDmg')); },
 
     perfectParry(attacker) {
       const p = this.player;
@@ -391,7 +417,7 @@
       if (this.stamina !== undefined) this.stamina = Math.min(100, this.stamina + 12);
       orig.playEntityAnim.call(this, p, p.actions && p.actions.Sword_Block ? 'Sword_Block' : 'Idle_Shield_Loop', true);
       if (attacker && !attacker.dead) {
-        this.addPosture(attacker, attacker.isBoss ? 45 : (attacker.isElite ? 48 : 52));
+        this.addPosture(attacker, (attacker.isBoss ? 45 : (attacker.isElite ? 48 : 52)) * (1 + this.tv('postureDmg')));
         // the attacker recoils (local visual; the host also applies it through posture)
         if (!attacker.isBoss) this.playEntityAnim(attacker, 'Hit_Chest', true);
       }
@@ -485,7 +511,7 @@
       if (local && mob.staggerTimer > 0.05 && this._combat) {
         // CRITICAL RIPOSTE on a staggered foe
         const args = Array.prototype.slice.call(arguments);
-        args[1] = Math.round(baseDmg * (mob.isBoss ? 2.5 : 3));
+        args[1] = Math.round(baseDmg * (mob.isBoss ? 2.5 : 3) * (1 + this.tv('riposte')));
         args[2] = true;
         orig.applyDamageToMonster.apply(this, args);
         this.spawnFloatingText(mob.pos, 'CRITICAL RIPOSTE!', '#fff2c4', mob.isBoss ? 26 : 22);
@@ -497,7 +523,7 @@
         return undefined;
       }
       const r = orig.applyDamageToMonster.apply(this, arguments);
-      if (local && this._combat && !mob.dead) this.addPosture(mob, (isHeavy ? 12 : 5) * (mob.isBoss ? 0.6 : 1));
+      if (local && this._combat && !mob.dead) this.addPosture(mob, (isHeavy ? 12 : 5) * (mob.isBoss ? 0.6 : 1) * (1 + this.tv('postureDmg')));
       return r;
     },
 

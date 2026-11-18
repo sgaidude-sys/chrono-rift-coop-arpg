@@ -313,7 +313,7 @@
       } else {
         this._sprinting = false;
         this._stamIdle += dt;
-        if (this._stamIdle > 0.8) this.stamina = Math.min(100, this.stamina + 30 * dt);
+        if (this._stamIdle > 0.8) this.stamina = Math.min(100, this.stamina + 30 * dt * (1 + (this.tv ? this.tv('stamRegen') : 0)));
       }
       if (!this._sprinting && p.animState === 'Sprint_Loop') this.playEntityAnim(p, 'Jog_Fwd_Loop');
       this._stamFlash = Math.max(0, (this._stamFlash || 0) - dt);

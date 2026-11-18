@@ -246,12 +246,14 @@ python scripts/build_audio.py voice --redo=hero_,grunt_
 | `2` / `K` | Heavy skill (moved off the right mouse button) |
 
 - **Dodge roll:**
-  - a 0.42 s, 5.2 m eased dash (the backstep is 0.34 s, 2.9 m);
+  - a 0.55 s, 5.6 m eased roll; with no movement input you roll the way the hero faces;
+  - the whole 1.46 s Roll clip (dive, tumble, stand-up) is time-scaled into the dodge, and idle or run clips can't cut it off; attacks may cancel the last 20%;
   - 0.25 s of i-frames, honoured by melee, projectiles and boss AoEs;
   - three class-coloured afterimages;
   - costs 20 stamina and is refused below 10.
 - **Input buffer:** attacks and dodges pressed up to 0.3 s early (mid-roll, mid-swing, guard-broken or at the end of a cooldown) are queued and fire on the first frame the hero can act.
 - **Block:**
+  - the guard pose (`Sword_Block`) replaces every idle and locomotion clip while held, including class idles like `Sword_Idle`;
   - takes 25% damage and costs 10–38 stamina by hit size; stamina doesn't regenerate and you move at 45% speed while guarding;
   - if a hit needs more stamina than you have, your guard breaks: a 0.9 s stun, 60% damage and stamina emptied.
 - **Perfect Parry:** a block pressed ≤ 0.18 s before impact.
@@ -309,3 +311,33 @@ Remote peers' and AI allies' skills play the same effects. Camera juice applies 
 - **Damage numbers:** the pooled, colour-coded, crit-marked screen-space numbers from `mmo_combatfx.js` now stack into lanes when several land on the same target at once, and heavy-skill hits read 20% bigger.
 
 **Cost:** at most 44 small draw calls; idle effects are hidden (only the single spark draw always runs). No measurable CPU change when skills fire every 20 frames. One shader program per effect type.
+
+### ✦ Talent Constellations (`mmo_talents.js`)
+Press **T** (or click **✦ Talents** next to Inventory) to open a full-screen glass constellation. You earn **1 talent point per hero level** (cap 50; the tree holds 43 ranks). Talents are stored **per class**. **↺ Reset** refunds every point for free.
+
+| Constellation | Passive nodes | Keystones (need 5 points in the branch) |
+|---|---|---|
+| 🛡️ **Parry Mastery** | Steady Guard (block stamina −12%/rank), Keen Timing (parry window +30 ms/rank), Iron Posture (posture damage +15%/rank), Bulwark (blocked damage −20%/rank), Executioner (riposte damage +25%/rank) | **Retribution Wave:** a Perfect Parry unleashes an elemental shockwave (5.5 m, 150% weapon damage). **Counter Stance:** a Perfect Parry resets your Heavy Skill and gives it +30% damage for 3 s. |
+| 🔮 **Elemental Arts** | Sharpened Focus (crit rate +3%/rank), Ruinous Edge (crit damage +15%/rank), Attunement (skill damage +8%/rank), Weapon Mastery (basic attack damage +7%/rank), Swift Incantation (cooldowns −5%/rank) | **Chain Arcana:** critical skill hits arc lightning to 2 more enemies for 35% damage. **Elemental Resonance:** every 3rd skill cast releases a 6 m nova. |
+| 💨 **Agility & Stamina** | Second Wind (stamina regen +15%/rank), Light Feet (roll cost −15%/rank), Fleet (move speed +4%/rank), Ghost Step (i-frames +40 ms/rank), Momentum (+12%/rank damage for 1.5 s after a dodge) | **Mirage Step:** dodging leaves a clone that detonates after 0.6 s (3.5 m, 120% damage). **Perfect Evasion:** dodging *through* an attack refunds 20 stamina, and your next hit within 3 s crits for +30%. |
+
+- **Data:** branches and nodes are plain config objects (`window.CR_TALENTS`). Each node has an id, max rank, a `mods` map of per-rank stat changes, prerequisites, a points gate for keystones, and its position in the constellation. Adding a node means adding one entry.
+- **Combat hooks:**
+  - `mmo_combat.js` reads `tv(key)`: parry window, block cost and damage, posture, riposte, i-frames and roll cost.
+  - `mmo_hud.js` uses it for stamina regen.
+  - This module wraps crit rate and damage (it pre-rolls the crit so bonus crit damage is exact), skill and basic damage, cooldowns, move speed, `perfectParry` and `bossHit`.
+  - It adds `onRollStart`, plus `onPerfectEvade`, which both mob-strike paths in `index.html` now call when a strike lands inside your i-frames.
+- **Saving and sync:**
+  - `player.talents` (`{ nodeId: rank }`) is saved to localStorage per hero token and class, and mirrored into `mmoState.talents`.
+  - Your keystones go out in the co-op player-state payload.
+  - It is also synced to Supabase after unlocks and on hero saves. The sync is skipped silently until the column exists:
+
+```sql
+alter table arpg_heroes add column if not exists talents jsonb default '{}'::jsonb;
+```
+
+- **UI:**
+  - Dark translucent glass panels sit over a generated starfield. Owned paths glow gold, paths you can buy pulse as dashed cyan lines, and keystones are larger rotated-frame nodes.
+  - Tooltips show the rank, current and next effect, and any missing requirement.
+  - Unlocking a node plays a radial burst (flash, double ring, 14 light rays), draws the connecting line in, and pulses the point counter.
+  - On phones the constellations become swipeable cards: tap a node to inspect it, tap again to buy.

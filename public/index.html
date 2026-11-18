@@ -6879,7 +6879,7 @@
                   } else {
                     this.spawnFloatingText(this.player.pos, 'VAULTED!', '#38e8ff', 14);
                   }
-                }
+                } else if (xzHitDist <= teleRadius && this.onPerfectEvade) this.onPerfectEvade(mob);   // dodged through it (mmo_talents.js)
               }
             });
           })
@@ -9095,7 +9095,7 @@
                     } else {
                       this.spawnFloatingText(this.player.pos, 'VAULTED!', '#38e8ff', 14);
                     }
-                  }
+                  } else if (xzHitDist <= teleRadius && this.onPerfectEvade) this.onPerfectEvade(m);   // dodged through it (mmo_talents.js)
                 }
               });
             } else if (m.windupTimer <= 0 && m.attackAnimTimer <= 0) {
@@ -9833,8 +9833,9 @@
   <script src="assets/js/mmo_anime.js?v=5"></script>
   <script src="assets/js/mmo_polish.js?v=5"></script>
   <script src="assets/js/mmo_realism.js?v=1"></script>
-  <script src="assets/js/mmo_hud.js?v=4"></script>
-  <script src="assets/js/mmo_combat.js?v=1"></script>
+  <script src="assets/js/mmo_hud.js?v=5"></script>
+  <script src="assets/js/mmo_combat.js?v=2"></script>
   <script src="assets/js/mmo_skillvfx.js?v=1"></script>
+  <script src="assets/js/mmo_talents.js?v=1"></script>
 </body>
 </html>
