@@ -27,6 +27,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "public", "assets", "audio")
 FORCE = "--force" in sys.argv
 ONLY = [a for a in sys.argv[1:] if not a.startswith("--")]
+# --redo=hero_,grunt_  -> force-rebuild only lines whose id starts with one of these prefixes
+REDO = tuple(x for a in sys.argv[1:] if a.startswith("--redo=") for x in a[7:].split(",") if x)
 
 # ---------------------------------------------------------------------------
 # VOICE CAST — Kokoro voice, speed, language and an ffmpeg FX chain per character
@@ -44,12 +46,23 @@ CAST = {
     "malakor":   dict(voice="bm_lewis",    speed=0.9, lang="en-gb", pitch=0.85,
                       fx="bass=g=5,aecho=0.8:0.7:60|130|240:0.22|0.12|0.06", layer_octave=True),
     "seraphina": dict(voice="bf_emma",     speed=0.96, lang="en-gb", fx="aecho=0.8:0.6:80|160:0.22|0.12"),
-    # playable heroes
-    "vanguard":  dict(voice="am_michael",  speed=1.02, lang="en-us", fx="highpass=f=70"),
-    "ranger":    dict(voice="af_nicole",   speed=1.04, lang="en-us", fx="highpass=f=90"),
-    "arcanist":  dict(voice="bf_isabella", speed=0.98, lang="en-gb", fx="aecho=0.8:0.45:40|90:0.14|0.08"),
-    "berserker": dict(voice="am_fenrir",   speed=1.03, lang="en-us", pitch=0.93, fx="acrusher=bits=11:mix=0.08,bass=g=3"),
 }
+
+# Playable heroes: blended voices (two Kokoro style vectors mixed into one distinct
+# timbre) + a proper vocal chain: rumble cut, mud cut, presence lift, gentle
+# compression and a short "room" so the hero sits in the world but stays clear.
+HERO_FX = ("highpass=f=85,equalizer=f=280:t=q:w=1.1:g=-2.5,equalizer=f=3300:t=q:w=1.0:g=3,"
+           "acompressor=threshold=-20dB:ratio=3:attack=4:release=70:makeup=2")
+CAST.update({
+    "vanguard":  dict(voice="am_michael", blend=[("am_michael", 0.58), ("am_onyx", 0.42)], speed=1.0, lang="en-us",
+                      fx=HERO_FX + ",bass=g=1.5,aecho=0.8:0.3:24|42:0.09|0.05"),
+    "ranger":    dict(voice="af_bella", blend=[("af_bella", 0.6), ("af_heart", 0.4)], speed=1.05, lang="en-us",
+                      fx=HERO_FX + ",aecho=0.8:0.28:20|38:0.08|0.05"),
+    "arcanist":  dict(voice="bf_emma", blend=[("bf_emma", 0.55), ("bf_isabella", 0.45)], speed=0.97, lang="en-gb",
+                      fx=HERO_FX + ",aecho=0.8:0.45:38|85|140:0.14|0.08|0.04"),
+    "berserker": dict(voice="am_fenrir", blend=[("am_fenrir", 0.62), ("am_onyx", 0.38)], speed=1.04, lang="en-us", pitch=0.94,
+                      fx=HERO_FX + ",bass=g=3,acrusher=bits=12:mix=0.05,aecho=0.8:0.3:24|40:0.1|0.05"),
+})
 
 SPEAKER_LABEL = {
     "aldous": "Lorekeeper Aldous", "lyra": "Rift Gatekeeper Lyra", "gronk": "Gronk, Puglin Warlord",
@@ -99,47 +112,69 @@ LINES = {
     "xeno_death": ("xeno", "Critical failure. Timeline... corrupted."),
 }
 
+# Hero lines: several takes per moment so they rarely repeat (the game shuffles
+# between hero_<cls>_<key>, hero_<cls>_<key>_1, ... / sig_0..3 / kill_0..2).
 HERO_BARKS = {
     "vanguard": {
-        "spawn": "Vanguard, ready. Let's move out.",
-        "ult": "By the Sunsteel oath... converge!",
-        "sig_0": "Stand behind the banner!",
-        "sig_1": "Rally to me!",
-        "levelup": "My oath grows stronger.",
-        "lowhp": "I'm hurt... hold the line!",
-        "revived": "Back on my feet. For Ashenvale!",
+        "spawn": ["Vanguard, reporting. Let's make Ashenvale proud.", "Shield up, eyes forward. We move."],
+        "ult": ["By the Sunsteel oath... converge!", "Light of the Bastion... answer me!"],
+        "sig": ["Stand behind the banner!", "Rally to me!", "Hold the line!", "Not one step back!"],
+        "levelup": ["My oath grows stronger.", "I can feel the Sunsteel burning brighter."],
+        "lowhp": ["I'm hurt... but I'm still standing!", "Steady... steady. I can hold."],
+        "revived": ["Back on my feet. For Ashenvale!", "Thank you. Let's finish this."],
+        "kill": ["Rest now.", "Another threat ended.", "For the Bastion!"],
+        "boss": ["A worthy foe. Stand with me!", "That one's big. Shields up!"],
+        "zone": ["New ground. Stay sharp.", "So this is what lies beyond the wall."],
+        "quest": ["Duty done. The people can rest easy.", "Another promise kept."],
     },
     "ranger": {
-        "spawn": "Shadow Ranger, in position.",
-        "ult": "Stars above... fall with me!",
-        "sig_0": "Rain them down!",
-        "sig_1": "Nowhere to hide.",
-        "levelup": "Sharper eyes. Steadier hands.",
-        "lowhp": "Too close! I need cover!",
-        "revived": "Thanks. I owe you one.",
+        "spawn": ["Shadow Ranger, in position.", "Quiet now. Let them come to us."],
+        "ult": ["Stars above... fall with me!", "Every arrow finds its mark. Watch!"],
+        "sig": ["Rain them down!", "Nowhere to hide.", "Marked you.", "Too slow!"],
+        "levelup": ["Sharper eyes. Steadier hands.", "Ha. I'm getting good at this."],
+        "lowhp": ["Too close! I need cover!", "Okay... that one hurt."],
+        "revived": ["Thanks. I owe you one.", "Back in the fight. Don't tell anyone."],
+        "kill": ["Clean shot.", "Down you go.", "Bullseye!"],
+        "boss": ["That's a big target. Easy to hit, at least.", "Keep it busy. I'll do the rest."],
+        "zone": ["Fresh tracks... and a view worth the climb.", "New woods, new secrets."],
+        "quest": ["Job done. What's next?", "Told you we'd make it look easy."],
     },
     "arcanist": {
-        "spawn": "The Reaper walks. Shall we?",
-        "ult": "Time itself bends to us. Converge!",
-        "sig_0": "Time... stand still.",
-        "sig_1": "Freeze, and wither.",
-        "levelup": "The rift whispers new secrets.",
-        "lowhp": "My aether is fading...",
-        "revived": "Death is merely a pause.",
+        "spawn": ["The Reaper walks. Shall we?", "Time is short. Let us not waste it."],
+        "ult": ["Time itself bends to us. Converge!", "Every clock stops... for you."],
+        "sig": ["Time... stand still.", "Freeze, and wither.", "Your hour has come.", "Fade into the rift."],
+        "levelup": ["The rift whispers new secrets.", "Ah... power, at last."],
+        "lowhp": ["My aether is fading...", "Careful... the veil grows thin."],
+        "revived": ["Death is merely a pause.", "I have seen my end. This was not it."],
+        "kill": ["Reaped.", "Your time is up.", "Into the dark with you."],
+        "boss": ["Such ancient power... I will take it.", "Let us see how long you last."],
+        "zone": ["This place remembers things it shouldn't.", "The rift runs deep here."],
+        "quest": ["As foretold.", "Another thread, neatly cut."],
     },
     "berserker": {
-        "spawn": "The Warlord has arrived. Who's first?",
-        "ult": "Burn it all! Together!",
-        "sig_0": "Blood and fire!",
-        "sig_1": "More! Bring me more!",
-        "levelup": "I grow stronger!",
-        "lowhp": "Is that all you've got?",
-        "revived": "Can't kill me that easy!",
+        "spawn": ["The Warlord has arrived. Who's first?", "I smell a fight. Good."],
+        "ult": ["Burn it all! Together!", "Fury unchained! Raaagh!"],
+        "sig": ["Blood and fire!", "More! Bring me more!", "Come here!", "Crush them!"],
+        "levelup": ["I grow stronger!", "Ha! Feel that? That's power!"],
+        "lowhp": ["Is that all you've got?", "Pain just makes me angry!"],
+        "revived": ["Can't kill me that easy!", "Ha! Round two!"],
+        "kill": ["Next!", "Too easy!", "Who's next?!"],
+        "boss": ["Finally, something worth smashing!", "You're big. I'm angrier."],
+        "zone": ["New land, new fights!", "Hope something here hits back."],
+        "quest": ["Done! Where's the ale?", "Ha! Another victory!"],
     },
 }
+# ids: legacy single keys keep their old id for the first take (hero_<cls>_spawn, ..._1, ...);
+# sig keeps sig_0..3; new moments use <key>_0..n
+LEGACY_SINGLE = {"spawn", "ult", "levelup", "lowhp", "revived"}
 for cls, barks in HERO_BARKS.items():
-    for key, text in barks.items():
-        LINES[f"hero_{cls}_{key}"] = (cls, text)
+    for key, texts in barks.items():
+        for i, text in enumerate(texts):
+            if key in LEGACY_SINGLE:
+                lid = f"hero_{cls}_{key}" if i == 0 else f"hero_{cls}_{key}_{i}"
+            else:
+                lid = f"hero_{cls}_{key}_{i}"
+            LINES[lid] = (cls, text)
 
 # ---------------------------------------------------------------------------
 # MMO EXPANSION CAST — zone bosses, world bosses, quest givers, announcer
@@ -206,9 +241,10 @@ for k, text in ANNOUNCER.items():
     LINES[k] = ("lyra", text)
 
 # Short hero effort grunts (attacks / taking a big hit)
-GRUNTS = {"attack": ["Hah!", "Hyah!", "Huah!"], "hurt": ["Agh!", "Ugh!"]}
+GRUNTS = {"attack": ["Hah!", "Hyah!", "Huah!", "Tch!", "Hmph!"], "hurt": ["Agh!", "Ugh!", "Nngh!"]}
+GRUNTS_BY_CLASS = {"berserker": {"attack": ["Hah!", "Raah!", "Huargh!", "Hyah!", "Graah!"], "hurt": ["Agh!", "Grr... ugh!", "Ngh!"]}}
 for cls in ("vanguard", "ranger", "arcanist", "berserker"):
-    for kind, texts in GRUNTS.items():
+    for kind, texts in GRUNTS_BY_CLASS.get(cls, GRUNTS).items():
         for i, t in enumerate(texts):
             LINES[f"grunt_{cls}_{kind}_{i}"] = (cls, t)
 
@@ -342,10 +378,15 @@ def build_voices():
     for line_id, (speaker, text) in LINES.items():
         out_path = os.path.join(vdir, f"{line_id}.mp3")
         prev = manifest.get(line_id)
-        if not need(out_path) and prev and prev.get("text") == text:
+        redo = bool(REDO) and line_id.startswith(REDO)
+        if not redo and not need(out_path) and prev and prev.get("text") == text:
             continue
         c = CAST[speaker]
-        samples, sr = kokoro.create(text, voice=c["voice"], speed=c["speed"], lang=c["lang"])
+        voice = c["voice"]
+        if c.get("blend"):
+            # mix Kokoro style vectors -> a distinct timbre per hero
+            voice = sum(kokoro.get_voice_style(n) * w for n, w in c["blend"])
+        samples, sr = kokoro.create(text, voice=voice, speed=c["speed"], lang=c["lang"])
         raw = os.path.join(tmp, f"{line_id}.wav")
         sf.write(raw, samples, sr)
 

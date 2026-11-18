@@ -27,7 +27,7 @@
     uAnimeFill: { value: new THREE.Color(0.22, 0.21, 0.30) },     // albedo-scaled fill so dark outfits stay readable
     uAnimeWarm: { value: new THREE.Color(1.08, 1.0, 0.9) },     // warm sunlight multiply
     uAnimeRim: { value: new THREE.Color(1.0, 0.86, 0.66) },
-    uAnimeRimK: { value: 0.65 }
+    uAnimeRimK: { value: 0.45 }
   };
   window.ANIME_UNIFORMS = AU;
 
@@ -56,7 +56,7 @@
       reflectedLight.directSpecular *= 0.3;
       reflectedLight.indirectSpecular *= 0.4;
       // lit side: subtle warm sunlight; shadow side: cool indigo ambient
-      reflectedLight.directDiffuse *= uAnimeWarm * 1.1;
+      reflectedLight.directDiffuse *= uAnimeWarm;
       reflectedLight.indirectDiffuse *= mix(uAnimeShadow, vec3(1.0), lit);
       // soft violet fill (stronger on the shadow side) keeps dark textures readable
       reflectedLight.indirectDiffuse += diffuseColor.rgb * uAnimeFill * (1.0 - 0.5 * lit);
@@ -68,7 +68,7 @@
       float awayFromSun = 1.0 - lit;
       float backlit = clamp(-dot(vV, uAnimeSunV), 0.0, 1.0);
       float rimMask = smoothstep(0.35, 0.75, fres) * (0.35 + 0.65 * awayFromSun) * (0.7 + 0.8 * backlit);
-      totalEmissiveRadiance += (uAnimeRim * 0.6 + uAnimeSunCol * 0.4) * rimMask * uAnimeRimK;
+      totalEmissiveRadiance += uAnimeRim * rimMask * uAnimeRimK;
     }`;
 
   // one shared hook -> one shared program per material variant
@@ -92,6 +92,11 @@
       mat.onBeforeCompile = function (shader, r) { prev.call(this, shader, r); animeHook.call(this, shader, r); };
     } else {
       mat.onBeforeCompile = animeHook;
+    }
+    // built-in model glow (e.g. gold trims) would bloom into white blobs under the HDR sun
+    if (mat.emissive) {
+      mat.emissive.multiplyScalar(0.45);
+      if (mat.userData.origEmissive) mat.userData.origEmissive.multiplyScalar(0.45);
     }
     // PBR values that fight a cel look
     mat.roughness = Math.max(mat.roughness, 0.7);
@@ -146,7 +151,7 @@
       AU.uAnimeWarm.value.setRGB(1.08 - 0.08 * night, 1.0, 0.9 + 0.1 * night);
       AU.uAnimeShadow.value.setRGB(0.80 - 0.08 * night, 0.76 - 0.04 * night, 1.06);
       AU.uAnimeFill.value.setRGB(0.22 - 0.05 * night, 0.21 - 0.04 * night, 0.30);
-      AU.uAnimeRimK.value = 0.65 + 0.25 * night;            // silhouettes pop more under moonlight
+      AU.uAnimeRimK.value = 0.45 + 0.25 * night;            // silhouettes pop more under moonlight
     },
 
     updateMMOWorld(dt) {

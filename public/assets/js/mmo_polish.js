@@ -84,8 +84,8 @@
   // 2) Weapon palette (keyed by GLB material names)
   // ---------------------------------------------------------------------------
   const WEAPON_PAL = {
-    steel:      { c: 0x9fb8d6, e: 0x0a1a2c, ei: 0.35 },   // cool blue steel
-    lightsteel: { c: 0xd8e8f6, e: 0x1c3a58, ei: 0.45 },   // bright edge with an icy sheen
+    steel:      { c: 0x6f84a2, e: 0x000000, ei: 0 },      // cool blue steel
+    lightsteel: { c: 0x8e9fb6, e: 0x000000, ei: 0 },      // polished edge (no glow, avoids bloom glare)
     darksteel:  { c: 0x4a5670, e: 0x000000, ei: 0 },
     gold:       { c: 0xf2b53c, e: 0x7a4a08, ei: 0.55 },
     lightgold:  { c: 0xffd978, e: 0x9a6a10, ei: 0.6 },
@@ -171,11 +171,11 @@
         this.gradePass.renderToScreen = true;
       }
       if (this.bloomPass) {
-        this.bloomPass.threshold = this.hdrPipeline ? 1.05 : 0.9;
+        this.bloomPass.threshold = this.hdrPipeline ? 1.1 : 0.92;
         this.bloomPass.strength = 0.62;
         this.bloomPass.radius = 0.72;
         if (this.bloomPass.highPassUniforms && this.bloomPass.highPassUniforms.smoothWidth) {
-          this.bloomPass.highPassUniforms.smoothWidth.value = 0.28;   // soft knee: halos fade in, no hard clip
+          this.bloomPass.highPassUniforms.smoothWidth.value = 0.12;   // narrow soft knee: sunlit armour/steel stays crisp
         }
       }
       // already-compiled programs pick up the new fog chunk

@@ -320,6 +320,8 @@
         const isTree = TREE_TYPES[t] === 1;
         // trees & flowers only on walkable, gentle ground (shared terrain heights)
         if ((isTree || t === 'flower' || t === 'mushroom') && (this.terrainSlope(x, z) > 0.5 || this.terrainHeight(x, z) < W.waterLevel + 0.4)) continue;
+        // nothing but rocks stands in the lakes (cacti, crystals, ruins, bones, pylons...)
+        if (!ROCKY[t] && this.terrainHeight(x, z) < W.waterLevel + 0.35) continue;
         ch.props.push({ t, x, z, r: rng() * 6.28, s, c: rng(), zone: zr.i });
         const or = PROP_COLLIDE[t];
         if (or) ch.obstacles.push({ x, z, r: or * s });
@@ -373,6 +375,7 @@
     mesa: [0.9, 1.6], pylon: [0.9, 1.3]
   };
   const TREE_TYPES = { oak: 1, pine: 1, snowpine: 1, deadtree: 1 };
+  const ROCKY = { rock: 1, boulder: 1, lavarock: 1, ridge: 1, mesa: 1 };
   const PROP_COLLIDE = {
     pine: 0.45, snowpine: 0.45, oak: 0.5, deadtree: 0.35, rock: 0.75, boulder: 1.5, mushroom: 0.4,
     cactus: 0.45, grave: 0.35, pillar: 0.7, crystal: 0.55, icespike: 0.6, lavarock: 0.85, mesa: 7.5, pylon: 0.75

@@ -37,11 +37,11 @@
       curve.getPointAt(t, center);
       v.fromBufferAttribute(tp, k).sub(center).multiplyScalar(rFn(t, ang)).add(center);
       nv.fromBufferAttribute(tn, k);
-      verts.push({ p: v.clone(), n: nv.clone(), c: colFn(t) });
+      verts.push({ p: v.clone(), n: nv.clone(), c: colFn(t), t });
     }
     for (let q = 0; q < idx.length; q++) {
       const V = verts[idx[q]];
-      out.push(V.p, V.n, V.c, 0, 0, -1, -1);
+      out.push(V.p, V.n, V.c, 0, V.t, -1, -1);
     }
     tube.dispose();
   }
@@ -158,6 +158,15 @@
   const LEAF_GLSL = `
     float leafMask(vec2 uv) {
       if (uv.x < -0.5) return 1.0;
+      if (uv.x > 1.5) {
+        // conifer needle spray: tapering fan with serrated edges + a few gaps
+        vec2 q = vec2(uv.x - 2.0, uv.y);
+        float hw = 0.5 * (1.0 - q.x * 0.82);
+        float teeth = 0.07 * abs(sin(q.x * 46.0 + q.y * 9.0));
+        float inside = step(abs(q.y - 0.5), hw - teeth);
+        float gap = step(0.12, fract(q.x * 7.0 + abs(q.y - 0.5) * 3.0));
+        return inside * mix(1.0, gap, 0.35);
+      }
       vec2 p = uv - 0.5;
       float m = smoothstep(0.22, 0.19, length(p));
       for (int k = 0; k < 7; k++) {
@@ -187,11 +196,18 @@
           transformed.y += rustle * 0.4;`;
 
   // Foliage: soft cel ramp + vertical canopy gradient + rim + wind; leaf cards cut out at 0.5
-  function makeFoliageMaterial(FU) {
+  function makeFoliageMaterial(FU, opts) {
+    opts = opts || {};
     const mat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: softRamp(), alphaTest: 0.5, side: THREE.DoubleSide });
+    const uBark = { value: new THREE.Color(opts.bark !== undefined ? opts.bark : 0x664430) };
+    const uLeafCol = { value: new THREE.Vector3(opts.leafDark ? 0.82 : 1.0, opts.leafDark ? 0.86 : 1.0, opts.leafDark ? 0.9 : 1.0) };
+    if (opts.snow) mat.defines = Object.assign({}, mat.defines, { SNOWY: 1 });
+    mat.customProgramCacheKey = () => 'cr-foliage-v2' + (opts.snow ? '-snow' : '');
     mat.onBeforeCompile = (shader) => {
       if (window.injectTerrain) window.injectTerrain(shader, mat);
       Object.assign(shader.uniforms, FU);
+      shader.uniforms.uBark = uBark;
+      shader.uniforms.uLeafCol = uLeafCol;
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>', `#include <common>
           attribute float aFoliage;
@@ -217,6 +233,8 @@
         .replace('#include <common>', `#include <common>
           uniform vec3 uRimColor;
           uniform float uFolAlbedo;
+          uniform vec3 uBark;
+          uniform vec3 uLeafCol;
           varying float vFoliage;
           varying float vCanopyH;
           varying vec2 vLeafUv;
@@ -235,8 +253,18 @@
           grad *= mix(0.88, 1.04, upF);
           float brush = max(diffuseColor.r, max(diffuseColor.g, diffuseColor.b));
           vec3 tintN = diffuseColor.rgb / max(1e-3, brush);
-          vec3 leaf = grad * mix(vec3(1.0), tintN * 1.18, 0.5) * (0.92 + 0.12 * fract(brush * 13.0));
-          diffuseColor.rgb = mix(diffuseColor.rgb, leaf, vFoliage) * uFolAlbedo;`)
+          vec3 leaf = grad * mix(vec3(1.0), tintN * 1.18, 0.5) * (0.92 + 0.12 * fract(brush * 13.0)) * uLeafCol;
+          #ifdef SNOWY
+            // snow settles on the upper, inner part of every needle tier (+ the solid cores' tops)
+            float uN = fract(vLeafUv.x);
+            float onCard = step(1.5, vLeafUv.x);
+            float snowK = onCard * (1.0 - smoothstep(0.18, 0.55, uN)) * (0.6 + 0.4 * h)
+                        + (1.0 - onCard) * smoothstep(0.55, 0.85, vFolN.y);
+            leaf = mix(leaf, vec3(0.9, 0.94, 1.0) * 1.05, clamp(snowK, 0.0, 1.0) * 0.82);
+          #endif
+          // bark: per-material colour, darker at the roots (vCanopyH carries the tube parameter)
+          vec3 bark = uBark * (0.62 + 0.38 * vCanopyH);
+          diffuseColor.rgb = mix(bark, leaf, vFoliage) * uFolAlbedo;`)
         .replace('#include <normal_fragment_begin>', `#include <normal_fragment_begin>
           // leaves use the transferred outward normal on BOTH sides (no dark backfaces)
           if (vFoliage > 0.5) normal = normalize(vNormal);`)
@@ -251,6 +279,7 @@
   // Shadow-map pass with the same leaf cut-out + wind, so shadows are crisp leaf shapes
   function makeFoliageDepthMaterial(FU) {
     const mat = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, alphaTest: 0.5, side: THREE.DoubleSide });
+    mat.customProgramCacheKey = () => 'cr-foliage-depth-v2';
     mat.onBeforeCompile = (shader) => {
       if (window.injectTerrain) window.injectTerrain(shader, mat);
       Object.assign(shader.uniforms, FU);
@@ -477,6 +506,8 @@
       #include <tonemapping_fragment>
       #include <fog_fragment>
     }`;
+
+  window.CR_FLORA = { addTube, makeFoliageMaterial, makeFoliageDepthMaterial, hash3, softRamp };
 
   // ---------------------------------------------------------------------------
   // Game integration

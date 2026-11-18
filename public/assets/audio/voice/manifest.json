@@ -199,9 +199,15 @@
  },
  "hero_vanguard_spawn": {
   "file": "assets/audio/voice/hero_vanguard_spawn.mp3",
-  "dur": 2.112,
+  "dur": 3.168,
   "speaker": "Vanguard Knight",
-  "text": "Vanguard, ready. Let's move out."
+  "text": "Vanguard, reporting. Let's make Ashenvale proud."
+ },
+ "hero_vanguard_spawn_1": {
+  "file": "assets/audio/voice/hero_vanguard_spawn_1.mp3",
+  "dur": 2.256,
+  "speaker": "Vanguard Knight",
+  "text": "Shield up, eyes forward. We move."
  },
  "hero_vanguard_ult": {
   "file": "assets/audio/voice/hero_vanguard_ult.mp3",
@@ -209,89 +215,287 @@
   "speaker": "Vanguard Knight",
   "text": "By the Sunsteel oath... converge!"
  },
+ "hero_vanguard_ult_1": {
+  "file": "assets/audio/voice/hero_vanguard_ult_1.mp3",
+  "dur": 2.016,
+  "speaker": "Vanguard Knight",
+  "text": "Light of the Bastion... answer me!"
+ },
  "hero_vanguard_sig_0": {
   "file": "assets/audio/voice/hero_vanguard_sig_0.mp3",
-  "dur": 1.512,
+  "dur": 1.632,
   "speaker": "Vanguard Knight",
   "text": "Stand behind the banner!"
  },
  "hero_vanguard_sig_1": {
   "file": "assets/audio/voice/hero_vanguard_sig_1.mp3",
-  "dur": 1.032,
+  "dur": 1.2,
   "speaker": "Vanguard Knight",
   "text": "Rally to me!"
  },
+ "hero_vanguard_sig_2": {
+  "file": "assets/audio/voice/hero_vanguard_sig_2.mp3",
+  "dur": 1.2,
+  "speaker": "Vanguard Knight",
+  "text": "Hold the line!"
+ },
+ "hero_vanguard_sig_3": {
+  "file": "assets/audio/voice/hero_vanguard_sig_3.mp3",
+  "dur": 1.488,
+  "speaker": "Vanguard Knight",
+  "text": "Not one step back!"
+ },
  "hero_vanguard_levelup": {
   "file": "assets/audio/voice/hero_vanguard_levelup.mp3",
-  "dur": 1.584,
+  "dur": 1.632,
   "speaker": "Vanguard Knight",
   "text": "My oath grows stronger."
  },
+ "hero_vanguard_levelup_1": {
+  "file": "assets/audio/voice/hero_vanguard_levelup_1.mp3",
+  "dur": 2.472,
+  "speaker": "Vanguard Knight",
+  "text": "I can feel the Sunsteel burning brighter."
+ },
  "hero_vanguard_lowhp": {
   "file": "assets/audio/voice/hero_vanguard_lowhp.mp3",
-  "dur": 1.608,
+  "dur": 2.016,
   "speaker": "Vanguard Knight",
-  "text": "I'm hurt... hold the line!"
+  "text": "I'm hurt... but I'm still standing!"
+ },
+ "hero_vanguard_lowhp_1": {
+  "file": "assets/audio/voice/hero_vanguard_lowhp_1.mp3",
+  "dur": 1.92,
+  "speaker": "Vanguard Knight",
+  "text": "Steady... steady. I can hold."
  },
  "hero_vanguard_revived": {
   "file": "assets/audio/voice/hero_vanguard_revived.mp3",
-  "dur": 2.208,
+  "dur": 2.136,
   "speaker": "Vanguard Knight",
   "text": "Back on my feet. For Ashenvale!"
  },
+ "hero_vanguard_revived_1": {
+  "file": "assets/audio/voice/hero_vanguard_revived_1.mp3",
+  "dur": 1.68,
+  "speaker": "Vanguard Knight",
+  "text": "Thank you. Let's finish this."
+ },
+ "hero_vanguard_kill_0": {
+  "file": "assets/audio/voice/hero_vanguard_kill_0.mp3",
+  "dur": 1.128,
+  "speaker": "Vanguard Knight",
+  "text": "Rest now."
+ },
+ "hero_vanguard_kill_1": {
+  "file": "assets/audio/voice/hero_vanguard_kill_1.mp3",
+  "dur": 1.536,
+  "speaker": "Vanguard Knight",
+  "text": "Another threat ended."
+ },
+ "hero_vanguard_kill_2": {
+  "file": "assets/audio/voice/hero_vanguard_kill_2.mp3",
+  "dur": 1.296,
+  "speaker": "Vanguard Knight",
+  "text": "For the Bastion!"
+ },
+ "hero_vanguard_boss_0": {
+  "file": "assets/audio/voice/hero_vanguard_boss_0.mp3",
+  "dur": 1.992,
+  "speaker": "Vanguard Knight",
+  "text": "A worthy foe. Stand with me!"
+ },
+ "hero_vanguard_boss_1": {
+  "file": "assets/audio/voice/hero_vanguard_boss_1.mp3",
+  "dur": 1.776,
+  "speaker": "Vanguard Knight",
+  "text": "That one's big. Shields up!"
+ },
+ "hero_vanguard_zone_0": {
+  "file": "assets/audio/voice/hero_vanguard_zone_0.mp3",
+  "dur": 1.704,
+  "speaker": "Vanguard Knight",
+  "text": "New ground. Stay sharp."
+ },
+ "hero_vanguard_zone_1": {
+  "file": "assets/audio/voice/hero_vanguard_zone_1.mp3",
+  "dur": 2.352,
+  "speaker": "Vanguard Knight",
+  "text": "So this is what lies beyond the wall."
+ },
+ "hero_vanguard_quest_0": {
+  "file": "assets/audio/voice/hero_vanguard_quest_0.mp3",
+  "dur": 2.448,
+  "speaker": "Vanguard Knight",
+  "text": "Duty done. The people can rest easy."
+ },
+ "hero_vanguard_quest_1": {
+  "file": "assets/audio/voice/hero_vanguard_quest_1.mp3",
+  "dur": 1.608,
+  "speaker": "Vanguard Knight",
+  "text": "Another promise kept."
+ },
  "hero_ranger_spawn": {
   "file": "assets/audio/voice/hero_ranger_spawn.mp3",
-  "dur": 2.208,
+  "dur": 1.776,
   "speaker": "Shadow Ranger",
   "text": "Shadow Ranger, in position."
  },
+ "hero_ranger_spawn_1": {
+  "file": "assets/audio/voice/hero_ranger_spawn_1.mp3",
+  "dur": 1.992,
+  "speaker": "Shadow Ranger",
+  "text": "Quiet now. Let them come to us."
+ },
  "hero_ranger_ult": {
   "file": "assets/audio/voice/hero_ranger_ult.mp3",
-  "dur": 2.352,
+  "dur": 1.752,
   "speaker": "Shadow Ranger",
   "text": "Stars above... fall with me!"
  },
+ "hero_ranger_ult_1": {
+  "file": "assets/audio/voice/hero_ranger_ult_1.mp3",
+  "dur": 2.424,
+  "speaker": "Shadow Ranger",
+  "text": "Every arrow finds its mark. Watch!"
+ },
  "hero_ranger_sig_0": {
   "file": "assets/audio/voice/hero_ranger_sig_0.mp3",
-  "dur": 1.152,
+  "dur": 1.008,
   "speaker": "Shadow Ranger",
   "text": "Rain them down!"
  },
  "hero_ranger_sig_1": {
   "file": "assets/audio/voice/hero_ranger_sig_1.mp3",
-  "dur": 1.224,
+  "dur": 1.008,
   "speaker": "Shadow Ranger",
   "text": "Nowhere to hide."
  },
+ "hero_ranger_sig_2": {
+  "file": "assets/audio/voice/hero_ranger_sig_2.mp3",
+  "dur": 0.816,
+  "speaker": "Shadow Ranger",
+  "text": "Marked you."
+ },
+ "hero_ranger_sig_3": {
+  "file": "assets/audio/voice/hero_ranger_sig_3.mp3",
+  "dur": 0.792,
+  "speaker": "Shadow Ranger",
+  "text": "Too slow!"
+ },
  "hero_ranger_levelup": {
   "file": "assets/audio/voice/hero_ranger_levelup.mp3",
-  "dur": 2.688,
+  "dur": 1.992,
   "speaker": "Shadow Ranger",
   "text": "Sharper eyes. Steadier hands."
  },
+ "hero_ranger_levelup_1": {
+  "file": "assets/audio/voice/hero_ranger_levelup_1.mp3",
+  "dur": 1.536,
+  "speaker": "Shadow Ranger",
+  "text": "Ha. I'm getting good at this."
+ },
  "hero_ranger_lowhp": {
   "file": "assets/audio/voice/hero_ranger_lowhp.mp3",
-  "dur": 1.968,
+  "dur": 1.56,
   "speaker": "Shadow Ranger",
   "text": "Too close! I need cover!"
  },
+ "hero_ranger_lowhp_1": {
+  "file": "assets/audio/voice/hero_ranger_lowhp_1.mp3",
+  "dur": 1.584,
+  "speaker": "Shadow Ranger",
+  "text": "Okay... that one hurt."
+ },
  "hero_ranger_revived": {
   "file": "assets/audio/voice/hero_ranger_revived.mp3",
-  "dur": 1.536,
+  "dur": 1.32,
   "speaker": "Shadow Ranger",
   "text": "Thanks. I owe you one."
  },
+ "hero_ranger_revived_1": {
+  "file": "assets/audio/voice/hero_ranger_revived_1.mp3",
+  "dur": 2.016,
+  "speaker": "Shadow Ranger",
+  "text": "Back in the fight. Don't tell anyone."
+ },
+ "hero_ranger_kill_0": {
+  "file": "assets/audio/voice/hero_ranger_kill_0.mp3",
+  "dur": 0.888,
+  "speaker": "Shadow Ranger",
+  "text": "Clean shot."
+ },
+ "hero_ranger_kill_1": {
+  "file": "assets/audio/voice/hero_ranger_kill_1.mp3",
+  "dur": 0.888,
+  "speaker": "Shadow Ranger",
+  "text": "Down you go."
+ },
+ "hero_ranger_kill_2": {
+  "file": "assets/audio/voice/hero_ranger_kill_2.mp3",
+  "dur": 0.768,
+  "speaker": "Shadow Ranger",
+  "text": "Bullseye!"
+ },
+ "hero_ranger_boss_0": {
+  "file": "assets/audio/voice/hero_ranger_boss_0.mp3",
+  "dur": 2.448,
+  "speaker": "Shadow Ranger",
+  "text": "That's a big target. Easy to hit, at least."
+ },
+ "hero_ranger_boss_1": {
+  "file": "assets/audio/voice/hero_ranger_boss_1.mp3",
+  "dur": 1.824,
+  "speaker": "Shadow Ranger",
+  "text": "Keep it busy. I'll do the rest."
+ },
+ "hero_ranger_zone_0": {
+  "file": "assets/audio/voice/hero_ranger_zone_0.mp3",
+  "dur": 2.4,
+  "speaker": "Shadow Ranger",
+  "text": "Fresh tracks... and a view worth the climb."
+ },
+ "hero_ranger_zone_1": {
+  "file": "assets/audio/voice/hero_ranger_zone_1.mp3",
+  "dur": 1.464,
+  "speaker": "Shadow Ranger",
+  "text": "New woods, new secrets."
+ },
+ "hero_ranger_quest_0": {
+  "file": "assets/audio/voice/hero_ranger_quest_0.mp3",
+  "dur": 1.56,
+  "speaker": "Shadow Ranger",
+  "text": "Job done. What's next?"
+ },
+ "hero_ranger_quest_1": {
+  "file": "assets/audio/voice/hero_ranger_quest_1.mp3",
+  "dur": 1.68,
+  "speaker": "Shadow Ranger",
+  "text": "Told you we'd make it look easy."
+ },
  "hero_arcanist_spawn": {
   "file": "assets/audio/voice/hero_arcanist_spawn.mp3",
-  "dur": 1.752,
+  "dur": 1.728,
   "speaker": "Reaper Arcanist",
   "text": "The Reaper walks. Shall we?"
+ },
+ "hero_arcanist_spawn_1": {
+  "file": "assets/audio/voice/hero_arcanist_spawn_1.mp3",
+  "dur": 2.304,
+  "speaker": "Reaper Arcanist",
+  "text": "Time is short. Let us not waste it."
  },
  "hero_arcanist_ult": {
   "file": "assets/audio/voice/hero_arcanist_ult.mp3",
   "dur": 2.568,
   "speaker": "Reaper Arcanist",
   "text": "Time itself bends to us. Converge!"
+ },
+ "hero_arcanist_ult_1": {
+  "file": "assets/audio/voice/hero_arcanist_ult_1.mp3",
+  "dur": 2.016,
+  "speaker": "Reaper Arcanist",
+  "text": "Every clock stops... for you."
  },
  "hero_arcanist_sig_0": {
   "file": "assets/audio/voice/hero_arcanist_sig_0.mp3",
@@ -301,9 +505,21 @@
  },
  "hero_arcanist_sig_1": {
   "file": "assets/audio/voice/hero_arcanist_sig_1.mp3",
-  "dur": 1.464,
+  "dur": 1.512,
   "speaker": "Reaper Arcanist",
   "text": "Freeze, and wither."
+ },
+ "hero_arcanist_sig_2": {
+  "file": "assets/audio/voice/hero_arcanist_sig_2.mp3",
+  "dur": 1.44,
+  "speaker": "Reaper Arcanist",
+  "text": "Your hour has come."
+ },
+ "hero_arcanist_sig_3": {
+  "file": "assets/audio/voice/hero_arcanist_sig_3.mp3",
+  "dur": 1.56,
+  "speaker": "Reaper Arcanist",
+  "text": "Fade into the rift."
  },
  "hero_arcanist_levelup": {
   "file": "assets/audio/voice/hero_arcanist_levelup.mp3",
@@ -311,59 +527,227 @@
   "speaker": "Reaper Arcanist",
   "text": "The rift whispers new secrets."
  },
+ "hero_arcanist_levelup_1": {
+  "file": "assets/audio/voice/hero_arcanist_levelup_1.mp3",
+  "dur": 1.632,
+  "speaker": "Reaper Arcanist",
+  "text": "Ah... power, at last."
+ },
  "hero_arcanist_lowhp": {
   "file": "assets/audio/voice/hero_arcanist_lowhp.mp3",
   "dur": 1.656,
   "speaker": "Reaper Arcanist",
   "text": "My aether is fading..."
  },
+ "hero_arcanist_lowhp_1": {
+  "file": "assets/audio/voice/hero_arcanist_lowhp_1.mp3",
+  "dur": 1.968,
+  "speaker": "Reaper Arcanist",
+  "text": "Careful... the veil grows thin."
+ },
  "hero_arcanist_revived": {
   "file": "assets/audio/voice/hero_arcanist_revived.mp3",
-  "dur": 1.752,
+  "dur": 1.704,
   "speaker": "Reaper Arcanist",
   "text": "Death is merely a pause."
  },
+ "hero_arcanist_revived_1": {
+  "file": "assets/audio/voice/hero_arcanist_revived_1.mp3",
+  "dur": 2.52,
+  "speaker": "Reaper Arcanist",
+  "text": "I have seen my end. This was not it."
+ },
+ "hero_arcanist_kill_0": {
+  "file": "assets/audio/voice/hero_arcanist_kill_0.mp3",
+  "dur": 1.176,
+  "speaker": "Reaper Arcanist",
+  "text": "Reaped."
+ },
+ "hero_arcanist_kill_1": {
+  "file": "assets/audio/voice/hero_arcanist_kill_1.mp3",
+  "dur": 1.44,
+  "speaker": "Reaper Arcanist",
+  "text": "Your time is up."
+ },
+ "hero_arcanist_kill_2": {
+  "file": "assets/audio/voice/hero_arcanist_kill_2.mp3",
+  "dur": 1.536,
+  "speaker": "Reaper Arcanist",
+  "text": "Into the dark with you."
+ },
+ "hero_arcanist_boss_0": {
+  "file": "assets/audio/voice/hero_arcanist_boss_0.mp3",
+  "dur": 2.472,
+  "speaker": "Reaper Arcanist",
+  "text": "Such ancient power... I will take it."
+ },
+ "hero_arcanist_boss_1": {
+  "file": "assets/audio/voice/hero_arcanist_boss_1.mp3",
+  "dur": 1.968,
+  "speaker": "Reaper Arcanist",
+  "text": "Let us see how long you last."
+ },
+ "hero_arcanist_zone_0": {
+  "file": "assets/audio/voice/hero_arcanist_zone_0.mp3",
+  "dur": 2.352,
+  "speaker": "Reaper Arcanist",
+  "text": "This place remembers things it shouldn't."
+ },
+ "hero_arcanist_zone_1": {
+  "file": "assets/audio/voice/hero_arcanist_zone_1.mp3",
+  "dur": 1.824,
+  "speaker": "Reaper Arcanist",
+  "text": "The rift runs deep here."
+ },
+ "hero_arcanist_quest_0": {
+  "file": "assets/audio/voice/hero_arcanist_quest_0.mp3",
+  "dur": 1.32,
+  "speaker": "Reaper Arcanist",
+  "text": "As foretold."
+ },
+ "hero_arcanist_quest_1": {
+  "file": "assets/audio/voice/hero_arcanist_quest_1.mp3",
+  "dur": 1.944,
+  "speaker": "Reaper Arcanist",
+  "text": "Another thread, neatly cut."
+ },
  "hero_berserker_spawn": {
   "file": "assets/audio/voice/hero_berserker_spawn.mp3",
-  "dur": 1.968,
+  "dur": 2.016,
   "speaker": "Berserker Warlord",
   "text": "The Warlord has arrived. Who's first?"
  },
+ "hero_berserker_spawn_1": {
+  "file": "assets/audio/voice/hero_berserker_spawn_1.mp3",
+  "dur": 1.464,
+  "speaker": "Berserker Warlord",
+  "text": "I smell a fight. Good."
+ },
  "hero_berserker_ult": {
   "file": "assets/audio/voice/hero_berserker_ult.mp3",
-  "dur": 1.176,
+  "dur": 1.32,
   "speaker": "Berserker Warlord",
   "text": "Burn it all! Together!"
  },
+ "hero_berserker_ult_1": {
+  "file": "assets/audio/voice/hero_berserker_ult_1.mp3",
+  "dur": 1.608,
+  "speaker": "Berserker Warlord",
+  "text": "Fury unchained! Raaagh!"
+ },
  "hero_berserker_sig_0": {
   "file": "assets/audio/voice/hero_berserker_sig_0.mp3",
-  "dur": 0.984,
+  "dur": 1.056,
   "speaker": "Berserker Warlord",
   "text": "Blood and fire!"
  },
  "hero_berserker_sig_1": {
   "file": "assets/audio/voice/hero_berserker_sig_1.mp3",
-  "dur": 1.128,
+  "dur": 1.272,
   "speaker": "Berserker Warlord",
   "text": "More! Bring me more!"
  },
+ "hero_berserker_sig_2": {
+  "file": "assets/audio/voice/hero_berserker_sig_2.mp3",
+  "dur": 0.816,
+  "speaker": "Berserker Warlord",
+  "text": "Come here!"
+ },
+ "hero_berserker_sig_3": {
+  "file": "assets/audio/voice/hero_berserker_sig_3.mp3",
+  "dur": 0.912,
+  "speaker": "Berserker Warlord",
+  "text": "Crush them!"
+ },
  "hero_berserker_levelup": {
   "file": "assets/audio/voice/hero_berserker_levelup.mp3",
-  "dur": 1.056,
+  "dur": 1.2,
   "speaker": "Berserker Warlord",
   "text": "I grow stronger!"
  },
+ "hero_berserker_levelup_1": {
+  "file": "assets/audio/voice/hero_berserker_levelup_1.mp3",
+  "dur": 1.608,
+  "speaker": "Berserker Warlord",
+  "text": "Ha! Feel that? That's power!"
+ },
  "hero_berserker_lowhp": {
   "file": "assets/audio/voice/hero_berserker_lowhp.mp3",
-  "dur": 1.128,
+  "dur": 1.368,
   "speaker": "Berserker Warlord",
   "text": "Is that all you've got?"
  },
+ "hero_berserker_lowhp_1": {
+  "file": "assets/audio/voice/hero_berserker_lowhp_1.mp3",
+  "dur": 1.608,
+  "speaker": "Berserker Warlord",
+  "text": "Pain just makes me angry!"
+ },
  "hero_berserker_revived": {
   "file": "assets/audio/voice/hero_berserker_revived.mp3",
-  "dur": 1.296,
+  "dur": 1.344,
   "speaker": "Berserker Warlord",
   "text": "Can't kill me that easy!"
+ },
+ "hero_berserker_revived_1": {
+  "file": "assets/audio/voice/hero_berserker_revived_1.mp3",
+  "dur": 1.128,
+  "speaker": "Berserker Warlord",
+  "text": "Ha! Round two!"
+ },
+ "hero_berserker_kill_0": {
+  "file": "assets/audio/voice/hero_berserker_kill_0.mp3",
+  "dur": 0.768,
+  "speaker": "Berserker Warlord",
+  "text": "Next!"
+ },
+ "hero_berserker_kill_1": {
+  "file": "assets/audio/voice/hero_berserker_kill_1.mp3",
+  "dur": 0.912,
+  "speaker": "Berserker Warlord",
+  "text": "Too easy!"
+ },
+ "hero_berserker_kill_2": {
+  "file": "assets/audio/voice/hero_berserker_kill_2.mp3",
+  "dur": 0.984,
+  "speaker": "Berserker Warlord",
+  "text": "Who's next?!"
+ },
+ "hero_berserker_boss_0": {
+  "file": "assets/audio/voice/hero_berserker_boss_0.mp3",
+  "dur": 1.776,
+  "speaker": "Berserker Warlord",
+  "text": "Finally, something worth smashing!"
+ },
+ "hero_berserker_boss_1": {
+  "file": "assets/audio/voice/hero_berserker_boss_1.mp3",
+  "dur": 1.416,
+  "speaker": "Berserker Warlord",
+  "text": "You're big. I'm angrier."
+ },
+ "hero_berserker_zone_0": {
+  "file": "assets/audio/voice/hero_berserker_zone_0.mp3",
+  "dur": 1.344,
+  "speaker": "Berserker Warlord",
+  "text": "New land, new fights!"
+ },
+ "hero_berserker_zone_1": {
+  "file": "assets/audio/voice/hero_berserker_zone_1.mp3",
+  "dur": 1.656,
+  "speaker": "Berserker Warlord",
+  "text": "Hope something here hits back."
+ },
+ "hero_berserker_quest_0": {
+  "file": "assets/audio/voice/hero_berserker_quest_0.mp3",
+  "dur": 1.176,
+  "speaker": "Berserker Warlord",
+  "text": "Done! Where's the ale?"
+ },
+ "hero_berserker_quest_1": {
+  "file": "assets/audio/voice/hero_berserker_quest_1.mp3",
+  "dur": 1.344,
+  "speaker": "Berserker Warlord",
+  "text": "Ha! Another victory!"
  },
  "boss_mycelord_engage": {
   "file": "assets/audio/voice/boss_mycelord_engage.mp3",
@@ -679,123 +1063,195 @@
  },
  "grunt_vanguard_attack_0": {
   "file": "assets/audio/voice/grunt_vanguard_attack_0.mp3",
-  "dur": 0.648,
+  "dur": 0.72,
   "speaker": "Vanguard Knight",
   "text": "Hah!"
  },
  "grunt_vanguard_attack_1": {
   "file": "assets/audio/voice/grunt_vanguard_attack_1.mp3",
-  "dur": 0.696,
+  "dur": 0.768,
   "speaker": "Vanguard Knight",
   "text": "Hyah!"
  },
  "grunt_vanguard_attack_2": {
   "file": "assets/audio/voice/grunt_vanguard_attack_2.mp3",
-  "dur": 0.744,
+  "dur": 0.816,
   "speaker": "Vanguard Knight",
   "text": "Huah!"
  },
+ "grunt_vanguard_attack_3": {
+  "file": "assets/audio/voice/grunt_vanguard_attack_3.mp3",
+  "dur": 1.248,
+  "speaker": "Vanguard Knight",
+  "text": "Tch!"
+ },
+ "grunt_vanguard_attack_4": {
+  "file": "assets/audio/voice/grunt_vanguard_attack_4.mp3",
+  "dur": 1.464,
+  "speaker": "Vanguard Knight",
+  "text": "Hmph!"
+ },
  "grunt_vanguard_hurt_0": {
   "file": "assets/audio/voice/grunt_vanguard_hurt_0.mp3",
-  "dur": 0.648,
+  "dur": 0.768,
   "speaker": "Vanguard Knight",
   "text": "Agh!"
  },
  "grunt_vanguard_hurt_1": {
   "file": "assets/audio/voice/grunt_vanguard_hurt_1.mp3",
-  "dur": 0.6,
+  "dur": 0.744,
   "speaker": "Vanguard Knight",
   "text": "Ugh!"
  },
+ "grunt_vanguard_hurt_2": {
+  "file": "assets/audio/voice/grunt_vanguard_hurt_2.mp3",
+  "dur": 1.272,
+  "speaker": "Vanguard Knight",
+  "text": "Nngh!"
+ },
  "grunt_ranger_attack_0": {
   "file": "assets/audio/voice/grunt_ranger_attack_0.mp3",
-  "dur": 0.744,
+  "dur": 0.576,
   "speaker": "Shadow Ranger",
   "text": "Hah!"
  },
  "grunt_ranger_attack_1": {
   "file": "assets/audio/voice/grunt_ranger_attack_1.mp3",
-  "dur": 0.792,
+  "dur": 0.6,
   "speaker": "Shadow Ranger",
   "text": "Hyah!"
  },
  "grunt_ranger_attack_2": {
   "file": "assets/audio/voice/grunt_ranger_attack_2.mp3",
-  "dur": 0.768,
+  "dur": 0.624,
   "speaker": "Shadow Ranger",
   "text": "Huah!"
  },
+ "grunt_ranger_attack_3": {
+  "file": "assets/audio/voice/grunt_ranger_attack_3.mp3",
+  "dur": 0.816,
+  "speaker": "Shadow Ranger",
+  "text": "Tch!"
+ },
+ "grunt_ranger_attack_4": {
+  "file": "assets/audio/voice/grunt_ranger_attack_4.mp3",
+  "dur": 1.008,
+  "speaker": "Shadow Ranger",
+  "text": "Hmph!"
+ },
  "grunt_ranger_hurt_0": {
   "file": "assets/audio/voice/grunt_ranger_hurt_0.mp3",
-  "dur": 0.744,
+  "dur": 0.576,
   "speaker": "Shadow Ranger",
   "text": "Agh!"
  },
  "grunt_ranger_hurt_1": {
   "file": "assets/audio/voice/grunt_ranger_hurt_1.mp3",
-  "dur": 0.744,
+  "dur": 0.552,
   "speaker": "Shadow Ranger",
   "text": "Ugh!"
  },
+ "grunt_ranger_hurt_2": {
+  "file": "assets/audio/voice/grunt_ranger_hurt_2.mp3",
+  "dur": 0.984,
+  "speaker": "Shadow Ranger",
+  "text": "Nngh!"
+ },
  "grunt_arcanist_attack_0": {
   "file": "assets/audio/voice/grunt_arcanist_attack_0.mp3",
-  "dur": 0.84,
+  "dur": 0.864,
   "speaker": "Reaper Arcanist",
   "text": "Hah!"
  },
  "grunt_arcanist_attack_1": {
   "file": "assets/audio/voice/grunt_arcanist_attack_1.mp3",
-  "dur": 1.2,
+  "dur": 1.104,
   "speaker": "Reaper Arcanist",
   "text": "Hyah!"
  },
  "grunt_arcanist_attack_2": {
   "file": "assets/audio/voice/grunt_arcanist_attack_2.mp3",
-  "dur": 0.912,
+  "dur": 0.96,
   "speaker": "Reaper Arcanist",
   "text": "Huah!"
  },
+ "grunt_arcanist_attack_3": {
+  "file": "assets/audio/voice/grunt_arcanist_attack_3.mp3",
+  "dur": 1.176,
+  "speaker": "Reaper Arcanist",
+  "text": "Tch!"
+ },
+ "grunt_arcanist_attack_4": {
+  "file": "assets/audio/voice/grunt_arcanist_attack_4.mp3",
+  "dur": 1.416,
+  "speaker": "Reaper Arcanist",
+  "text": "Hmph!"
+ },
  "grunt_arcanist_hurt_0": {
   "file": "assets/audio/voice/grunt_arcanist_hurt_0.mp3",
-  "dur": 0.96,
+  "dur": 0.816,
   "speaker": "Reaper Arcanist",
   "text": "Agh!"
  },
  "grunt_arcanist_hurt_1": {
   "file": "assets/audio/voice/grunt_arcanist_hurt_1.mp3",
-  "dur": 1.08,
+  "dur": 0.96,
   "speaker": "Reaper Arcanist",
   "text": "Ugh!"
  },
+ "grunt_arcanist_hurt_2": {
+  "file": "assets/audio/voice/grunt_arcanist_hurt_2.mp3",
+  "dur": 1.416,
+  "speaker": "Reaper Arcanist",
+  "text": "Nngh!"
+ },
  "grunt_berserker_attack_0": {
   "file": "assets/audio/voice/grunt_berserker_attack_0.mp3",
-  "dur": 0.576,
+  "dur": 0.672,
   "speaker": "Berserker Warlord",
   "text": "Hah!"
  },
  "grunt_berserker_attack_1": {
   "file": "assets/audio/voice/grunt_berserker_attack_1.mp3",
-  "dur": 0.6,
+  "dur": 0.672,
   "speaker": "Berserker Warlord",
-  "text": "Hyah!"
+  "text": "Raah!"
  },
  "grunt_berserker_attack_2": {
   "file": "assets/audio/voice/grunt_berserker_attack_2.mp3",
-  "dur": 0.648,
+  "dur": 0.864,
   "speaker": "Berserker Warlord",
-  "text": "Huah!"
+  "text": "Huargh!"
+ },
+ "grunt_berserker_attack_3": {
+  "file": "assets/audio/voice/grunt_berserker_attack_3.mp3",
+  "dur": 0.696,
+  "speaker": "Berserker Warlord",
+  "text": "Hyah!"
+ },
+ "grunt_berserker_attack_4": {
+  "file": "assets/audio/voice/grunt_berserker_attack_4.mp3",
+  "dur": 0.696,
+  "speaker": "Berserker Warlord",
+  "text": "Graah!"
  },
  "grunt_berserker_hurt_0": {
   "file": "assets/audio/voice/grunt_berserker_hurt_0.mp3",
-  "dur": 0.624,
+  "dur": 0.672,
   "speaker": "Berserker Warlord",
   "text": "Agh!"
  },
  "grunt_berserker_hurt_1": {
   "file": "assets/audio/voice/grunt_berserker_hurt_1.mp3",
-  "dur": 0.576,
+  "dur": 1.368,
   "speaker": "Berserker Warlord",
-  "text": "Ugh!"
+  "text": "Grr... ugh!"
+ },
+ "grunt_berserker_hurt_2": {
+  "file": "assets/audio/voice/grunt_berserker_hurt_2.mp3",
+  "dur": 1.008,
+  "speaker": "Berserker Warlord",
+  "text": "Ngh!"
  },
  "cr_critter_aggro_0": {
   "file": "assets/audio/voice/cr_critter_aggro_0.mp3",

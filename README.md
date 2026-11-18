@@ -200,3 +200,38 @@ The game picks one of five songs from `public/assets/audio/music/` based on the 
   - **Movement:** wind comes as layered gust bands with a sheen on the tips. Blades part around the hero's feet. Normals are bent upward to blend with the terrain.
   - **Shadows:** grass casts no shadows, but receives the sun's shadow map through a light-enabled shader.
 - **Performance.** All of this stays in the same instanced meshes, so draw calls are unchanged. Frames take about 3.3 ms median (95th percentile up to 6 ms) in meadows and forests on High.
+
+### 🍄 Full Stylized Prop Set (`mmo_props.js`)
+Every environment prop now uses the same crisp, stylized pipeline as the rocks and broadleaf trees. Each type is still one instanced mesh, culled per chunk, and its footprint matches the old collision radius.
+
+| Prop | New look |
+|---|---|
+| Pines and snow pines | Tapered spline trunk with root flare and 5 drooping tiers of alpha-cut, serrated needle-spray cards around small cores. Leaf-shaped shadows; snow settles in bands on the upper part of each tier. |
+| Dead trees | Gnarled spline trunk with forking spline branches and twisted grey bark. |
+| Mushrooms | Bulbous curved stem, lathe-turned dome cap with a curled rim, procedural spots that glow softly at night, cream radial gills, plus two baby mushrooms. |
+| Cacti | Ribbed saguaro column with two curved arms and spines. |
+| Crystals and ice spikes | Clusters of hard-faceted hexagonal prisms whose inner glow rises toward the tips. |
+| Pillars and graves | Fluted, broken ruin column on a chipped plinth; bevelled arched headstone with a chiseled burial mound. Both use the rock shader (grain, moss, edge wear). |
+| Bones and pylons | Curved ivory ribcage; tapered obelisk with glowing rune bands and a floating crystal. |
+| Mesas | Flat-topped, chiseled sandstone plateaus with strata. |
+
+- **Lakes:** only rocks may stand in lakes now (shared world gen, identical for every client).
+- **Shader cache keys:** custom materials have unique program cache keys. The see-through occluder wraps every hook in identical source, which previously made three.js share one compiled shader across different materials.
+
+### 🗣️ Hero Voices (`scripts/build_audio.py`, `mmo_audio.js`)
+- **Voices:** each class has a blended Kokoro voice, two style vectors mixed into one distinct timbre:
+
+| Class | Blend |
+|---|---|
+| Vanguard | michael + onyx |
+| Ranger | bella + heart |
+| Arcanist | emma + isabella |
+| Berserker | fenrir + onyx, pitched down |
+
+- **Vocal chain:** rumble cut, mud cut, presence lift, compression, short room and loudness normalisation.
+- **Lines:** about 23 lines per class (92 total) plus 8 grunts per class. That covers spawn, ultimate, 4 skill calls, level-up, low HP and revive, plus new kill, boss-engage, new-region and quest-complete moments. Every request picks a random take, never the same one twice in a row.
+- **Rebuild only hero audio:**
+
+```
+python scripts/build_audio.py voice --redo=hero_,grunt_
+```

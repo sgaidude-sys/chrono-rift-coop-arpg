@@ -1940,7 +1940,8 @@
         this._barkCooldownUntil = 0;
         this._lastStepIdx = {};
         this.voiceManifest = {};
-        this.manifestReady = fetch(this.base + 'voice/manifest.json')
+        this.voiceVer = 'v=3';   // bump when voice clips are regenerated (busts browser caches)
+        this.manifestReady = fetch(this.base + 'voice/manifest.json?' + this.voiceVer)
           .then(r => r.ok ? r.json() : {})
           .then(m => { this.voiceManifest = m || {}; })
           .catch(() => {});
@@ -2245,7 +2246,7 @@
 
       preloadVoice(ids) {
         if (!this.ctx) return;
-        ids.forEach(id => { if (this.hasVoice(id)) this.loadBuffer('vo_' + id, `${this.base}voice/${id}.mp3`); });
+        ids.forEach(id => { if (this.hasVoice(id)) this.loadBuffer('vo_' + id, `${this.base}voice/${id}.mp3?${this.voiceVer}`); });
       }
 
       isVoiceBusy(minPriority = 1) {
@@ -2271,7 +2272,7 @@
         if (priority === 1 && this.ctx.currentTime < this._barkCooldownUntil) return false;
         const token = { priority };
         this._pendingVoice = token;
-        this.loadBuffer('vo_' + id, `${this.base}voice/${id}.mp3`).then(buf => {
+        this.loadBuffer('vo_' + id, `${this.base}voice/${id}.mp3?${this.voiceVer}`).then(buf => {
           if (this._pendingVoice !== token) return;
           this._pendingVoice = null;
           if (!buf || this.muted) return;
@@ -9801,23 +9802,24 @@
     });
   </script>
   <script src="public/assets/js/mmo_data.js?v=11"></script>
-  <script src="public/assets/js/world_core.js?v=16"></script>
+  <script src="public/assets/js/world_core.js?v=17"></script>
   <script src="public/assets/js/mmo_world.js?v=18"></script>
   <script src="public/assets/js/mmo_rpg.js?v=10"></script>
-  <script src="public/assets/js/mmo_audio.js?v=10"></script>
+  <script src="public/assets/js/mmo_audio.js?v=12"></script>
   <script src="public/assets/js/mmo_vfx.js?v=10"></script>
   <script src="public/assets/js/mmo_mobile.js?v=10"></script>
   <script src="public/assets/js/mmo_sky.js?v=12"></script>
   <script src="public/assets/js/mmo_terrain.js?v=16"></script>
-  <script src="public/assets/js/mmo_foliage.js?v=20"></script>
-  <script src="public/assets/js/mmo_rocks.js?v=2"></script>
+  <script src="public/assets/js/mmo_foliage.js?v=24"></script>
+  <script src="public/assets/js/mmo_rocks.js?v=4"></script>
+  <script src="public/assets/js/mmo_props.js?v=4"></script>
   <script src="public/assets/js/mmo_water.js?v=2"></script>
   <script src="public/assets/js/mmo_music.js?v=1"></script>
   <script src="public/assets/js/mmo_combatfx.js?v=5"></script>
   <script src="public/assets/js/mmo_grounding.js?v=3"></script>
-  <script src="public/assets/js/mmo_anime.js?v=3"></script>
-  <script src="public/assets/js/mmo_polish.js?v=2"></script>
+  <script src="public/assets/js/mmo_anime.js?v=5"></script>
+  <script src="public/assets/js/mmo_polish.js?v=5"></script>
   <script src="public/assets/js/mmo_realism.js?v=1"></script>
-  <script src="public/assets/js/mmo_hud.js?v=3"></script>
+  <script src="public/assets/js/mmo_hud.js?v=4"></script>
 </body>
 </html>

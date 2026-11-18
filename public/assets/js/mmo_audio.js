@@ -69,15 +69,40 @@
     return true;
   };
 
+  // Hero lines & grunts come in several takes: any request for hero_<cls>_<key>[_n] or
+  // grunt_<cls>_<kind>_<n> plays a random take of that moment (never the same twice running).
+  AP.pickTake = function (id) {
+    if (!/^(hero_|grunt_)/.test(id) || !this.voiceManifest) return id;
+    const base = id.replace(/_\d+$/, '');
+    this._takeCache = this._takeCache || {};
+    let list = this._takeCache[base];
+    if (!list) {
+      const re = new RegExp('^' + base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(_\\d+)?$');
+      list = Object.keys(this.voiceManifest).filter(k => re.test(k));
+      if (list.length) this._takeCache[base] = list;
+    }
+    if (!list || list.length < 2) return list && list.length ? list[0] : id;
+    this._lastTake = this._lastTake || {};
+    let pick;
+    do { pick = list[Math.floor(Math.random() * list.length)]; } while (pick === this._lastTake[base] && list.length > 1);
+    this._lastTake[base] = pick;
+    return pick;
+  };
+  const origPlayVoice = AP.playVoice;
+  AP.playVoice = function (id, priority, vol) {
+    return origPlayVoice.call(this, this.pickTake(id), priority, vol);
+  };
+
   // Short voice clips (creatures, grunts) that should NOT duck the music or block dialogue
   AP.playClipAt = function (id, pos, vol = 0.6, rate = 1, maxDist = 40) {
+    id = this.pickTake(id);
     if (!this.ctx || this.muted || !this.hasVoice(id)) return;
     const s = pos ? this.spatial(pos, maxDist) : { gain: 1, pan: 0 };
     if (s.gain * vol < 0.015) return;
     const now = this.ctx.currentTime;
     this._clipActive = this._clipActive || 0;
     if (this._clipActive >= 3) return; // never more than 3 creature/grunt voices at once
-    this.loadBuffer('vo_' + id, `${this.base}voice/${id}.mp3`).then((buf) => {
+    this.loadBuffer('vo_' + id, `${this.base}voice/${id}.mp3?${this.voiceVer}`).then((buf) => {
       if (!buf || this.muted) return;
       const src = this.ctx.createBufferSource();
       src.buffer = buf;
@@ -188,6 +213,19 @@
       a.listener = { x: this.player.pos.x, z: this.player.pos.z, yaw: this.cameraYaw || 0 };
       if (!a.ctx) return;
       this.updateCreatureVoices(dt);
+      // the hero reacts when a boss fight starts (once per fight)
+      if (a.bossActive && !this._heroSawBoss) { this._heroSawBoss = true; this.heroBark('boss', 0.9); }
+      else if (!a.bossActive && this._heroSawBoss) this._heroBossClear = (this._heroBossClear || 0) + dt;
+      if (this._heroBossClear > 20) { this._heroSawBoss = false; this._heroBossClear = 0; }
+    },
+
+    // A short in-character line from the player's hero (random take, low priority:
+    // never interrupts dialogue, respects the bark cooldown)
+    heroBark(key, delaySec = 0) {
+      const cls = this.player && this.player.classId;
+      if (!cls || !this.audio || !this.audio.ctx) return;
+      const fire = () => { if (!this.player.dead) this.audio.playVoice(`hero_${cls}_${key}_0`, 1); };
+      if (delaySec > 0) setTimeout(fire, delaySec * 1000); else fire();
     },
 
     mobVoiceRate(m) {
@@ -235,6 +273,9 @@
       this.audio.playMonsterDeath(mob.modelKey || '', mob.isBoss || mob.isElite, mob.pos);
       if (!mob.isBoss) { mob._voiceAt = 0; this.mobVoice(mob, 'death', 0.6); }
       if (mob.isBoss) this.audio.playVoice('ann_boss_slain', 1);
+      // the hero comments on their own kills: always for elites, sometimes for regular foes
+      if (!fromNetwork && mob._lastHitLocal && !mob.isBoss && (mob.isElite || Math.random() < 0.14)) this.heroBark('kill', 0.35);
+      else if (!fromNetwork && mob._lastHitLocal && mob.isBoss) this.heroBark('kill', 3.2);
     },
 
     applyDamageToMonster(mob, baseDmg, isHeavy, attacker, fromNetwork = false, netData = null, opts = {}) {
@@ -245,6 +286,7 @@
       } else {
         origApplyDmg.call(this, mob, baseDmg, isHeavy, attacker, fromNetwork, netData, opts);
       }
+      if (mob) mob._lastHitLocal = !fromNetwork && (!attacker || attacker === this.player);
       if (mob && !mob.dead && !mob.isBoss && Math.random() < 0.22) this.mobVoice(mob, 'hurt', 0.45);
     },
 
@@ -255,7 +297,7 @@
       const now = performance.now();
       if (lost > this.player.maxHp * 0.07 && now - (this._hurtGruntAt || 0) > 1600 && this.player.hp > 0) {
         this._hurtGruntAt = now;
-        this.audio.playClipAt(`grunt_${this.player.classId}_hurt_${Math.floor(Math.random() * 2)}`, null, 0.55);
+        this.audio.playClipAt(`grunt_${this.player.classId}_hurt_0`, null, 0.55);
       }
     },
 
@@ -270,7 +312,7 @@
       const chance = slot === 1 ? 0.14 : (slot === 5 ? 0 : 0.55);
       if (Math.random() < chance && now - (this._gruntAt || 0) > 650) {
         this._gruntAt = now;
-        this.audio.playClipAt(`grunt_${this.player.classId}_attack_${Math.floor(Math.random() * 3)}`, null, 0.5, 0.96 + Math.random() * 0.08);
+        this.audio.playClipAt(`grunt_${this.player.classId}_attack_0`, null, 0.5, 0.96 + Math.random() * 0.08);
       }
     },
 
@@ -301,6 +343,9 @@
       const g = q && GIVER_VOICE[this._qgZone || q.zone];
       if (g) this.audio.playVoice(`qg_${g}_thanks`, 2);
       else this.audio.playVoice('ann_quest_done', 2);
+      // the hero answers once the quest giver has finished speaking
+      const said = g ? `qg_${g}_thanks` : 'ann_quest_done';
+      this.heroBark('quest', (this.audio.voiceDuration(said) || 1.5) + 0.5);
     },
 
     spawnCampMob(c, slotIdx, gen) {

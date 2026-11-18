@@ -62,6 +62,7 @@
     const cnt = pos.count;
     // cutting planes -> flat chiseled faces
     const planes = [];
+    if (o.topCut !== undefined) planes.push({ n: new THREE.Vector3(0, 1, 0), d: o.topCut });   // flat plateau top
     for (let k = 0; k < o.cuts; k++) {
       const th = rng() * Math.PI * 2, ph = Math.acos(rng() * 1.6 - 0.6);  // biased to sides/top
       planes.push({ n: new THREE.Vector3(Math.sin(ph) * Math.cos(th), Math.cos(ph), Math.sin(ph) * Math.sin(th)), d: 0.6 + rng() * 0.22 });
@@ -96,6 +97,12 @@
     for (let i = 0; i < cnt; i++) rMax = Math.max(rMax, Math.hypot(out[i * 3], out[i * 3 + 2]));
     const k = o.footprint / rMax;
     for (let i = 0; i < cnt * 3; i++) out[i] *= k;
+    if (o.height) {
+      let yMax = 0;
+      for (let i = 0; i < cnt; i++) yMax = Math.max(yMax, out[i * 3 + 1]);
+      const ky = o.height / Math.max(0.01, yMax);
+      for (let i = 0; i < cnt; i++) out[i * 3 + 1] *= ky;
+    }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(out, 3));
     creaseNormals(g, o.crease);
@@ -218,6 +225,7 @@
 
   function makeRockMaterial() {
     const mat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: softRamp() });
+    mat.customProgramCacheKey = () => 'cr-rock-v1';
     mat.onBeforeCompile = function (shader) {
       if (window.injectTerrain) window.injectTerrain(shader, mat);
       shader.vertexShader = shader.vertexShader
@@ -244,8 +252,11 @@
     rock:     { detail: 3, cuts: 6, freq: 1.5, amp: 0.32, strata: 5, sx: 1.0, sy: 0.7, sz: 0.88, sink: 0.08, footprint: 0.9, crease: 34, seed: 101 },
     boulder:  { detail: 4, cuts: 8, freq: 1.3, amp: 0.36, strata: 6, sx: 1.15, sy: 0.85, sz: 1.0, sink: 0.12, footprint: 1.75, crease: 32, seed: 202 },
     lavarock: { detail: 3, cuts: 7, freq: 1.8, amp: 0.4, strata: 4, sx: 1.0, sy: 0.75, sz: 0.95, sink: 0.08, footprint: 1.0, crease: 30, seed: 303 },
-    ridge:    { detail: 4, cuts: 9, freq: 1.2, amp: 0.42, strata: 8, sx: 1.0, sy: 1.0, sz: 0.85, sink: 0.25, footprint: 1.0, crease: 30, seed: 404 }
+    ridge:    { detail: 4, cuts: 9, freq: 1.2, amp: 0.42, strata: 8, sx: 1.0, sy: 1.0, sz: 0.85, sink: 0.25, footprint: 1.0, crease: 30, seed: 404 },
+    mesa:     { detail: 4, cuts: 7, freq: 1.1, amp: 0.3, strata: 9, sx: 1.0, sy: 0.75, sz: 0.95, sink: 0.3, footprint: 8.0, height: 7.6, topCut: 0.42, crease: 30, seed: 505 }
   };
+
+  window.CR_ROCKS = { buildChiseledRock, creaseNormals, makeRockMaterial, makeNoise3, ridged };
 
   const GP = ChronoRiftCoOpGame.prototype;
   const orig = { initMMOWorld: GP.initMMOWorld };

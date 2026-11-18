@@ -356,6 +356,7 @@
       b.classList.remove('play');
       void b.offsetWidth;
       b.classList.add('play');
+      if (first && this.heroBark && this._regionsSeen.size > 1) this.heroBark('zone', 1.4);   // the hero reacts to new lands
     },
 
     updateMMOWorld(dt) {
