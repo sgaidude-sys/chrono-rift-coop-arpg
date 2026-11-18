@@ -2949,6 +2949,17 @@
         if (!window.MMO) this.scene.add(castleBase);
 
         // 4. Batched 3D Pine & Autumn Forest Ring + Perimeter Boulders (radius 24–42 for rich framing!)
+        // Keep every walkable route out of town clear: the N/S path, the E/W road and the
+        // procedural main road (shared world_core road map), padded by the prop's footprint.
+        const blocksTownPath = (x, z, pad) => {
+          if (Math.abs(x) < 6 + pad) return true;                 // north & south paths (whole length)
+          if (Math.abs(z - 9.5) < 5 + pad) return true;           // east-west road
+          const CWd = window.ChronoWorld;
+          if (CWd && CWd.sharedWorld) {
+            try { if (CWd.sharedWorld().roadDist(x, z) < 8 + pad) return true; } catch (e) { /* layout not ready */ }
+          }
+          return false;
+        };
         const treePlacements = [];
         for (let i = 0; i < 48; i++) {
           const ang = (i / 48) * Math.PI * 2;
@@ -2959,6 +2970,7 @@
           if (Math.abs(tx) < 16 && tz > -16 && tz < 25) continue;
           if (Math.abs(tx) < 8 && tz <= 0 && tz > -64) continue;
           if (tz < -10 && tz > -38 && Math.abs(tx) > 10 && Math.abs(tx) < 28) continue;
+          if (blocksTownPath(tx, tz, 2.5)) continue;              // canopy radius up to ~2.4 m
           const s = 0.88 + (i % 5) * 0.22;
           const isGold = (i % 3 === 0 || tz > 12);
           treePlacements.push({ tx, tz, s, isGold });
@@ -3013,6 +3025,7 @@
           const rz = Math.sin(ang) * radius;
           if (Math.abs(rx) < 15 && rz > -12 && rz < 24) continue;
           if (Math.abs(rx) < 8 && rz <= 0 && rz > -62) continue;
+          if (blocksTownPath(rx, rz, 2.0)) continue;
           rockPlacements.push({ rx, rz, sx: 1.1 + (i % 4) * 0.45, sy: 0.7 + (i % 3) * 0.38, sz: 1.0 + ((i + 1) % 4) * 0.42 });
         }
         if (rockPlacements.length > 0) {
@@ -9779,5 +9792,6 @@
   <script src="assets/js/mmo_music.js?v=1"></script>
   <script src="assets/js/mmo_combatfx.js?v=4"></script>
   <script src="assets/js/mmo_grounding.js?v=3"></script>
+  <script src="assets/js/mmo_anime.js?v=2"></script>
 </body>
 </html>

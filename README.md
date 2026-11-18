@@ -139,3 +139,11 @@ The game picks one of five songs from `public/assets/audio/music/` based on the 
   - Instance buffers are rebuilt with a fast copy, and only the used range is uploaded, and only when the visible set changes.
   - Grass tufts outside the view are rejected early in the vertex shader.
   - In a Whisperwood forest test, prop instances fell about 60% and triangles 15–25%. Frames take about 3 ms on a desktop GPU, well inside the 16.7 ms budget for 60 FPS.
+
+### 🧑‍🎨 Anime Character Shading (`mmo_anime.js`)
+- **Scope.** Every hero, NPC, monster and weapon material (skinned `MeshStandardMaterial`) is patched through one shared `onBeforeCompile` hook. Only fragment lighting changes, so skinning, animation, vertex colours, texture maps, hit-flash emissive and elite tints all keep working.
+- **2-step cel ramp.** The direct-light N·L term is replaced by a crisp ramp with a slightly feathered terminator (smoothstep 0.02–0.10). PBR specular is reduced to 30%, and metalness and roughness are clamped so metal reads as painted colour rather than black.
+- **Shadow and light tint.** The shadow side's ambient is tinted cool indigo-violet. The lit side gets a subtle warm sunlight multiply. Both follow the day-night cycle: neutral and bluer at night.
+- **Rim light.** A Fresnel rim follows the silhouette. It is stronger on the side facing away from the sun and when the character is backlit, and a bit stronger at night.
+- **Shadow cleanup.** Characters no longer carry the old flat blob shadow; the terrain-fitted contact shadows replace it.
+- **Town paths.** The decorative tree and boulder ring around Ashenvale Bastion now keeps the north and south paths, the east–west road and the procedural main road clear.
