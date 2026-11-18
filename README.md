@@ -180,3 +180,23 @@ The game picks one of five songs from `public/assets/audio/music/` based on the 
   - Monster nameplates now sit above each model's real animated top. Measured once per model with CPU skinning, this fixes rats and flyers whose nameplates sat inside or below their bodies.
   - The Ranger fires real arrows (wood, steel, red fletching, a thin wind streak) instead of green plasma balls.
   - Character shadows keep about 40% of the sunlight, tinted violet, plus an albedo fill, so dark outfits and backlit heroes stay readable.
+
+### 🪨 Chiseled Rocks, Spline Trees & Lush Meadows (`mmo_rocks.js`, `mmo_foliage.js`)
+- **Rocks, boulders, cliffs and lava rocks.**
+  - **Geometry:** each starts as an icosphere (detail 3 for 320 triangles, detail 4 for 500). It is displaced with seeded ridged multifractal noise (1 − |noise|), carved by random flattening planes into sharp facets, and given gentle strata terraces and a flat seated base.
+  - **Normals:** crease-angle normals (32°) keep flat faces crisp and curves smooth, and a per-vertex convex-edge attribute drives edge wear.
+  - **Shader:** a toon shader with a soft ramp adds triplanar grain and strata bands, moss on up-facing faces (normal.y > ~0.7, less in sandy or red zones), lighter edge wear along ridges and contact darkening at the base.
+  - **Collision:** each shape is rescaled to the old prop's footprint, so the collision circles are unchanged.
+- **Broadleaf trees** (pines, snow pines and dead trees are unchanged).
+  - **Trunk and branches:** a tapered CatmullRom spline tube with flared roots and bark grooves, plus 4–5 spline branches.
+  - **Canopy:** layered outward-facing leaf cards with a procedural seven-leaf silhouette cut out at alphaTest 0.5, around a small core per cluster.
+  - **Shading:** normals point out from the canopy centre on both sides, so there are no dark backfaces. The vertical teal-to-emerald-to-lime gradient and wind are kept.
+  - **Shadows:** a matching depth material gives leaf-shaped shadows.
+  - **Size:** about 720–840 triangles per tree. The root flare stays inside the trunk collision radius.
+- **Grass.**
+  - **Clumps:** each clump has 6 tapered, curved blades with 3 segments each, plus an optional tiny wildflower: 34 triangles.
+  - **Density:** 40k clumps sit in a deterministic world grid wrapped around the hero within 55 m, fading out between 45 and 55 m. The same rules apply: slope, water, roads and town are kept clear. Quality presets scale the count (35%, 65%, 100%).
+  - **Colour:** noise patches vary height, lushness and colour (emerald base, lime tips, dry golden-green patches).
+  - **Movement:** wind comes as layered gust bands with a sheen on the tips. Blades part around the hero's feet. Normals are bent upward to blend with the terrain.
+  - **Shadows:** grass casts no shadows, but receives the sun's shadow map through a light-enabled shader.
+- **Performance.** All of this stays in the same instanced meshes, so draw calls are unchanged. Frames take about 3.3 ms median (95th percentile up to 6 ms) in meadows and forests on High.
