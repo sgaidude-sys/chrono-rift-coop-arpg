@@ -5720,7 +5720,10 @@
 
         // Lethal hit burst, directional sparks & rising soul wisps
         const deathColor = mob.isBoss ? 0xf3c86b : (isAlien ? 0x38e8ff : 0xff3b5c);
-        this.spawnVFXFlipbook('anima', mob.pos, mob.isBoss ? 6.5 : 3.6, 0.7, deathColor, false, { depthTest: false });
+        // crystal-shatter burst (mmo_polish.js); the old wavy flame sprite is only a fallback
+        if (!(this.spawnDeathShatter && this.spawnDeathShatter(mob, deathColor))) {
+          this.spawnVFXFlipbook('anima', mob.pos, mob.isBoss ? 6.5 : 3.6, 0.7, deathColor, false, { depthTest: false });
+        }
         this.spawnShockwaveRing(mob.pos, mob.isBoss ? 6.8 : (mob.isElite ? 4.4 : 2.8), deathColor, 0.42);
         this.spawnHitSparks(mob.pos, kbDir, deathColor, mob.isBoss ? 28 : 16);
         if (this.rollMobLoot) this.rollMobLoot(mob); else this.spawnLootDrop(mob.pos, mob.isElite || mob.isBoss, mob.isBoss);
@@ -8866,10 +8869,7 @@
                     }
                   });
                 }
-                if (m.glbNode) {
-                  const baseS = m.scale || 1.0;
-                  m.glbNode.scale.set(baseS, baseS * Math.max(0.25, 1 - fadeT * 0.55), baseS);
-                }
+                // (no squash/melt: the body simply glows out while its shards scatter)
               }
 
               if (m.deathTimer <= 0) {
@@ -9785,7 +9785,7 @@
   <script src="public/assets/js/mmo_audio.js?v=10"></script>
   <script src="public/assets/js/mmo_vfx.js?v=10"></script>
   <script src="public/assets/js/mmo_mobile.js?v=10"></script>
-  <script src="public/assets/js/mmo_sky.js?v=11"></script>
+  <script src="public/assets/js/mmo_sky.js?v=12"></script>
   <script src="public/assets/js/mmo_terrain.js?v=16"></script>
   <script src="public/assets/js/mmo_foliage.js?v=17"></script>
   <script src="public/assets/js/mmo_water.js?v=2"></script>
@@ -9793,5 +9793,6 @@
   <script src="public/assets/js/mmo_combatfx.js?v=4"></script>
   <script src="public/assets/js/mmo_grounding.js?v=3"></script>
   <script src="public/assets/js/mmo_anime.js?v=2"></script>
+  <script src="public/assets/js/mmo_polish.js?v=2"></script>
 </body>
 </html>

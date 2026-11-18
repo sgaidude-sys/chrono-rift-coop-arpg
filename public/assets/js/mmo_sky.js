@@ -86,6 +86,8 @@
       float sunVis = smoothstep(-0.08, 0.03, uSunDir.y);
       sky += vec3(1.0, 0.72, 0.42) * pow(sd, 12.0) * 0.26 * sunVis;
       sky += vec3(1.0, 0.86, 0.62) * pow(sd, 90.0) * 0.5 * sunVis;
+      // luminous sun-side horizon: crosses the bloom threshold for a soft dreamy halo
+      sky += vec3(1.0, 0.84, 0.6) * band * pow(sd, 3.0) * 0.55 * sunVis;
       sky += vec3(1.0, 0.95, 0.82) * smoothstep(0.99935, 0.99965, sd) * 5.0 * sunVis * step(-0.02, elev);
 
       // night: twinkling stars + moon

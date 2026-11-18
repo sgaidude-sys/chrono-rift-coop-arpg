@@ -147,3 +147,19 @@ The game picks one of five songs from `public/assets/audio/music/` based on the 
 - **Rim light.** A Fresnel rim follows the silhouette. It is stronger on the side facing away from the sun and when the character is backlit, and a bit stronger at night.
 - **Shadow cleanup.** Characters no longer carry the old flat blob shadow; the terrain-fitted contact shadows replace it.
 - **Town paths.** The decorative tree and boulder ring around Ashenvale Bastion now keeps the north and south paths, the east–west road and the procedural main road clear.
+
+### ✨ Cinematic Polish (`mmo_polish.js`)
+- **Crystal-shatter deaths.** These replace the old wavy flame sprite. A dying monster bursts into glowing, spinning crystal shards in its death colour; the shards bounce once and shrink away. Elites and bosses also send up a short soul beam. All shards share one pooled instanced mesh (1 draw call), and the body no longer squashes as it fades.
+- **Weapon colours.** The weapon models ship with plain white materials whose *names* say their colour (Steel, Gold, DarkWood, Red, LightBlue…). Each part is now coloured from an anime palette by name: cool blue steel, warm gold, rich wood, crimson. Gems and gold glow softly into the bloom.
+- **Anime colour grade.** A separate post pass runs after bloom and the ACES tonemap. It adds midtone saturation, teal-shifted shadows, warm golden highlights and a gentle filmic S-curve.
+- **Bloom.** The threshold is 1.05 with a soft 0.28 knee, strength 0.62 and radius 0.72. Only HDR elements halo: spells, glowing flowers and gems, the sun disk and the sun-side horizon, and bright rims. Terrain and UI stay crisp.
+- **Aerial perspective.** The global fog chunk desaturates and lifts mid-distance terrain, then blends far hills into a luminous sky-blue haze derived from the live fog colour, so it follows the day-night cycle.
+- **Graphics quality.** A 🎛️ button in the HUD cycles Low, Medium and High, and the choice is remembered. The default is Low on touch devices, Medium on CPUs with 4 cores or fewer, and High otherwise.
+
+| Setting | Low | Medium | High |
+|---|---|---|---|
+| Pixel ratio | 0.8× | 1× | up to 2× |
+| Shadow map | 512 | 1024 | 2048 |
+| Grass density | 35% | 65% | 100% |
+| Ambient particles | 40% | 70% | 100% |
+| Bloom + grade | off | half-res | full |
