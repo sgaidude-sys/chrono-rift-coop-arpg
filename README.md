@@ -235,3 +235,44 @@ Every environment prop now uses the same crisp, stylized pipeline as the rocks a
 ```
 python scripts/build_audio.py voice --redo=hero_,grunt_
 ```
+
+### ⚔️ Souls-like Action Combat (`mmo_combat.js`)
+
+| Input | Action |
+|---|---|
+| `Space` (or 💨 on touch) | **Dodge roll** in the movement direction, or a short backstep when standing still. |
+| Hold `RMB` / `G` (or 🛡️ on touch) | **Block.** Pressing it just before a hit lands is a **Perfect Parry**. A right-drag still orbits the camera and drops the guard. |
+| `Alt` | Jump |
+| `2` / `K` | Heavy skill (moved off the right mouse button) |
+
+- **Dodge roll:**
+  - a 0.42 s, 5.2 m eased dash (the backstep is 0.34 s, 2.9 m);
+  - 0.25 s of i-frames, honoured by melee, projectiles and boss AoEs;
+  - three class-coloured afterimages;
+  - costs 20 stamina and is refused below 10.
+- **Input buffer:** attacks and dodges pressed up to 0.3 s early (mid-roll, mid-swing, guard-broken or at the end of a cooldown) are queued and fire on the first frame the hero can act.
+- **Block:**
+  - takes 25% damage and costs 10–38 stamina by hit size; stamina doesn't regenerate and you move at 45% speed while guarding;
+  - if a hit needs more stamina than you have, your guard breaks: a 0.9 s stun, 60% damage and stamina emptied.
+- **Perfect Parry:** a block pressed ≤ 0.18 s before impact.
+  - The hit deals no damage.
+  - Effects: a golden spark burst, a double metallic shockwave ring, a **50 ms hit-stop**, a sharp shake and a metallic clang.
+  - The attacker takes 45–52 posture damage, and you get 12 stamina back.
+  - Arrows are reflected at their shooter for 1.6× damage.
+  - The window stays open, so a pack's simultaneous strikes are all deflected. Spamming the button doesn't work because of a 0.32 s lockout between parry windows.
+  - Boss parries: only weapon moves (swipe, cleave, charge, slam) can be parried or blocked; spells and shockwaves must be dodged.
+- **Posture:**
+  - every enemy has a golden posture bar under its HP bar, and bosses show one under the boss HP bar;
+  - maximum: 70 normal, 120 elite, 220 boss;
+  - fills from hits (+5, heavy +12, ×0.6 on bosses), blocks and parries, and drains after 2.5 s without pressure.
+- **Stagger:** when posture is full, the enemy is stunned for **3 s** with a flashing bar and dizzy stars. The next hit is a **CRITICAL RIPOSTE**: ×3 damage (×2.5 on bosses), forced crit, a big hit-stop and a shockwave.
+- **Telegraphs:**
+  - every enemy attack has a wind-up: the attack clip is slowed and the body squats into a coil, then snaps through the strike with a stretch;
+  - **0.25 s before the hitbox is live**, a golden star glint flashes on the enemy, together with a 0.14 s emissive flash and a positional chime. That is your parry cue;
+  - boss abilities get the same glint against their telegraph timers.
+- **Multiplayer:**
+  - Block, parry and dodge resolve on the defending client, with no added latency; each client already resolves enemy hits against itself.
+  - Clients batch posture gains to the host (`mob_posture`, 4/s, sent immediately when a bar fills).
+  - The host alone decides staggers and broadcasts them (`mob_stagger`), and every client applies them.
+  - Riposte damage goes through the normal `mob_hit` event.
+- **Timing:** all combat timers run on a game-time clock, so hit-stop and frame hitches never shift the parry window.

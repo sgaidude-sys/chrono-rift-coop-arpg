@@ -1311,7 +1311,7 @@
         <div class="skill-cd-overlay" id="cd-1"></div>
       </div>
       <div class="skill-slot" id="slot-2" data-slot="2" onclick="window.game.useSkill(2)">
-        <span class="skill-key">RMB</span>
+        <span class="skill-key">2</span>
         <span class="skill-icon" id="icon-2">🛡️</span>
         <span class="skill-name" id="name-2">Seismic Slam</span>
         <div class="skill-cd-overlay" id="cd-2"></div>
@@ -1328,10 +1328,15 @@
         <span class="skill-name" id="name-4">Phalanx Banner</span>
         <div class="skill-cd-overlay" id="cd-4"></div>
       </div>
-      <div class="skill-slot" id="slot-jump" data-slot="jump" onclick="window.game.jump()" style="width: 62px;">
+      <div class="skill-slot" id="slot-jump" data-slot="jump" onclick="window.game.dodgeRoll ? window.game.dodgeRoll() : window.game.jump()" style="width: 62px;">
         <span class="skill-key">SPACE</span>
-        <span class="skill-icon">🪽</span>
-        <span class="skill-name">Vault Jump</span>
+        <span class="skill-icon">💨</span>
+        <span class="skill-name">Dodge</span>
+      </div>
+      <div class="skill-slot" id="slot-parry" data-slot="parry" style="width: 62px;">
+        <span class="skill-key">RMB</span>
+        <span class="skill-icon">🛡️</span>
+        <span class="skill-name">Parry</span>
       </div>
       <div class="skill-slot" id="slot-potion" data-slot="potion" onclick="window.game.usePotion()">
         <span class="skill-key">H</span>
@@ -1417,7 +1422,7 @@
 
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.14);">
         <div style="font-size: 11.5px; color: var(--text-main); line-height: 1.5;">
-          <strong>Controls:</strong> <span class="key-cap">WASD</span> Move • <span class="key-cap">Space</span> Jump/Vault • <span class="key-cap">Q/E</span> Orbit Camera • <span class="key-cap">Z/X</span> or <span class="key-cap">RMB drag</span> Tilt Camera • <span class="key-cap">LMB / 1 / J</span> Combo Attack • <span class="key-cap">RMB / 2</span> Heavy Skill • <span class="key-cap">Shift</span> Dodge/Movement • <span class="key-cap">4</span> Class Skill • <span class="key-cap">H</span> Elixir • <span class="key-cap">R</span> Convergence • <span class="key-cap">I</span> Inventory • <span class="key-cap">F</span> Talk/Interact
+          <strong>Controls:</strong> <span class="key-cap">WASD</span> Move • <span class="key-cap">Space</span> Dodge Roll • <span class="key-cap">RMB / G</span> Block (tap just before a hit = Perfect Parry) • <span class="key-cap">Alt</span> Jump • <span class="key-cap">Q/E</span> Orbit Camera • <span class="key-cap">Z/X</span> or <span class="key-cap">RMB drag</span> Tilt Camera • <span class="key-cap">LMB / 1 / J</span> Combo Attack • <span class="key-cap">2</span> Heavy Skill • <span class="key-cap">Shift</span> Movement Skill • <span class="key-cap">4</span> Class Skill • <span class="key-cap">H</span> Elixir • <span class="key-cap">R</span> Convergence • <span class="key-cap">I</span> Inventory • <span class="key-cap">F</span> Talk/Interact
         </div>
         <button class="cta-btn" onclick="window.game.startOrResumeGame()">⚡ ENTER ASHENVALE REALM</button>
       </div>
@@ -6850,6 +6855,7 @@
             }
             mob.attackAnimTimer = payload.isBoss ? 1.35 : 0.95;
             if (payload.atkClip) this.playEntityAnim(mob, payload.atkClip, true);
+            if (this.mobWindup) this.mobWindup(mob, payload.windup || 0.55);
             const targetSnap = new THREE.Vector3(payload.tx || 0, 0, payload.tz || 0);
             const teleRadius = payload.teleRadius || (mob.isBoss ? 4.4 : 2.4);
             const teleCenter = mob.ranged
@@ -6861,7 +6867,7 @@
                 const dir = targetSnap.clone().sub(mob.pos).setY(0);
                 if (dir.lengthSq() > 0.0001) dir.normalize();
                 else dir.set(Math.sin(mob.yaw), 0, Math.cos(mob.yaw));
-                this.spawnProjectile(mob.pos.clone().add(new THREE.Vector3(0, 1.1, 0)), dir, 16, mob.dmg, 0xff3b5c, false, false, { srcLevel: mob.level });
+                this.spawnProjectile(mob.pos.clone().add(new THREE.Vector3(0, 1.1, 0)), dir, 16, mob.dmg, 0xff3b5c, false, false, { srcLevel: mob.level, actor: mob });
               } else {
                 const hitCenter = mob.pos.clone().add(new THREE.Vector3(Math.sin(mob.yaw), 0, Math.cos(mob.yaw)).multiplyScalar(1.6));
                 this.spawnVFXFlipbook('smallhit', hitCenter, teleRadius, 0.3, 0xff3b5c);
@@ -6869,13 +6875,19 @@
                 const xzHitDist = Math.hypot(this.player.pos.x - hitCenter.x, this.player.pos.z - hitCenter.z);
                 if (xzHitDist <= teleRadius && this.player.dodgeTimer <= 0) {
                   if (this.player.pos.y <= 0.7) {
-                    this.damagePlayer(mob.dmg, mob.name, mob.level);
+                    if (this.mobStrikePlayer) this.mobStrikePlayer(mob); else this.damagePlayer(mob.dmg, mob.name, mob.level);
                   } else {
                     this.spawnFloatingText(this.player.pos, 'VAULTED!', '#38e8ff', 14);
                   }
                 }
               }
             });
+          })
+          .on('broadcast', { event: 'mob_posture' }, ({ payload }) => {
+            if (this.onMobPostureNet) this.onMobPostureNet(payload);
+          })
+          .on('broadcast', { event: 'mob_stagger' }, ({ payload }) => {
+            if (this.onMobStaggerNet) this.onMobStaggerNet(payload);
           })
           .on('broadcast', { event: 'boss_cast' }, ({ payload }) => {
             if (this.onBossCastEvent) this.onBossCastEvent(payload);
@@ -7901,10 +7913,7 @@
             const wasMoved = this.orbitDragStart.moved;
             const btn = this.orbitDragStart.button;
             this.isOrbitDragging = false;
-            if (btn === 2 && !wasMoved && !this.isAnyModalOpen) {
-              this.updateMouseWorld();
-              this.useSkill(2);
-            }
+            if (btn === 2 && this.endBlock) this.endBlock();   // right mouse = block / parry (mmo_combat.js)
           }
         });
 
@@ -7960,7 +7969,7 @@
         const tip = document.getElementById('skill-tooltip');
         if (!tip) return;
         const cls = HERO_CLASSES[this.player.classId] || HERO_CLASSES.vanguard;
-        const keyMap = { '1': 'LMB / 1', '2': 'RMB / 2', '3': 'SHIFT / 3', '4': '4 / V', 'jump': 'SPACE', 'potion': 'H / C', '5': 'R / 5' };
+        const keyMap = { '1': 'LMB / 1', '2': '2 / K', '3': 'SHIFT / 3', '4': '4 / V', 'jump': 'SPACE', 'potion': 'H / C', '5': 'R / 5' };
         let title = '', meta = '', desc = '';
         if (slotKey === 'jump') {
           title = 'Vault Jump';
@@ -9047,6 +9056,7 @@
                 ? 'Sword_Heavy_Combo'
                 : (m.ranged ? 'Spell_Simple_Shoot' : 'Sword_Attack');
               this.playEntityAnim(m, atkClip, true);
+              if (this.mobWindup) this.mobWindup(m, m.windupTimer);
 
               const targetSnap = nearestTarget.pos.clone();
               const teleRadius = m.isBoss ? 4.4 : 2.4;
@@ -9073,7 +9083,7 @@
                 if (m.dead) return;
                 if (m.ranged) {
                   const dir = targetSnap.clone().sub(m.pos).setY(0).normalize();
-                  this.spawnProjectile(m.pos.clone().add(new THREE.Vector3(0, 1.1, 0)), dir, 16, m.dmg, 0xff3b5c, false, false, { srcLevel: m.level });
+                  this.spawnProjectile(m.pos.clone().add(new THREE.Vector3(0, 1.1, 0)), dir, 16, m.dmg, 0xff3b5c, false, false, { srcLevel: m.level, actor: m });
                 } else {
                   const hitCenter = m.pos.clone().add(new THREE.Vector3(Math.sin(m.yaw), 0, Math.cos(m.yaw)).multiplyScalar(1.6));
                   this.spawnVFXFlipbook('smallhit', hitCenter, teleRadius, 0.3, 0xff3b5c);
@@ -9081,7 +9091,7 @@
                   const xzHitDist = Math.hypot(this.player.pos.x - hitCenter.x, this.player.pos.z - hitCenter.z);
                   if (xzHitDist <= teleRadius && this.player.dodgeTimer <= 0) {
                     if (this.player.pos.y <= 0.7) {
-                      this.damagePlayer(m.dmg, m.name, m.level);
+                      if (this.mobStrikePlayer) this.mobStrikePlayer(m); else this.damagePlayer(m.dmg, m.name, m.level);
                     } else {
                       this.spawnFloatingText(this.player.pos, 'VAULTED!', '#38e8ff', 14);
                     }
@@ -9364,7 +9374,7 @@
           } else {
             const xzDist = Math.hypot(this.player.pos.x - pr.mesh.position.x, this.player.pos.z - pr.mesh.position.z);
             if (xzDist < 1.15 && Math.abs((this.player.pos.y + 1.0) - pr.mesh.position.y) < 1.25 && this.player.dodgeTimer <= 0) {
-              this.damagePlayer(pr.dmg, 'Projectile', pr.srcLevel);
+              if (this.defendProjectile) this.defendProjectile(pr); else this.damagePlayer(pr.dmg, 'Projectile', pr.srcLevel);
               removeProj = true;
             }
           }
@@ -9824,5 +9834,6 @@
   <script src="public/assets/js/mmo_polish.js?v=5"></script>
   <script src="public/assets/js/mmo_realism.js?v=1"></script>
   <script src="public/assets/js/mmo_hud.js?v=4"></script>
+  <script src="public/assets/js/mmo_combat.js?v=1"></script>
 </body>
 </html>
