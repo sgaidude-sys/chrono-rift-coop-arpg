@@ -208,9 +208,17 @@
           const d = Math.hypot(a.x - b.x, a.y - b.y);
           this.cameraZoom = Math.max(10, Math.min(30, zoomStart * pinchStart / Math.max(20, d)));
           this._userZoomed = true;
+          // two fingers dragged up/down together tilt the camera (to look at the sky)
+          const midY = (a.y + b.y) / 2;
+          if (this._pinchMidY !== undefined) {
+            const dy = midY - this._pinchMidY;
+            if (this.cameraPitch === undefined) this.cameraPitch = 0.6454;
+            this.cameraPitch = Math.max(0.04, Math.min(1.3, this.cameraPitch + dy * 0.006));
+          }
+          this._pinchMidY = midY;
         }
       });
-      const endT = (e) => { touches.delete(e.pointerId); if (touches.size < 2) pinchStart = 0; };
+      const endT = (e) => { touches.delete(e.pointerId); if (touches.size < 2) { pinchStart = 0; this._pinchMidY = undefined; } };
       this.canvas.addEventListener('pointerup', endT);
       this.canvas.addEventListener('pointercancel', endT);
     },
