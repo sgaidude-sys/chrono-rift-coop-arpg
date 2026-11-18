@@ -13,7 +13,8 @@
     gateWidth: 14,       // half-width of the pass where a road crosses a ridge
     townRadius: 46,      // Ashenvale Bastion safe area around the origin
     activateRadius: 115, // camps within this radius of any hero are simulated
-    levelCap: 50
+    levelCap: 50,
+    waterLevel: -2.0      // sea level; lower ground becomes shallow lakes
   };
 
   // ---------------------------------------------------------------------------

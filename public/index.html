@@ -5432,6 +5432,17 @@
         }
       }
 
+      // Frees geometry/material created for one transient object (tagged userData.ownsGPU).
+      // Untagged nodes (model-cache clones, shared VFX geometry) are left alone.
+      disposeOwnedGPU(root) {
+        if (!root) return;
+        root.traverse((n) => {
+          if (!n.userData || !n.userData.ownsGPU) return;
+          if (n.geometry) n.geometry.dispose();
+          if (n.material) (Array.isArray(n.material) ? n.material : [n.material]).forEach((m) => m.dispose());
+        });
+      }
+
       spawnProjectile(origin, dir, speed, dmg, colorHex, fromPlayer = true, visualOnly = false, opts = {}) {
         let mesh;
         const normDir = dir.clone().normalize();
@@ -5442,6 +5453,7 @@
             geo,
             new THREE.MeshBasicMaterial({ color: colorHex, side: THREE.DoubleSide, transparent: true, opacity: 0.92, blending: THREE.AdditiveBlending, depthWrite: false })
           );
+          mesh.userData.ownsGPU = true;
           mesh.position.copy(origin);
           mesh.rotation.y = Math.atan2(normDir.x, normDir.z);
         } else {
@@ -5457,12 +5469,14 @@
               new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.72, blending: THREE.AdditiveBlending, depthWrite: false })
             );
             glow.position.z = mKey === 'weapon_Arrow' ? 1.8 : 0;
+            glow.userData.ownsGPU = true;   // the cloned arrow model itself shares the cache's GPU data
             mesh.add(glow);
           } else {
             mesh = new THREE.Mesh(
               new THREE.SphereGeometry(0.24, 8, 8),
               new THREE.MeshBasicMaterial({ color: colorHex })
             );
+            mesh.userData.ownsGPU = true;
           }
           mesh.position.copy(origin);
           mesh.lookAt(origin.clone().add(normDir));
@@ -5776,6 +5790,7 @@
           new THREE.MeshBasicMaterial({ color: beamColor, transparent: true, opacity: 0.42, blending: THREE.AdditiveBlending })
         );
         beam.position.y = 1.3;
+        beam.userData.ownsGPU = true;
         group.add(beam);
 
         const orb = new THREE.Mesh(
@@ -5783,6 +5798,7 @@
           new THREE.MeshStandardMaterial({ color: beamColor, emissive: beamColor, emissiveIntensity: 1.5 })
         );
         orb.position.y = 0.45;
+        orb.userData.ownsGPU = true;
         group.add(orb);
 
         this.scene.add(group);
@@ -8031,6 +8047,10 @@
           const dz = this.player.pos.z - npc.pos.z;
           const distSq = dx * dx + dz * dz;
           const isNear = distSq <= 30.25; // 5.5m
+          // Distance culling (like mobs): each NPC is ~17 skinned draw calls + shadows
+          const inRange = distSq <= 6400; // 80m
+          if (npc.meshRoot && npc.meshRoot.visible !== inRange) npc.meshRoot.visible = inRange;
+          if (!inRange) continue;
           const targetYaw = isNear ? Math.atan2(dx, dz) : npc.baseYaw;
           let dyaw = targetYaw - npc.yaw;
           while (dyaw > Math.PI) dyaw -= Math.PI * 2;
@@ -9313,6 +9333,7 @@
               this.spawnShockwaveRing(new THREE.Vector3(pr.mesh.position.x, 0, pr.mesh.position.z), 1.65, pr.splashRingColor, 0.28);
             }
             this.scene.remove(pr.mesh);
+            this.disposeOwnedGPU(pr.mesh);
             this.projectiles.splice(i, 1);
           }
         }
@@ -9331,6 +9352,8 @@
           }
           if (tg.elapsed >= tg.duration) {
             this.scene.remove(tg.mesh);
+            // each telegraph owns its ring/fill geometry + materials: free them
+            tg.mesh.traverse((n) => { if (n.geometry) n.geometry.dispose(); if (n.material) n.material.dispose(); });
             if (tg.onComplete) tg.onComplete();
             this.telegraphs.splice(i, 1);
           }
@@ -9594,6 +9617,7 @@
               this.renderInventoryModal();
             }
             this.scene.remove(ld.group);
+            this.disposeOwnedGPU(ld.group);
             this.lootDrops.splice(i, 1);
           }
         }
@@ -9739,15 +9763,16 @@
       window.game = new ChronoRiftCoOpGame();
     });
   </script>
-  <script src="assets/js/mmo_data.js?v=10"></script>
-  <script src="assets/js/world_core.js?v=15"></script>
+  <script src="assets/js/mmo_data.js?v=11"></script>
+  <script src="assets/js/world_core.js?v=16"></script>
   <script src="assets/js/mmo_world.js?v=15"></script>
   <script src="assets/js/mmo_rpg.js?v=10"></script>
   <script src="assets/js/mmo_audio.js?v=10"></script>
   <script src="assets/js/mmo_vfx.js?v=10"></script>
   <script src="assets/js/mmo_mobile.js?v=10"></script>
   <script src="assets/js/mmo_sky.js?v=11"></script>
-  <script src="assets/js/mmo_terrain.js?v=15"></script>
-  <script src="assets/js/mmo_foliage.js?v=15"></script>
+  <script src="assets/js/mmo_terrain.js?v=16"></script>
+  <script src="assets/js/mmo_foliage.js?v=16"></script>
+  <script src="assets/js/mmo_water.js?v=2"></script>
 </body>
 </html>

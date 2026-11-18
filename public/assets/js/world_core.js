@@ -199,6 +199,7 @@
           if (dist2(x, z, zone.bossPos[0], zone.bossPos[1]) < 95 * 95) continue;
           if (zone.worldBossPos && dist2(x, z, zone.worldBossPos[0], zone.worldBossPos[1]) < 110 * 110) continue;
           if (zone.sites.some(s => dist2(x, z, s[0], s[1]) < 30 * 30)) continue;
+          if (this.terrainHeight(x, z) < W.waterLevel + 0.5) continue; // no camps in lakes
           this.camps.push({ x, z, zone: zone.idx });
         }
       }
@@ -318,7 +319,7 @@
         const s = PROP_SCALE[t] ? PROP_SCALE[t][0] + rng() * (PROP_SCALE[t][1] - PROP_SCALE[t][0]) : 1;
         const isTree = TREE_TYPES[t] === 1;
         // trees & flowers only on walkable, gentle ground (shared terrain heights)
-        if ((isTree || t === 'flower' || t === 'mushroom') && this.terrainSlope(x, z) > 0.5) continue;
+        if ((isTree || t === 'flower' || t === 'mushroom') && (this.terrainSlope(x, z) > 0.5 || this.terrainHeight(x, z) < W.waterLevel + 0.4)) continue;
         ch.props.push({ t, x, z, r: rng() * 6.28, s, c: rng(), zone: zr.i });
         const or = PROP_COLLIDE[t];
         if (or) ch.obstacles.push({ x, z, r: or * s });
@@ -331,7 +332,7 @@
             for (let k = 0; k < n; k++) {
               const ang = rng() * 6.283, rad = 1.6 + rng() * 2.6 * s;
               const fx = x + Math.cos(ang) * rad, fz = z + Math.sin(ang) * rad;
-              if (this.roadDist(fx, fz) < 7) continue;
+              if (this.roadDist(fx, fz) < 7 || this.terrainHeight(fx, fz) < W.waterLevel + 0.3) continue;
               ch.props.push({ t: 'flower', x: fx, z: fz, r: rng() * 6.28, s: 0.7 + rng() * 0.5, c: (fc + rng() * 0.25) % 1, zone: zr.i });
             }
           }
@@ -452,7 +453,16 @@
     let mtn = d0 > 300 ? 1 - smooth(W.borderBand * 0.15, W.borderBand * 1.9, zr.f) : 0;
     mtn = Math.max(mtn, 1 - smooth(15, 110, edge)) * (1 - roadFlat);
     const peaks = 22 + 10 * simplex2(this.perm, x / 90, z / 90);
-    return (base + mtn * peaks) * (1 - flat);
+    let h = (base + mtn * peaks) * (1 - flat);
+    // valleys below sea level become shallow, wadeable lakes (max ~1.5 m deep)
+    const bed = W.waterLevel - 1.5;
+    if (h < bed) h = bed + (h - bed) * 0.12;
+    return h;
+  };
+
+  // >0 where the ground is under water (metres of water above the terrain)
+  WorldGen.prototype.waterDepth = function (x, z) {
+    return W.waterLevel - this.terrainHeight(x, z);
   };
 
   // rise/run over ~3 m using the shared height function (0 = flat, 1 = 45°)
@@ -472,6 +482,7 @@
   let shared = null;
   function sharedWorld() { return shared || (shared = new WorldGen()); }
   function getTerrainHeight(x, z) { return sharedWorld().terrainHeight(x, z); }
+  function getWaterDepth(x, z) { return sharedWorld().waterDepth(x, z); }
 
-  return { mulberry32, hash2, vnoise, fbm, smooth, dist2, WorldGen, PROP_SCALE, PROP_COLLIDE, buildPerm, simplex2, getTerrainHeight, sharedWorld };
+  return { mulberry32, hash2, vnoise, fbm, smooth, dist2, WorldGen, PROP_SCALE, PROP_COLLIDE, buildPerm, simplex2, getTerrainHeight, getWaterDepth, WATER_LEVEL: W.waterLevel, sharedWorld };
 });

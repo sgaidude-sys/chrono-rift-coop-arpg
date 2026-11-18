@@ -166,6 +166,11 @@ gl_Position = projectionMatrix * mvPosition;`;
 
     vec3 col = mix(flatC, dirtC, max(low * 0.85, road * 0.95));
     col = mix(col, rockC, rockW);
+    // pale sand beach at the waterline, darker wet sand + lake bed below it
+    float wl = ${(W.waterLevel !== undefined ? W.waterLevel : -2.0).toFixed(2)};
+    float beach = smoothstep(wl + 0.95, wl + 0.2, terrH + (n2 - 0.5) * 0.5) * (1.0 - rockW);
+    col = mix(col, mix(vec3(0.80, 0.70, 0.50), vec3(0.90, 0.80, 0.60), n1), beach * 0.85);
+    col *= 1.0 - smoothstep(wl + 0.15, wl - 0.35, terrH) * 0.38;
     float snow = smoothstep(40.0, 48.0, terrH + n1 * 4.0) * (1.0 - rockW * 0.4);   // only the tallest peaks
     col = mix(col, vec3(0.93, 0.95, 1.0), snow);
     col *= 0.94 + n3 * 0.12;

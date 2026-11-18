@@ -206,6 +206,7 @@
     uniform vec3 uSunCol;
     uniform vec3 uAmbCol;
     uniform float uAlbedoScale;
+    uniform float uWaterLevel;
     varying vec3 vCol;
     #include <fog_pars_vertex>
     __TERRAIN__
@@ -229,6 +230,7 @@
       // only on flat, grassy ground: no roads, cliffs, town paving, peaks or lava
       float mask = smoothstep(0.45, 0.75, grassW) * (1.0 - smoothstep(0.22, 0.45, ca.a));
       mask *= smoothstep(0.86, 0.93, tn.y) * (1.0 - smoothstep(14.0, 18.0, th));
+      mask *= smoothstep(uWaterLevel + 0.3, uWaterLevel + 0.9, th);   // no grass in lakes / on beaches
       float dPlaza = length(w - vec2(0.0, 9.5));
       mask *= smoothstep(15.0, 19.0, dPlaza) * smoothstep(5.0, 7.0, abs(w.x)) + step(60.0, length(w));
       mask = clamp(mask, 0.0, 1.0);
@@ -384,7 +386,8 @@
         uSunDir: { value: new THREE.Vector3(0, 1, 0) },
         uSunCol: { value: new THREE.Color(1, 1, 1) },
         uAmbCol: { value: new THREE.Color(0.5, 0.6, 0.7) },
-        uAlbedoScale: G.uAlbedoScale || { value: 0.5 }
+        uAlbedoScale: G.uAlbedoScale || { value: 0.5 },
+        uWaterLevel: { value: window.MMO.WORLD.waterLevel !== undefined ? window.MMO.WORLD.waterLevel : -2.0 }
       }, TU);
       const mat = new THREE.ShaderMaterial({
         uniforms: this.grassU,
