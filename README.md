@@ -85,3 +85,18 @@ Rebuild the audio with `python scripts/build_audio.py [voice|music|sfx] [--force
 - **Performance audit**: call `game.perfAudit()` in the console. It reports draw calls and triangles for one full composer frame, GPU geometry, texture and program counts, JS heap, and live entity counts. It found and fixed:
   - town NPCs (12 NPCs, 207 skinned draws plus shadows) still rendering across the map; they are now hidden beyond 80 m, which cut a frame by the lake from 563 to 112 draw calls;
   - leaked geometry and materials from telegraph circles, projectiles and loot drops, now disposed. Shared model-cache data is protected by `userData.ownsGPU` tags.
+
+### 🎵 Scene Music (`mmo_music.js`)
+The game picks one of five songs from `public/assets/audio/music/` based on the current scene, checked 4 times per second:
+
+| Song | When it plays |
+|---|---|
+| `boss_epic` | A zone or world boss is engaged. It stays on for 5 s after the boss disengages. |
+| `combat` | You hit or are hit by a monster, or a monster is hunting you within 20 m. It stays on for 7 s after the last of these. |
+| `town_day` | You are in Ashenvale Bastion. |
+| `explore_day` / `explore_night` | You are out in the world. The song follows the day-night cycle and switches when the sky passes 65% night (or back below 35%). |
+
+- **No overlap.** The current song fades out completely and pauses before the next one fades in. Combat and boss songs cut in faster (0.7–1 s fades) than calm ones (2.4 s out, 3 s in). If the scene changes back during a fade, the fade reverses instead of the song restarting. Town and exploration songs resume where they left off after a fight.
+- **No lag.** Songs stream through `<audio>` → `MediaElementSource` instead of being decoded into RAM all at once. Each song loads only when first needed, and the next one starts buffering while the previous fades out. Fades are gain ramps scheduled once per transition and run on the audio thread, so nothing is computed per frame. Paused songs stop decoding, and muting pauses the active song.
+- **Files.** The source songs were loudness-normalised to −16 LUFS, trimmed of silence and given click-free loop edges. They are 128 kbps, 44.1 kHz MP3s, 15.6 MB in total (down from 23.6 MB).
+- **Debugging.** `game.audio.musicDebug()` shows the wanted song, the current song, the fade state, and each song's volume, position and buffering.
