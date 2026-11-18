@@ -409,9 +409,11 @@
           for (let k = 0; k < ch.props.length; k++) {
             const p = ch.props[k];
             if (far && p.t !== 'ridge' && p.t !== 'mesa') continue;
-            const inst = this.propInst[p.t];
+            // procedural tree variants (mmo_foliage.js) replace the old oak prop
+            const pk = (p.t === 'oak' && this.treeVariants) ? this.treeVariants[Math.min(this.treeVariants.length - 1, Math.floor(p.c * this.treeVariants.length))] : p.t;
+            const inst = this.propInst[pk];
             if (!inst) continue;
-            const n = counts[p.t];
+            const n = counts[pk];
             if (n >= inst.instanceMatrix.count) continue;
             d.position.set(p.x, 0, p.z);
             d.rotation.set(0, p.r, 0);
@@ -424,7 +426,7 @@
             if (p.t === 'flower') col.setHex(FLOWER_COLORS[Math.floor(p.c * FLOWER_COLORS.length)]);
             else col.setHex(tint).multiplyScalar(0.86 + p.c * 0.28);
             inst.setColorAt(n, col);
-            counts[p.t] = n + 1;
+            counts[pk] = n + 1;
           }
         }
       }

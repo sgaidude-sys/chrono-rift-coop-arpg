@@ -316,9 +316,37 @@
         const near = this.campsNear(x, z, 9);
         if (near.length && t !== 'flower') continue;
         const s = PROP_SCALE[t] ? PROP_SCALE[t][0] + rng() * (PROP_SCALE[t][1] - PROP_SCALE[t][0]) : 1;
+        const isTree = TREE_TYPES[t] === 1;
+        // trees & flowers only on walkable, gentle ground (shared terrain heights)
+        if ((isTree || t === 'flower' || t === 'mushroom') && this.terrainSlope(x, z) > 0.5) continue;
         ch.props.push({ t, x, z, r: rng() * 6.28, s, c: rng(), zone: zr.i });
         const or = PROP_COLLIDE[t];
         if (or) ch.obstacles.push({ x, z, r: or * s });
+        if (isTree) {
+          // small glowing wildflower clusters and pebble rocks around the trunk
+          const flowery = (pp.flower || 0) > 0 || zr.i <= 1;
+          if (flowery && rng() < 0.6) {
+            const n = 3 + Math.floor(rng() * 5);
+            const fc = rng();
+            for (let k = 0; k < n; k++) {
+              const ang = rng() * 6.283, rad = 1.6 + rng() * 2.6 * s;
+              const fx = x + Math.cos(ang) * rad, fz = z + Math.sin(ang) * rad;
+              if (this.roadDist(fx, fz) < 7) continue;
+              ch.props.push({ t: 'flower', x: fx, z: fz, r: rng() * 6.28, s: 0.7 + rng() * 0.5, c: (fc + rng() * 0.25) % 1, zone: zr.i });
+            }
+          }
+          if (rng() < 0.38) {
+            const n = 1 + Math.floor(rng() * 2);
+            for (let k = 0; k < n; k++) {
+              const ang = rng() * 6.283, rad = 1.8 + rng() * 2.2;
+              const rx = x + Math.cos(ang) * rad, rz = z + Math.sin(ang) * rad;
+              if (this.roadDist(rx, rz) < 8) continue;
+              const rs = 0.45 + rng() * 0.45;
+              ch.props.push({ t: 'rock', x: rx, z: rz, r: rng() * 6.28, s: rs, c: rng(), zone: zr.i });
+              ch.obstacles.push({ x: rx, z: rz, r: PROP_COLLIDE.rock * rs });
+            }
+          }
+        }
       }
       // Decorative ruins at explore sites
       this.zones.forEach((pz) => {
@@ -343,6 +371,7 @@
     pillar: [0.8, 1.4], crystal: [0.8, 1.8], icespike: [0.8, 1.9], lavarock: [0.8, 1.7], bones: [0.9, 1.5],
     mesa: [0.9, 1.6], pylon: [0.9, 1.3]
   };
+  const TREE_TYPES = { oak: 1, pine: 1, snowpine: 1, deadtree: 1 };
   const PROP_COLLIDE = {
     pine: 0.45, snowpine: 0.45, oak: 0.5, deadtree: 0.35, rock: 0.75, boulder: 1.5, mushroom: 0.4,
     cactus: 0.45, grave: 0.35, pillar: 0.7, crystal: 0.55, icespike: 0.6, lavarock: 0.85, mesa: 7.5, pylon: 0.75
@@ -424,6 +453,14 @@
     mtn = Math.max(mtn, 1 - smooth(15, 110, edge)) * (1 - roadFlat);
     const peaks = 22 + 10 * simplex2(this.perm, x / 90, z / 90);
     return (base + mtn * peaks) * (1 - flat);
+  };
+
+  // rise/run over ~3 m using the shared height function (0 = flat, 1 = 45°)
+  WorldGen.prototype.terrainSlope = function (x, z) {
+    const d = 1.5;
+    const hx = this.terrainHeight(x + d, z) - this.terrainHeight(x - d, z);
+    const hz = this.terrainHeight(x, z + d) - this.terrainHeight(x, z - d);
+    return Math.hypot(hx, hz) / (2 * d);
   };
 
   WorldGen.prototype.terrainHeight = function (x, z) {

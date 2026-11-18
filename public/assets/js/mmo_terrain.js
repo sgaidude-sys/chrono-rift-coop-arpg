@@ -84,6 +84,7 @@ gl_Position = projectionMatrix * mvPosition;`;
   // (custom ones in this project chain to the previous hook, which is this one).
   THREE.Material.prototype.onBeforeCompile = function terrainInject(shader) { injectTerrain(shader, this); };
   window.injectTerrain = injectTerrain;
+  window.TERRAIN_GLSL = TERRAIN_GLSL;
   window.TERRAIN_UNIFORMS = TU;
 
   // Culling: bounding spheres live in logical (flat) space; lift them onto the terrain
