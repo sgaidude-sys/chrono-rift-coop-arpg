@@ -365,6 +365,8 @@
     },
 
     // ---- instanced, streamed props ------------------------------------------
+    propTintTables() { return { byZone: PROP_TINT, def: PROP_TINT.default, flowers: FLOWER_COLORS }; },
+
     buildPropInstancing() {
       const geos = buildPropGeometries();
       this.propInst = {};

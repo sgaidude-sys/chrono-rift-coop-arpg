@@ -127,3 +127,15 @@ The game picks one of five songs from `public/assets/audio/music/` based on the 
   - An unlocked shrine blesses you every 90 s: basic attacks take the zone's element for 60 s, and you heal 25% HP.
 - **Hit-stop and camera shake.** Crits, heavy attacks, reactions and boss skills that land freeze the frame for 40 ms, throttled so multi-hit skills stay smooth. They also add smooth camera shake that scales with the square of hit strength (trauma²), with a slight roll. The shake is applied after the camera's smoothing, so it isn't damped away.
 - **Co-op note.** Reactions are calculated by the attacker's client. Damage numbers sync as before, but reaction visuals show only for the player who triggered them.
+
+### 🎨 Hand-Painted Foliage & Grounding (`mmo_foliage.js`, `mmo_grounding.js`)
+- **Spherized canopy normals.** Each canopy cluster's normals point outward from the cluster centre, using the *undisplaced* sphere direction. They are pulled 20% toward the whole crown, so the canopy shades as one soft mass. The lumpy silhouette stays, but light wraps smoothly across the crown with no dark facet triangles. A feathered 3-tone ramp, linearly filtered, replaces the hard 3-band toon ramp.
+- **Vertical canopy gradient.** Each tree stores a normalised canopy height attribute (`aCanopyH`, 0 at the lowest leaves to 1 at the top). The foliage shader blends deep teal at the bottom, rich emerald in the middle and sunlit yellow-green at the top. Zone tints shift the hue without changing brightness.
+- **Contact shadows.** Soft ambient-occlusion decals sit under trees, rocks, boulders and other props, and under the hero, allies, party members, monsters and NPCs. They use 2 draw calls in total: the prop decals are streamed and culled with the props, and the character decals are rebuilt each frame. Character decals shrink and fade while airborne and fade out on death.
+  - The decal vertex shader rebuilds the ground mesh's exact triangle surface, so decals sit on the visible ground, including slopes. They also fade with the fog.
+- **Culling.** Props are cached per 64 m chunk as ready-made matrix and colour blocks.
+  - Each frame, chunks are tested against the camera frustum with a 12 m margin, so nothing pops at the screen edges.
+  - Chunks within 56 m of the hero always stay in, because they cast into the shadow map.
+  - Instance buffers are rebuilt with a fast copy, and only the used range is uploaded, and only when the visible set changes.
+  - Grass tufts outside the view are rejected early in the vertex shader.
+  - In a Whisperwood forest test, prop instances fell about 60% and triangles 15–25%. Frames take about 3 ms on a desktop GPU, well inside the 16.7 ms budget for 60 FPS.

@@ -27,7 +27,7 @@
 
   function buildTreeGeometry(seed) {
     const rng = CW.mulberry32(seed >>> 0);
-    const pos = [], nrm = [], col = [], fol = [];
+    const pos = [], nrm = [], col = [], fol = [], hgt = [];
     const trunkH = 2.3 + rng() * 1.1;
     const twist = 0.5 + rng() * 0.8;
     const leanX = (rng() - 0.5) * 0.5, leanZ = (rng() - 0.5) * 0.5;
@@ -55,7 +55,9 @@
       const shade = 0.75 + 0.25 * (tp.getY(i) / trunkH);
       col.push(0.42 * shade, 0.28 * shade, 0.17 * shade);
       fol.push(0);
+      hgt.push(0);
     }
+    const canopyStart = pos.length / 3;
     // ---- clustered, displaced icosahedron canopy ----
     const top = bend(1);
     const C = [top[0], trunkH + 0.9, top[1]];
@@ -69,28 +71,37 @@
       const ico = new THREE.IcosahedronGeometry(r, 1);
       const ip = ico.attributes.position;
       for (let i = 0; i < ip.count; i++) {
+        const ux = ip.getX(i) / r, uy = ip.getY(i) / r, uz = ip.getZ(i) / r;   // unit sphere direction
         let x = ip.getX(i), y = ip.getY(i), z = ip.getZ(i);
         // deterministic displacement keyed on the vertex position (no cracks)
         const d = 1 + (hash3(x * 3.1 + seed, y * 3.1, z * 3.1) - 0.5) * 0.32;
         x *= d; y *= d * 0.88; z *= d;
         const wx = cc[0] + x, wy = cc[1] + y, wz = cc[2] + z;
         pos.push(wx, wy, wz);
-        // blob normals: blend the cluster normal with the whole canopy's normal
-        const n1 = [x, y, z], n2 = [wx - C[0], wy - C[1] + 0.4, wz - C[2]];
-        const l1 = Math.hypot(...n1) || 1, l2 = Math.hypot(...n2) || 1;
-        const nx = n1[0] / l1 * 0.4 + n2[0] / l2 * 0.6, ny = n1[1] / l1 * 0.4 + n2[1] / l2 * 0.6, nz = n1[2] / l1 * 0.4 + n2[2] / l2 * 0.6;
+        // SPHERIZED normals: radiate from the cluster centre using the *undisplaced*
+        // sphere direction (so the lumpy surface still shades like a smooth ball),
+        // with a 20% pull toward the whole crown so clusters read as one canopy.
+        const cx = wx - C[0], cy = wy - C[1] + 0.4, cz = wz - C[2];
+        const lc = Math.hypot(cx, cy, cz) || 1;
+        const nx = ux * 0.8 + cx / lc * 0.2, ny = uy * 0.8 + cy / lc * 0.2, nz = uz * 0.8 + cz / lc * 0.2;
         const ln = Math.hypot(nx, ny, nz) || 1;
         nrm.push(nx / ln, ny / ln, nz / ln);
-        const v = 0.9 + hash3(wx, wy, wz) * 0.2;
-        col.push(0.72 * v, 0.95 * v, 0.6 * v);
+        const v = 0.92 + hash3(wx, wy, wz) * 0.16;          // gentle per-vertex brush variation
+        col.push(v, v, v);
         fol.push(1);
+        hgt.push(wy);
       }
     }
+    // normalise canopy heights to 0 (lowest leaves) .. 1 (crown top) for the vertical gradient
+    let hMin = Infinity, hMax = -Infinity;
+    for (let i = canopyStart; i < hgt.length; i++) { hMin = Math.min(hMin, hgt[i]); hMax = Math.max(hMax, hgt[i]); }
+    for (let i = canopyStart; i < hgt.length; i++) hgt[i] = (hgt[i] - hMin) / Math.max(0.01, hMax - hMin);
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     g.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
     g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
     g.setAttribute('aFoliage', new THREE.Float32BufferAttribute(fol, 1));
+    g.setAttribute('aCanopyH', new THREE.Float32BufferAttribute(hgt, 1));
     g.computeBoundingSphere();
     return g;
   }
@@ -103,15 +114,33 @@
     return t;
   }
 
-  // Cel foliage: toon bands + warm tops / teal undersides + rim + wind rustle
+  // Soft "hand-painted" cel ramp: 3 tones with feathered transitions (linear-filtered)
+  function softRamp() {
+    const N = 32, data = new Uint8Array(N * 4);
+    const ss = (a, b, x) => { const k = Math.min(1, Math.max(0, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
+    for (let i = 0; i < N; i++) {
+      const x = i / (N - 1);
+      const v = Math.round(84 + 46 * ss(0.30, 0.46, x) + 42 * ss(0.58, 0.74, x));
+      data.set([v, v, v, 255], i * 4);
+    }
+    const t = new THREE.DataTexture(data, N, 1, THREE.RGBAFormat);
+    t.minFilter = t.magFilter = THREE.LinearFilter;
+    t.generateMipmaps = false;
+    t.needsUpdate = true;
+    return t;
+  }
+
+  // Foliage: soft cel ramp + vertical canopy gradient + rim + wind rustle
   function makeFoliageMaterial(FU) {
-    const mat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: bandMap(78, 128, 170) });
+    const mat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: softRamp() });
     mat.onBeforeCompile = (shader) => {
       if (window.injectTerrain) window.injectTerrain(shader, mat);
       Object.assign(shader.uniforms, FU);
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>', `#include <common>
           attribute float aFoliage;
+          attribute float aCanopyH;
+          varying float vCanopyH;
           uniform float uTime;
           uniform vec2 uWindDir;
           varying float vFoliage;
@@ -124,6 +153,7 @@
           #endif`)
         .replace('#include <begin_vertex>', `#include <begin_vertex>
           vFoliage = aFoliage;
+          vCanopyH = aCanopyH;
           #ifdef USE_INSTANCING
             vec3 treeRoot = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
           #else
@@ -141,13 +171,23 @@
           uniform vec3 uRimColor;
           uniform float uFolAlbedo;
           varying float vFoliage;
+          varying float vCanopyH;
           varying vec3 vFolN;`)
         .replace('#include <color_fragment>', `#include <color_fragment>
-          // canopy: deep teal-green underside -> bright warm sunlit top
-          float upF = smoothstep(-0.45, 0.85, vFolN.y);
-          vec3 under = diffuseColor.rgb * vec3(0.32, 0.6, 0.58);
-          vec3 topC = diffuseColor.rgb * vec3(1.12, 1.1, 0.8) + vec3(0.03, 0.035, 0.0);
-          vec3 leaf = mix(under, topC, upF);
+          // vertical canopy gradient: deep teal (bottom) -> rich emerald -> sunlit yellow-green (top)
+          float h = vCanopyH;
+          vec3 deepTeal = vec3(0.10, 0.40, 0.42);
+          vec3 emerald  = vec3(0.20, 0.66, 0.40);
+          vec3 sunlit   = vec3(0.86, 1.02, 0.40);
+          vec3 grad = mix(deepTeal, emerald, smoothstep(0.0, 0.5, h));
+          grad = mix(grad, sunlit, smoothstep(0.5, 1.0, h));
+          // outward-facing (sun-side) leaves lift a touch, inner/underside ones settle
+          float upF = smoothstep(-0.5, 0.9, vFolN.y);
+          grad *= mix(0.88, 1.06, upF);
+          // per-zone hue from the instance tint (normalised so it shifts hue, not brightness)
+          float brush = max(diffuseColor.r, max(diffuseColor.g, diffuseColor.b));
+          vec3 tintN = diffuseColor.rgb / max(1e-3, brush);
+          vec3 leaf = grad * mix(vec3(1.0), tintN * 1.18, 0.5);
           vec3 bark = vec3(0.40, 0.27, 0.17);   // trunks ignore the zone's leaf tint
           diffuseColor.rgb = mix(bark, leaf, vFoliage) * uFolAlbedo;`)
         .replace('gl_FragColor = vec4( outgoingLight, diffuseColor.a );', `
@@ -223,6 +263,15 @@
       vec4 ts = terrSample(w);
       float th = uTerrOn > 0.5 ? ts.r : 0.0;
       vec3 tn = normalize(vec3(ts.g, 1.0, ts.b));
+      // frustum early-out (with margin so blades never pop at the screen edges)
+      vec4 cRoot = projectionMatrix * viewMatrix * vec4(w.x, th + 0.4, w.y, 1.0);
+      if (cRoot.w < 0.05 || abs(cRoot.x) > cRoot.w * 1.2 || cRoot.y < -cRoot.w * 1.35 || cRoot.y > cRoot.w * 1.2) {
+        gl_Position = vec4(2.0, 2.0, 2.0, 1.0); vCol = vec3(0.0);
+        #ifdef USE_FOG
+          fogDepth = 0.0;
+        #endif
+        return;
+      }
       vec2 cUv = w / (2.0 * uWorldHalf) + 0.5;
       vec4 ca = texture2D(uCtrlA, cUv);
       vec4 cb = texture2D(uCtrlB, cUv);
