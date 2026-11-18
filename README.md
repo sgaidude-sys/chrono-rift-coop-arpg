@@ -276,3 +276,36 @@ python scripts/build_audio.py voice --redo=hero_,grunt_
   - The host alone decides staggers and broadcasts them (`mob_stagger`), and every client applies them.
   - Riposte damage goes through the normal `mob_hit` event.
 - **Timing:** all combat timers run on a game-time clock, so hit-stop and frame hitches never shift the parry window.
+
+### 💥 Procedural Skill VFX & Camera Juice (`mmo_skillvfx.js`)
+Every effect is a pooled mesh with a custom additive GLSL shader. No texture files are used. Each effect sits on the terrain by sampling the same heightmap the ground uses.
+
+| Layer | How it's drawn |
+|---|---|
+| **Core flash** | A camera-facing quad with a white-hot core, a coloured halo and 6–8 star rays. |
+| **Sparks** | One instanced draw of up to 2,200 particles (900 on phones or Low quality). Physics run in the vertex shader (exponential drag plus gravity), and each spark is stretched along its screen-space velocity into a streak. |
+| **Slash arc** | A crescent strip that sweeps head to tail, with a thickness profile, scrolling energy noise and a thin hot outer edge. It can be tilted for diagonal cuts. |
+| **Rune ring** | A ground sigil drawn in polar space: concentric rings, a rotating band of procedural glyphs and a counter-rotating hexagram. It grows outward, then fades. |
+| **Shockwave wall** | An expanding open cylinder with a Fresnel edge and noise flicker. When aligned to the cast direction it becomes a directional "sonic boom" ring for projectile bursts. |
+| **Energy pillars** | Open cylinders that rise with upward-scrolling streaks, in a staggered ring around the impact. |
+| **Ribbon trails** | An energy sheet that follows the hero through leaps and vaults, or lies along the path of instant dashes and blinks. |
+| **VFX lights** | 4 pooled lights evaluated only in the ground and grass shaders, so skills tint the meadow around them (strongest at night). The scene still has no `THREE.PointLight`, so other materials pay nothing. |
+
+**Three archetypes, coloured by class and skill element:**
+
+| Archetype | Layers | Skills |
+|---|---|---|
+| Elemental dash-slash | Ribbon, sparks along the path, a crossed pair of arcs at the end, flash, small shockwave and light. Ranger's vault is an evade variant: a rune and flash at the take-off point. | Vanguard Shield Dash, Arcanist blink, Berserker leap, Ranger vault |
+| AoE ground slam | Flash, rune ring, double shockwave, 4–10 rising pillars plus a central column, an upward spark fountain plus a ground-skimming spray, and a big light | Vanguard heavy, Berserker whirlwind (with spinning arcs per tick) and leap landing, every class skill 4 that hits an area, and ultimates (×2.1) |
+| Charged projectile burst | Muzzle flash, two directional boom rings, a cone of sparks, lingering embers and a light. Targeted casts add a rune ring and light at the target. | Ranger dagger fan and arrow rain (each volley wave also lands with pillars), Arcanist anima orb |
+
+Remote peers' and AI allies' skills play the same effects. Camera juice applies only to your own casts.
+
+**Combat feel:**
+- **Camera kick:** a damped spring (underdamped, so it overshoots once) pushes the camera away from the impact and down. The offset is layered on top of the camera rig, so it never drifts.
+- **FOV punch:** a spring-driven widening on heavy casts: about 3–7° on skill and ultimate casts, plus a smaller one when dash-slashes land. It is layered on the sprint FOV.
+- **Hit-stop:** heavy skill impacts freeze for 70 ms, once per cast. Ordinary heavy and crit hits keep the throttled 40 ms freeze.
+- **Enemy rim flash:** a per-material `uHitRim` uniform is chained onto the mob's anime shader, giving a 0.1 s Fresnel rim plus a slight body tint. It is white for plain hits, the element colour for elemental hits and the reaction colour for reactions.
+- **Damage numbers:** the pooled, colour-coded, crit-marked screen-space numbers from `mmo_combatfx.js` now stack into lanes when several land on the same target at once, and heavy-skill hits read 20% bigger.
+
+**Cost:** at most 44 small draw calls; idle effects are hidden (only the single spark draw always runs). No measurable CPU change when skills fire every 20 frames. One shader program per effect type.
