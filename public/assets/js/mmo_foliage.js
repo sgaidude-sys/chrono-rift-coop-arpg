@@ -323,6 +323,10 @@
       float ndl = dot(tn, uSunDir) * 0.5 + 0.5;
       float band = ndl < 0.42 ? 0.26 : (ndl < 0.62 ? 0.45 : 0.62);
       vCol = albedo * (uSunCol * band + uAmbCol) * (0.92 + 0.16 * aH);
+      // translucency: blades glow warm-gold when backlit by a low sun
+      vec3 toCam = normalize(uCamPos - world);
+      float backlit = pow(clamp(dot(-toCam, uSunDir), 0.0, 1.0), 3.0) * smoothstep(0.0, 0.25, uSunDir.y + 0.05);
+      vCol += tipC * uSunCol * backlit * aH * aH * 0.45;
     }`;
 
   const GRASS_FRAG = `
@@ -406,7 +410,7 @@
     },
 
     buildGrass() {
-      const COUNT = LOW ? 7000 : 18000;
+      const COUNT = LOW ? 7000 : 24000;
       const TILE = LOW ? 110 : 140;
       const geo = buildTuftGeometry();
       const off = new Float32Array(COUNT * 3);

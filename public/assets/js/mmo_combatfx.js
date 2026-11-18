@@ -534,7 +534,7 @@
         mob._elIcon = sp;
       }
       mob._elIcon.material = this._elemMats[el];
-      mob._elIcon.position.set(0, (mob.desiredHeight || 2) + 1.35 + (mob.hover || 0), 0);
+      mob._elIcon.position.set(0, mob.plateY !== undefined ? mob.plateY + 0.75 : (mob.desiredHeight || 2) + 1.35 + (mob.hover || 0), 0);
       mob._elIcon.visible = true;
       mob._elIcon.userData.born = performance.now();
     },

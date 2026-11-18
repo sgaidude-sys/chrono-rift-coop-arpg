@@ -1130,8 +1130,45 @@
           }
         });
       }
-      // Nameplate height follows the model
-      if (entity.nameplateSprite) entity.nameplateSprite.position.y = (entity.desiredHeight || 2) + (entity.hover || 0) + 0.55;
+      // Nameplate height follows the model's REAL animated top (several rigs render much
+      // taller than their bind-pose box, and flyers lift themselves in their idle clip)
+      const top = this.measureModelTop(modelKey) * (entity.scale || scale || 1);
+      entity.plateY = Math.max(entity.desiredHeight || 2, top) + (entity.hover || 0) + 0.45;
+      if (entity.nameplateSprite) entity.nameplateSprite.position.y = entity.plateY;
+    },
+
+    // Highest point of a model (template units) in its idle pose, sampled with CPU skinning.
+    // Cached per model key, so each monster type is measured once.
+    measureModelTop(key) {
+      this._modelTopCache = this._modelTopCache || {};
+      if (this._modelTopCache[key] !== undefined) return this._modelTopCache[key];
+      const t = this.modelCache[key];
+      let top = 0;
+      if (t) {
+        try {
+          const c = (typeof cloneSkinnedModel === 'function') ? cloneSkinnedModel(t) : t.clone();
+          const clips = (this.modelAnimClips && this.modelAnimClips[key]) || {};
+          const clip = clips.idle || clips.Idle_Loop;
+          if (clip) { const mx = new THREE.AnimationMixer(c); mx.clipAction(clip).play(); mx.update(0.4); }
+          c.updateMatrixWorld(true);
+          const v = new THREE.Vector3();
+          top = -Infinity;
+          c.traverse((o) => {
+            if (!o.isMesh || !o.geometry || !o.geometry.attributes.position) return;
+            const pos = o.geometry.attributes.position;
+            const step = Math.max(1, Math.floor(pos.count / 300));
+            for (let i = 0; i < pos.count; i += step) {
+              v.fromBufferAttribute(pos, i);
+              if (o.isSkinnedMesh) o.boneTransform(i, v);
+              v.applyMatrix4(o.matrixWorld);
+              if (v.y > top) top = v.y;
+            }
+          });
+          if (!isFinite(top)) top = t.userData.rawHeight || 0;
+        } catch (e) { top = t.userData.rawHeight || 0; }
+      }
+      this._modelTopCache[key] = top;
+      return top;
     },
 
     // ---- nameplates -----------------------------------------------------------

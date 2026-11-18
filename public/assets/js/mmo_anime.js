@@ -23,10 +23,11 @@
   const AU = {
     uAnimeSunV: { value: new THREE.Vector3(0, 1, 0) },     // key light direction, view space
     uAnimeSunCol: { value: new THREE.Color(1, 1, 1) },
-    uAnimeShadow: { value: new THREE.Color(0.66, 0.60, 1.0) },  // indigo / violet shadow tint
+    uAnimeShadow: { value: new THREE.Color(0.80, 0.76, 1.06) },  // indigo / violet shadow tint
+    uAnimeFill: { value: new THREE.Color(0.22, 0.21, 0.30) },     // albedo-scaled fill so dark outfits stay readable
     uAnimeWarm: { value: new THREE.Color(1.08, 1.0, 0.9) },     // warm sunlight multiply
     uAnimeRim: { value: new THREE.Color(1.0, 0.86, 0.66) },
-    uAnimeRimK: { value: 0.55 }
+    uAnimeRimK: { value: 0.65 }
   };
   window.ANIME_UNIFORMS = AU;
 
@@ -38,6 +39,7 @@
     uniform vec3 uAnimeSunCol;
     uniform vec3 uAnimeShadow;
     uniform vec3 uAnimeWarm;
+    uniform vec3 uAnimeFill;
     uniform vec3 uAnimeRim;
     uniform float uAnimeRimK;
     // 2-step cel ramp with a slightly softened terminator
@@ -54,8 +56,13 @@
       reflectedLight.directSpecular *= 0.3;
       reflectedLight.indirectSpecular *= 0.4;
       // lit side: subtle warm sunlight; shadow side: cool indigo ambient
-      reflectedLight.directDiffuse *= uAnimeWarm;
+      reflectedLight.directDiffuse *= uAnimeWarm * 1.1;
       reflectedLight.indirectDiffuse *= mix(uAnimeShadow, vec3(1.0), lit);
+      // soft violet fill (stronger on the shadow side) keeps dark textures readable
+      reflectedLight.indirectDiffuse += diffuseColor.rgb * uAnimeFill * (1.0 - 0.5 * lit);
+      // anime shadow ratio: the shadow side keeps ~40% of the key light, tinted violet,
+      // so backlit / dark-armoured characters never collapse to black
+      reflectedLight.indirectDiffuse += diffuseColor.rgb * uAnimeSunCol * uAnimeShadow * 0.42 * (1.0 - lit);
       // Fresnel rim: stronger on the side turned away from the sun and when backlit
       float fres = pow(1.0 - clamp(dot(nV, vV), 0.0, 1.0), 3.0);
       float awayFromSun = 1.0 - lit;
@@ -137,8 +144,9 @@
       const night = this.skyUniforms && this.skyUniforms.uNight ? this.skyUniforms.uNight.value : 0;
       // warm multiply fades to neutral at night; shadows a touch bluer
       AU.uAnimeWarm.value.setRGB(1.08 - 0.08 * night, 1.0, 0.9 + 0.1 * night);
-      AU.uAnimeShadow.value.setRGB(0.66 - 0.08 * night, 0.60 - 0.04 * night, 1.0);
-      AU.uAnimeRimK.value = 0.55 + 0.25 * night;            // silhouettes pop more under moonlight
+      AU.uAnimeShadow.value.setRGB(0.80 - 0.08 * night, 0.76 - 0.04 * night, 1.06);
+      AU.uAnimeFill.value.setRGB(0.22 - 0.05 * night, 0.21 - 0.04 * night, 0.30);
+      AU.uAnimeRimK.value = 0.65 + 0.25 * night;            // silhouettes pop more under moonlight
     },
 
     updateMMOWorld(dt) {

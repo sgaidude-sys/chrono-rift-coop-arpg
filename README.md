@@ -163,3 +163,20 @@ The game picks one of five songs from `public/assets/audio/music/` based on the 
 | Grass density | 35% | 65% | 100% |
 | Ambient particles | 40% | 70% | 100% |
 | Bloom + grade | off | half-res | full |
+
+### 🎮 Camera, HUD & Environment Detail (`mmo_hud.js`, `mmo_realism.js`)
+- **Camera.** The camera follows with a critically damped spring, so it neither lags nor overshoots.
+  - It checks for collisions along the hero-to-camera line against the terrain and world obstacles (rocks, boulders, trunks, town props). It pulls in quickly when blocked, eases back out, and never comes closer than 20% of its normal distance.
+  - The field of view widens by about 5.5° while sprinting.
+- **Sprint and stamina.** After about 1 s of continuous movement the hero sprints automatically: 35% faster, with the `Sprint_Loop` animation. Sprinting drains stamina; dodges, vaults, leaps and skills spend some but are never blocked. Stamina regenerates after a short pause.
+  - A curved gold SVG stamina ring floats beside the hero. It fades in while sprinting or acting and fades out when full; it turns orange when low and red when empty.
+- **HUD.** Panels are translucent dark glass with a thin gold hairline, diamond studs and diamond button bullets. Headings use Cinzel, and the bars are slimmer and glossy. The restyle changes colour, border and type only; positioning is untouched.
+- **Region banner.** An animated title card appears on zone entry: tracked-in Cinzel title, gold rules and gems, and a subtitle. It reads "Region Discovered" the first time and "Entering" afterwards.
+- **Environment.**
+  - The ground gets sunlit micro-relief, pebbles on dirt and roads, brush strokes in grass, and cavity darkening. These are baked into the ground colour so the cel shading stays clean, and fade by about 90 m.
+  - Screen-space sun shafts (24 samples on High, 12 on Medium, off on Low) appear when looking toward the sun.
+  - Grass is backlit-translucent, and there are 24k tufts on desktop.
+- **Fixes.**
+  - Monster nameplates now sit above each model's real animated top. Measured once per model with CPU skinning, this fixes rats and flyers whose nameplates sat inside or below their bodies.
+  - The Ranger fires real arrows (wood, steel, red fletching, a thin wind streak) instead of green plasma balls.
+  - Character shadows keep about 40% of the sunlight, tinted violet, plus an albedo fill, so dark outfits and backlit heroes stay readable.
