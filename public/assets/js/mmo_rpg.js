@@ -120,6 +120,11 @@
         st.waypoints = new Set(s.waypoints || ['town']);
         st.zonesSeen = new Set(s.zonesSeen || ['meadows']);
       }
+      // town NPC quests (Kaelen's bounty, Aldous's boss quest) are saved with the hero
+      const town = { catacombBounty: { state: 'available', kills: 0, target: 5 }, archonBoss: { state: 'available', kills: 0, target: 1 } };
+      Object.keys(town).forEach((k) => { if (st.town && st.town[k]) Object.assign(town[k], st.town[k]); });
+      st.town = town;
+      this.quests = town;
       this.mmoState = st;
       this._mmoClass = classId;
       const p = this.player;

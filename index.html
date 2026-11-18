@@ -3087,7 +3087,7 @@
           { id: 'npc_cleric', pos: new THREE.Vector3(7.5, 0, 8), radius: 3.4, label: 'Talk to High Cleric Seraphina (Heal & Solar Blessing)', action: () => this.openNPCModal('cleric') },
           { id: 'npc_gatekeeper', pos: new THREE.Vector3(2.4, 0, 1.5), radius: 3.0, label: 'Talk to Rift Gatekeeper Lyra (Warp & Rift Wave)', action: () => this.openNPCModal('gatekeeper') },
           { id: 'npc_scholar', pos: new THREE.Vector3(-4.5, 0, 13.5), radius: 3.2, label: 'Talk to Lorekeeper Aldous (Lore & Boss Quest)', action: () => this.openNPCModal('scholar') },
-          { id: 'portal', pos: new THREE.Vector3(-1.4, 0, -0.5), radius: 2.6, label: 'Channel Astral Rift Gate (Summon Next Rift Wave / Warp)', action: () => this.activateAstralPortal() }
+          { id: 'portal', pos: new THREE.Vector3(-1.4, 0, -0.5), radius: 2.6, label: 'Channel Astral Rift Gate (Fast Travel)', action: () => this.activateAstralPortal() }
         ];
         this.initPortalVortexAndAtmosphere();
       }
@@ -5791,21 +5791,27 @@
         }
 
         // Update active NPC Bounty & Boss quests
+        // Town quests (saved per hero in mmoState.town)
         const bq = this.quests?.catacombBounty;
-        if (bq && bq.state === 'active') {
+        if (bq && bq.state === 'active' && (mob.level || 1) >= this.bountyMinLevel()) {
           bq.kills = Math.min(bq.target, bq.kills + 1);
           if (bq.kills >= bq.target) {
             bq.state = 'ready';
+            const r = this.townQuestReward('catacombBounty');
             this.showLootToast('⚒️ Bounty Complete! Return to Blacksmith Kaelen');
-            this.addChatMessage('Quest', '⚒️ Catacomb Bounty Complete! Speak to Blacksmith Kaelen to claim 180 Gold & 5 Shards!', 'sys-loot');
+            this.addChatMessage('Quest', `⚒️ Forge Bounty complete! Speak to Blacksmith Kaelen to claim ${r.gold} Gold & ${r.shards} Shards.`, 'sys-loot');
           }
+          if (this.saveMMOState) this.saveMMOState();
         }
         const aq = this.quests?.archonBoss;
-        if (mob.isBoss && aq && aq.state === 'active') {
+        const isMalakor = mob.bossDef ? !!mob.bossDef.isFinal : (mob.isBoss && /malakor/i.test(mob.name || ''));
+        if (isMalakor && aq && aq.state === 'active') {
           aq.kills = 1;
           aq.state = 'ready';
+          const r = this.townQuestReward('archonBoss');
           this.showLootToast('📜 Boss Quest Complete! Return to Lorekeeper Aldous');
-          this.addChatMessage('Quest', '📜 Archon Malakor vanquished! Speak to Lorekeeper Aldous to claim 500 Gold & 15 Shards!', 'sys-loot');
+          this.addChatMessage('Quest', `📜 Archon Malakor vanquished! Speak to Lorekeeper Aldous to claim ${r.gold} Gold & ${r.shards} Shards.`, 'sys-loot');
+          if (this.saveMMOState) this.saveMMOState();
         }
 
         if (this.grantKillRewards) this.grantKillRewards(mob, fromNetwork);
@@ -7547,7 +7553,7 @@
             : bq.state === 'active'
               ? `<span class="room-badge">In Progress: ${bq.kills} / ${bq.target} Slain</span>`
               : bq.state === 'ready'
-                ? `<button class="cta-btn" style="padding:8px 16px; font-size:12px;" onclick="window.game.claimQuestReward('catacombBounty')">Claim +180 🪙 &amp; +5 💠</button>`
+                ? `<button class="cta-btn" style="padding:8px 16px; font-size:12px;" onclick="window.game.claimQuestReward('catacombBounty')">Claim +${this.townQuestReward('catacombBounty').gold} 🪙 &amp; +${this.townQuestReward('catacombBounty').shards} 💠</button>`
                 : `<button class="mini-btn" onclick="window.game.acceptQuest('catacombBounty')">Repeat Bounty</button>`;
           bodyEl.innerHTML = `
             <div class="npc-dialogue-box">"Hail, ${this.player.name}! The Chrono-Rifts warped steel and starlight alike. Bring me your blades and I'll temper them hot enough to cleave an Archon."</div>
@@ -7565,8 +7571,8 @@
             </div>
             <div class="npc-quest-card">
               <div>
-                <div style="font-family:'Cinzel',serif; font-weight:700; color:var(--gold-bright);">⚔️ Bounty Quest: Slay 5 Catacomb Monsters</div>
-                <div style="font-size:12px; color:var(--text-muted);">Progress: <b>${bq.kills} / ${bq.target}</b> • Reward: <b style="color:#ffd56b;">+180 Gold</b> &amp; <b style="color:var(--cyan);">+5 Chrono-Shards</b></div>
+                <div style="font-family:'Cinzel',serif; font-weight:700; color:var(--gold-bright);">⚔️ Forge Bounty: Slay 5 Worthy Foes</div>
+                <div style="font-size:12px; color:var(--text-muted);">Any monster of level <b>${this.bountyMinLevel()}+</b> counts, anywhere in the realm • Progress: <b>${bq.kills} / ${bq.target}</b> • Reward: <b style="color:#ffd56b;">+${this.townQuestReward('catacombBounty').gold} Gold</b> &amp; <b style="color:var(--cyan);">+${this.townQuestReward('catacombBounty').shards} Chrono-Shards</b></div>
               </div>
               ${questBtn}
             </div>
@@ -7626,7 +7632,7 @@
             : aq.state === 'active'
               ? `<span class="room-badge">Active: ${aq.kills} / 1 Slain</span>`
               : aq.state === 'ready'
-                ? `<button class="cta-btn" style="padding:8px 16px; font-size:12px;" onclick="window.game.claimQuestReward('archonBoss')">Claim +500 🪙 &amp; +15 💠</button>`
+                ? `<button class="cta-btn" style="padding:8px 16px; font-size:12px;" onclick="window.game.claimQuestReward('archonBoss')">Claim +${this.townQuestReward('archonBoss').gold} 🪙 &amp; +${this.townQuestReward('archonBoss').shards} 💠</button>`
                 : `<button class="mini-btn" onclick="window.game.acceptQuest('archonBoss')">Repeat Boss Quest</button>`;
           bodyEl.innerHTML = `
             <div style="display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap;">
@@ -7636,7 +7642,7 @@
             <div class="npc-quest-card" style="margin-bottom:12px;">
               <div>
                 <div style="font-family:'Cinzel',serif; font-weight:700; color:#ff99a8;">☠️ Boss Quest: Vanquish Archon Malakor</div>
-                <div style="font-size:12px; color:var(--text-muted);">Progress: <b>${aq.kills} / 1</b> • Reward: <b style="color:#ffd56b;">+500 Gold</b> &amp; <b style="color:var(--cyan);">+15 Chrono-Shards</b></div>
+                <div style="font-size:12px; color:var(--text-muted);">${this.malakorHint()} • Progress: <b>${aq.kills} / 1</b> • Reward: <b style="color:#ffd56b;">+${this.townQuestReward('archonBoss').gold} Gold</b> &amp; <b style="color:var(--cyan);">+${this.townQuestReward('archonBoss').shards} Chrono-Shards</b></div>
               </div>
               ${bossBtn}
             </div>
@@ -7659,21 +7665,39 @@
         q.state = 'active';
         q.kills = 0;
         this.audio.playLootChime();
-        this.showLootToast(questKey === 'catacombBounty' ? '⚔️ Accepted: Slay 5 Catacomb Monsters' : '☠️ Accepted: Vanquish Archon Malakor');
+        this.showLootToast(questKey === 'catacombBounty' ? `⚔️ Accepted: Slay 5 monsters of level ${this.bountyMinLevel()}+` : '☠️ Accepted: Vanquish Archon Malakor');
+        if (this.saveMMOState) this.saveMMOState();
         this.renderNPCModal();
+      }
+
+      // Town quest helpers: rewards scale with level so the repeatable bounty stays worth doing
+      bountyMinLevel() { return Math.max(1, (this.player.level || 1) - 3); }
+
+      townQuestReward(questKey) {
+        const L = this.player.level || 1;
+        return questKey === 'catacombBounty'
+          ? { gold: 60 + L * 14, shards: 3 + Math.floor(L / 6) }
+          : { gold: 500 + L * 20, shards: 15 + Math.floor(L / 5) };
+      }
+
+      malakorHint() {
+        const z = window.MMO && window.MMO.ZONES ? window.MMO.ZONES.find(zz => zz.boss && zz.boss.isFinal) : null;
+        if (!z) return 'Malakor waits in the northern Citadel';
+        const lv = z.boss.lv;
+        return `Malakor waits in <b>${z.name}</b> (Lv ${lv}${(this.player.level || 1) < lv - 5 ? ` — recommended level ${lv - 3}+` : ''})`;
       }
 
       claimQuestReward(questKey) {
         const q = this.quests[questKey];
         if (!q || q.state !== 'ready') return;
-        const goldR = questKey === 'catacombBounty' ? 180 : 500;
-        const shardR = questKey === 'catacombBounty' ? 5 : 15;
+        const { gold: goldR, shards: shardR } = this.townQuestReward(questKey);
         this.player.gold += goldR;
         this.player.shards += shardR;
         q.state = 'completed';
         this.audio.playLootChime();
         this.spawnVFXFlipbook('eldenring', this.player.pos, 4.5, 0.65, 0xf3c86b, true);
         this.showLootToast(`🏆 Quest Complete! +${goldR} 🪙, +${shardR} 💠`);
+        if (this.saveMMOState) this.saveMMOState();
         this.saveHeroToSupabase();
         this.renderNPCModal();
       }
@@ -7969,7 +7993,7 @@
         const tip = document.getElementById('skill-tooltip');
         if (!tip) return;
         const cls = HERO_CLASSES[this.player.classId] || HERO_CLASSES.vanguard;
-        const keyMap = { '1': 'LMB / 1', '2': '2 / K', '3': 'SHIFT / 3', '4': '4 / V', 'jump': 'SPACE', 'potion': 'C', '5': 'R / 5' };
+        const keyMap = { '1': 'LMB / 1', '2': '2', '3': 'SHIFT / 3', '4': '4 / V', 'jump': 'SPACE', 'potion': 'C', '5': 'R / 5' };
         let title = '', meta = '', desc = '';
         if (slotKey === 'jump') {
           title = 'Vault Jump';
@@ -9816,8 +9840,8 @@
   </script>
   <script src="public/assets/js/mmo_data.js?v=12"></script>
   <script src="public/assets/js/world_core.js?v=17"></script>
-  <script src="public/assets/js/mmo_world.js?v=20"></script>
-  <script src="public/assets/js/mmo_rpg.js?v=10"></script>
+  <script src="public/assets/js/mmo_world.js?v=21"></script>
+  <script src="public/assets/js/mmo_rpg.js?v=11"></script>
   <script src="public/assets/js/mmo_audio.js?v=13"></script>
   <script src="public/assets/js/mmo_vfx.js?v=10"></script>
   <script src="public/assets/js/mmo_mobile.js?v=10"></script>
@@ -9836,8 +9860,9 @@
   <script src="public/assets/js/mmo_hud.js?v=5"></script>
   <script src="public/assets/js/mmo_combat.js?v=2"></script>
   <script src="public/assets/js/mmo_skillvfx.js?v=1"></script>
-  <script src="public/assets/js/mmo_talents.js?v=1"></script>
-  <script src="public/assets/js/mmo_ui.js?v=1"></script>
-  <script src="public/assets/js/mmo_tutorial.js?v=1"></script>
+  <script src="public/assets/js/mmo_talents.js?v=2"></script>
+  <script src="public/assets/js/mmo_ui.js?v=2"></script>
+  <script src="public/assets/js/mmo_tutorial.js?v=2"></script>
+  <script src="public/assets/js/mmo_social.js?v=1"></script>
 </body>
 </html>

@@ -1748,7 +1748,17 @@
     detectZoneFromPosition() { /* replaced by updateZoneTracking */ },
 
     checkStoryMilestonesOnDeath(mob) {
-      if (!mob || !mob.bossDef) return;
+      if (!mob) return;
+      // Chapter I (legacy "clear the outskirts" wave): your first three kills in the open world
+      if (!this.storyState.completed.has('ch1')) {
+        this._storyKills = (this._storyKills || 0) + 1;
+        if (this._storyKills >= 3) {
+          this.storyState.completed.add('ch1');
+          this.showLootToast('📖 Chapter I Complete: Outskirts Cleared!');
+          this.saveStoryState();
+        }
+      }
+      if (!mob.bossDef) return;
       const story = mob.bossDef.story;
       if (story === 'ch2' && !this.storyState.completed.has('ch2')) {
         this.storyState.completed.add('ch2');

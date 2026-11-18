@@ -475,7 +475,7 @@
       if (!document.getElementById('btn-talents')) {
         const b = document.createElement('button');
         b.id = 'btn-talents'; b.className = 'mini-btn';
-        b.innerHTML = '✦ Talents [T]<span class="tal-badge" style="display:none"></span>';
+        b.innerHTML = '✦ Talents [K]<span class="tal-badge" style="display:none"></span>';
         b.onclick = () => this.toggleTalents();
         const inv = Array.from(document.querySelectorAll('.net-actions .mini-btn')).find(x => /Inventory/.test(x.textContent));
         if (inv && inv.parentNode) inv.parentNode.insertBefore(b, inv.nextSibling); else document.body.appendChild(b);
@@ -483,7 +483,7 @@
       window.addEventListener('keydown', (e) => {
         if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
         if (this.cutsceneActive || e.repeat) return;
-        if (e.key.toLowerCase() === 't') {
+        if (e.key.toLowerCase() === 't' && !window.CR_SOCIAL) {
           const open = document.getElementById('talent-modal').classList.contains('active');
           if (open) this.closeModals(true);
           else if (!this.isAnyModalOpen && this.isInWorld) this.toggleTalents();
@@ -524,7 +524,7 @@
             <div class="tal-title">✦ Constellations <small id="tal-class"></small></div>
             <div class="tal-points" id="tal-points"><b id="tal-avail">0</b><span>talent points · <span id="tal-spent"></span></span></div>
             <div class="tal-actions"><button class="mini-btn" id="tal-reset" title="Refund every point (free)">↺ Reset</button>
-              <button class="mini-btn" id="tal-close">✕ Close [T / ESC]</button></div>
+              <button class="mini-btn" id="tal-close">✕ Close [K / ESC]</button></div>
           </header>
           <div class="tal-branches">${branchHtml}</div>
           <div class="tal-tip" id="tal-tip"></div>
@@ -667,8 +667,8 @@
       // level up -> new talent point
       if (this.player.level > (this._lastTalentLevel || 0)) {
         if (this._lastTalentLevel) {
-          this.spawnFloatingText(this.player.pos, '+1 TALENT POINT  [T]', '#7fe3ff', 17);
-          if (this.addChatMessage) this.addChatMessage('System', '✦ You earned a talent point. Press T to open your Constellations.', 'sys-synergy');
+          this.spawnFloatingText(this.player.pos, '+1 TALENT POINT  [K]', '#7fe3ff', 17);
+          if (this.addChatMessage) this.addChatMessage('System', '✦ You earned a talent point. Press K to open your Constellations.', 'sys-synergy');
         }
         this._lastTalentLevel = this.player.level;
         this.refreshTalentUI();

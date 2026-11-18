@@ -319,7 +319,7 @@
       const q = document.createElement('div');
       q.id = 'ui-quick';
       q.innerHTML = `
-        <button data-a="talents" data-tip="Talents [T]" aria-label="Talents">${ICON.talents}<span class="badge"></span></button>
+        <button data-a="talents" data-tip="Talents [K]" aria-label="Talents">${ICON.talents}<span class="badge"></span></button>
         <button data-a="bag" data-tip="Inventory [I]" aria-label="Inventory">${ICON.bag}</button>
         <button data-a="map" data-tip="World Map [M]" aria-label="World map">${ICON.map}</button>
         <span class="sep"></span>

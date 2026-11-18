@@ -375,3 +375,37 @@ A glass objective pill under the minimap teaches the game during play. It has an
 - **Progress** is saved in `localStorage` (`cr_tutorial_v1_<hero>`) and mirrored into `mmoState.tutorial`, so reloads resume at the same step. Existing heroes at level 5+ skip it automatically.
 - **Skip ✕** is in the pill. **Replay Tutorial** is in Settings.
 - **[F1] / [H]** opens the Controls sheet at any time. `H` no longer drinks an Elixir; use **C**.
+
+### 📜 Town Quest Review
+- **Zone quest chains** (Warden Elric and the 7 other givers): audited against the seeded world. Every zone has its giver, both explore sites, both named elites, its boss, and at least one camp for every kill and collect target, so all 13 quests per zone can be completed. Kill credit needs you within 75 m (personal loot range).
+- **Kaelen's bounty** is now the **Forge Bounty: Slay 5 Worthy Foes**.
+  - Any monster of level *(your level − 3)* or higher counts, anywhere in the realm.
+  - The reward scales with your level: 60 + 14 × level gold, and 3 + level ÷ 6 shards.
+  - Before this, it was labelled "Catacomb monsters" but counted any kill, and paid a flat 180 gold.
+- **Aldous's boss quest** now completes only when **Malakor** (the Citadel's final boss) dies. Before, any boss counted, even the level-1 Mycelord Fungaron. The card shows where Malakor is, his level and the recommended level.
+- **Both town quests are saved** with your hero (`mmoState.town`), so accepted or finished quests survive a reload. Before, they reset every session.
+- **Story Chapter I ("Outskirts Cleared")** now completes after your first 3 kills in the open world. It used to wait for legacy rift-wave mob ids that no longer exist, so it could never finish.
+- **The town portal's prompt** now reads *Fast Travel*. It already opened the world map; the old "Summon Next Rift Wave" text was out of date.
+
+### 💎 Loot Loop, Social Presence & Live Title (`mmo_social.js`)
+- **Loot orbs:**
+  - every drop (mobs, elites, bosses, chests) bursts out as a glowing orb that arcs, bounces up to 3 times, settles with an idle bob, and raises an additive light pillar coloured and sized by rarity (Common 1.2 m … Legendary 6.2 m, Mythic 7.5 m);
+  - within **4 m** it magnetises into your chest with a chime pitched by rarity (Epic and above add the fanfare);
+  - pickups land in a slim **side-screen loot feed** on the right, which replaces the centred toast stack;
+  - if your bag is full the orb pops back out and waits, so the item is never lost.
+- **Remote heroes are drawn from a snapshot buffer:**
+  - packets carry a sender timestamp, and each peer gets a clock-offset estimate;
+  - rendering runs **110 ms** behind, with cubic Hermite interpolation using the sent velocities, shortest-arc yaw smoothing and up to 250 ms of extrapolation;
+  - in a jittery 95 ms / 60–100 ms latency test, frame-to-frame motion variation fell from **14.7% → 2.6%**;
+  - remote dodge rolls play at the local roll speed, and remote Perfect Parries spark (parry counter in the state payload).
+- **Chat bubbles** are translucent obsidian pills (gold edge for you, ice-blue for others) that pop in, bob, then drift up and fade.
+- **Emote wheel — hold [T], aim, release** (or click; 😊 in the phone quick column):
+  - **Wave:** a procedural arm pose on the skeleton;
+  - **Cheer:** both arms up, hops and confetti;
+  - **Sit:** `LayToIdle` reversed into a seated hold;
+  - moving, attacking, blocking or rolling cancels an emote, and emotes sync to the room through the player-state payload.
+- **Key changes:** **T** = emotes, **K** = Talents (moved from T), and the heavy skill is on **2** only.
+- **Live title screen:**
+  - before you spawn, the camera glides around the real world with slight mouse parallax, behind a minimalist "CHRONO-RIFT / Click to Enter World" title;
+  - click, **Enter** or **Space** reveals the class picker;
+  - meanwhile `renderer.compile()` pre-warms every combat effect. Sparks, rings, slash arcs, all flipbooks, the skill VFX pools, loot pillars and projectiles are spawned under the world and compiled, so the first cast never hitches.

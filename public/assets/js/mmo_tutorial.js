@@ -8,7 +8,7 @@
  *    3. Dodge roll [SPACE]                    — roll once
  *    4. Perfect Parry [RMB] on the glint      — a Training Sentinel appears and
  *                                               swings telegraphed strikes at you
- *    5. Skill [1]/[2] + Talents [T]           — cast a skill, open the talent tree
+ *    5. Skill [1]/[2] + Talents [K]           — cast a skill, open the talent tree
  *  Progress persists (localStorage + mmoState). "Skip" in the pill, "Replay Tutorial"
  *  in Settings, and a keybind sheet on [F1] / [H] at any time.
  * ============================================================================= */
@@ -31,7 +31,7 @@
       text: () => isTouch() ? `Tap 🛡️ as the Sentinel glints` : `${kc('RMB')} right as it glints`,
       sub: 'Watch for the golden flash, then block.' },
     { id: 'skill', title: 'Skills & talents',
-      text: () => isTouch() ? `Tap a skill, then ✦ Talents in ☰` : `Cast ${kc('1')} or ${kc('2')}, then open ${kc('T')} Talents`,
+      text: () => isTouch() ? `Tap a skill, then ✦ Talents in ☰` : `Cast ${kc('1')} or ${kc('2')}, then open ${kc('K')} Talents`,
       sub: 'Skills break posture. Talents shape your style.' }
   ];
 
@@ -88,9 +88,9 @@
 
   const SHEET = [
     ['Movement', [['Move', ['W', 'A', 'S', 'D']], ['Sprint', ['Hold move']], ['Dodge roll (i-frames)', ['SPACE']], ['Jump', ['ALT']], ['Orbit / tilt camera', ['RMB drag', 'Q', 'E', 'Z', 'X']], ['Zoom', ['Wheel']]]],
-    ['Combat', [['Combo attack', ['LMB', '1']], ['Block · Perfect Parry', ['RMB', 'G']], ['Heavy skill', ['2', 'K']], ['Movement skill', ['SHIFT', '3']], ['Class skill', ['4', 'V']], ['Convergence (ultimate)', ['R']]]],
+    ['Combat', [['Combo attack', ['LMB', '1']], ['Block · Perfect Parry', ['RMB', 'G']], ['Heavy skill', ['2']], ['Movement skill', ['SHIFT', '3']], ['Class skill', ['4', 'V']], ['Convergence (ultimate)', ['R']]]],
     ['Items & world', [['Elixir', ['C']], ['Interact / talk', ['F']], ['World map', ['M']], ['Quest log', ['O']], ['Chat', ['Enter']]]],
-    ['Menus', [['Talents', ['T']], ['Inventory', ['I']], ['Controls (this sheet)', ['F1', 'H']], ['Close any window', ['ESC']]]]
+    ['Menus', [['Talents', ['K']], ['Emote wheel (hold)', ['T']], ['Inventory', ['I']], ['Controls (this sheet)', ['F1', 'H']], ['Close any window', ['ESC']]]]
   ];
 
   const GP = ChronoRiftCoOpGame.prototype;
