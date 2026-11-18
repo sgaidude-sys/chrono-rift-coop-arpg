@@ -89,7 +89,11 @@
     return pick;
   };
   const origPlayVoice = AP.playVoice;
+  // bosses and the world announcer no longer speak (their synthesized lines sounded robotic);
+  // boss fights keep their roars / slams / telegraph sound effects and the chat call-outs
+  const SILENT = /^(boss_|wb_|ann_boss_slain$|gronk_|xeno_)/;
   AP.playVoice = function (id, priority, vol) {
+    if (SILENT.test(id)) return false;
     return origPlayVoice.call(this, this.pickTake(id), priority, vol);
   };
 
@@ -272,7 +276,6 @@
       if (was || !mob.dead) return;
       this.audio.playMonsterDeath(mob.modelKey || '', mob.isBoss || mob.isElite, mob.pos);
       if (!mob.isBoss) { mob._voiceAt = 0; this.mobVoice(mob, 'death', 0.6); }
-      if (mob.isBoss) this.audio.playVoice('ann_boss_slain', 1);
       // the hero comments on their own kills: always for elites, sometimes for regular foes
       if (!fromNetwork && mob._lastHitLocal && !mob.isBoss && (mob.isElite || Math.random() < 0.14)) this.heroBark('kill', 0.35);
       else if (!fromNetwork && mob._lastHitLocal && mob.isBoss) this.heroBark('kill', 3.2);
@@ -350,7 +353,6 @@
 
     spawnCampMob(c, slotIdx, gen) {
       const m = origSpawnCampMob.call(this, c, slotIdx, gen);
-      if (m && m.isWorldBoss && (this.isRoomHost || this.remotePeers.size === 0)) this.audio.playVoice('wb_' + m.typeKey, 2);
       return m;
     }
   });

@@ -1421,7 +1421,6 @@
       if (this._bossEngagedAt[m.id]) return;
       this._bossEngagedAt[m.id] = true;
       this.addChatMessage(m.name, `☠️ ${m.name}, ${def.title}, engages! Learn its pattern — watch the cast bar.`, 'sys-boss');
-      if (def.voice && def.voice.engage) this.audio.playVoice(def.voice.engage, 2);
       if (m.desiredHeight > 4) this.screenShake = Math.max(this.screenShake, 0.4);
       this.spawnShockwaveRing(m.pos, 12, 0xff3b5c, 0.6);
     },
@@ -1437,10 +1436,6 @@
       this.spawnShockwaveRing(m.pos, 14, ph.enrage ? 0xff2a2a : 0xffb347, 0.7);
       this.screenShake = Math.max(this.screenShake, 0.5);
       this.audio.playSpell('ult');
-      if (def.voice) {
-        if (phaseIdx === 1 && def.voice.half) this.audio.playVoice(def.voice.half, 2);
-        if (phaseIdx === 2 && def.voice.quarter) this.audio.playVoice(def.voice.quarter, 2);
-      }
       if (ph.enrage && m.materials) {
         m.materials.forEach((mat) => { if (mat.emissive) { mat.emissive.setHex(0x8a1010); mat.emissiveIntensity = 0.9; } });
       }
@@ -1732,7 +1727,6 @@
     onBossDefeated(mob, fromNetwork) {
       const def = mob.bossDef;
       if (!def) return;
-      if (def.voice && def.voice.death) this.audio.playVoice(def.voice.death, 2);
       const where = this.worldGen.zones[this.worldGen.zoneAt(mob.pos.x, mob.pos.z).i].name;
       this.addChatMessage(mob.isWorldBoss ? 'World Boss' : 'Boss Slain', `🏆 ${mob.name}, ${def.title.split(' — ')[0]}, has fallen in ${where}!`, 'sys-boss');
       if (!fromNetwork && (def.isFinal || mob.isWorldBoss) && this.recordLeaderboardVictory) this.recordLeaderboardVictory();
