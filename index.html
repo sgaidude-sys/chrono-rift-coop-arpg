@@ -6937,6 +6937,9 @@
             const peer = this.remotePeers.get(payload.id);
             if (peer) this.useSkill(payload.slot, true, peer);
           })
+          .on('broadcast', { event: 'heal' }, ({ payload }) => {
+            if (this.onHealEvent) this.onHealEvent(payload);
+          })
           .on('broadcast', { event: 'party' }, ({ payload }) => {
             if (this.onPartyEvent) this.onPartyEvent(payload);
           })
@@ -9017,6 +9020,14 @@
             }
           }
 
+          // Provoke (mmo_roles.js): a taunted monster attacks its taunter while the taunt lasts
+          if (m.tauntedBy && m.tauntUntil > performance.now() && alivePlayers.indexOf(m.tauntedBy) >= 0) {
+            nearestTarget = m.tauntedBy;
+            toPlayerX = nearestTarget.pos.x - m.pos.x;
+            toPlayerZ = nearestTarget.pos.z - m.pos.z;
+            distSqToPlayer = toPlayerX * toPlayerX + toPlayerZ * toPlayerZ;
+          }
+
           // Distance culling: skip AI if NO player is within 52m (2704 sq meters)
           if (distSqToPlayer > 2704) {
             if (m.meshRoot && m.meshRoot.visible) m.meshRoot.visible = false;
@@ -9884,12 +9895,13 @@
   <script src="public/assets/js/mmo_tutorial.js?v=2"></script>
   <script src="public/assets/js/mmo_social.js?v=1"></script>
   <script src="public/assets/js/mmo_epic.js?v=3"></script>
-  <script src="public/assets/js/mmo_travel.js?v=5"></script>
+  <script src="public/assets/js/mmo_travel.js?v=6"></script>
   <script src="public/assets/js/mmo_party.js?v=1"></script>
   <script src="public/assets/js/mmo_envmodels.js?v=2"></script>
   <script src="public/assets/js/mmo_bossmodels.js?v=2"></script>
   <script src="public/assets/js/mmo_sfx.js?v=2"></script>
+  <script src="public/assets/js/mmo_roles.js?v=1"></script>
   <script src="public/assets/js/mmo_account.js?v=1"></script>
-  <script src="public/assets/js/mmo_heroselect.js?v=2"></script>
+  <script src="public/assets/js/mmo_heroselect.js?v=3"></script>
 </body>
 </html>

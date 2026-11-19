@@ -476,18 +476,21 @@
     ridePose(ent) {
       const B = this.travelBones(ent); if (!B.thigh_l || !B.calf_l || !B.pelvis) return;
       const rest = this.travelRestPose(ent); if (!rest) return;
-      const RIDE = this._ridePoseQ || (this._ridePoseQ = (() => {
+      // per mount: a jockey lean (three spine bones) with both hands resting on the mount's neck,
+      // solved against the hero rig and each mount's measured neck position
+      const SETS = this._ridePoseSets || (this._ridePoseSets = (() => {
+        const LEGS = { thigh_l: [-1.6, -0.4, -0.6], calf_l: [1.6, 0.2, -0.6], thigh_r: [-1.6, 0.4, 0.6], calf_r: [1.6, -0.2, 0.6] };
+        const LEAN = { spine_01: [0.8, 0, 0], spine_02: [0.4, 0, 0], spine_03: [0.1, 0, 0] };
         const P = {
-          thigh_l: [-1.6, -0.4, -0.6], calf_l: [1.6, 0.2, -0.6], thigh_r: [-1.6, 0.4, 0.6], calf_r: [1.6, -0.2, 0.6],
-          // leaning slightly forward, hands low and forward on the reins / neck
-          spine_01: [0.42, 0, 0], spine_02: [0.18, 0, 0],
-          upperarm_l: [1.6, -0.4, -0.2], lowerarm_l: [0.6, -1.4, 0.6], upperarm_r: [1.6, 0.4, 0.2], lowerarm_r: [0.6, 1.4, -0.6]
+          land: Object.assign({}, LEGS, LEAN, { upperarm_l: [-0.25, 1.0, 1.75], lowerarm_l: [-0.25, -0.75, 0.5], upperarm_r: [-0.25, -1.0, -1.75], lowerarm_r: [-0.25, 0.75, -0.5] }),
+          fly: Object.assign({}, LEGS, LEAN, { upperarm_l: [-0.25, 1.25, 1.75], lowerarm_l: [-1.25, 0.75, 0.75], upperarm_r: [-0.25, -1.25, -1.75], lowerarm_r: [-1.25, -0.75, -0.75] })
         };
         const out = {}, e = new THREE.Euler();
-        Object.keys(P).forEach((k) => { e.set(P[k][0], P[k][1], P[k][2]); out[k] = new THREE.Quaternion().setFromEuler(e); });
+        Object.keys(P).forEach((m) => { out[m] = {}; Object.keys(P[m]).forEach((k) => { e.set(P[m][k][0], P[m][k][1], P[m][k][2]); out[m][k] = new THREE.Quaternion().setFromEuler(e); }); });
         return out;
       })());
-      ['pelvis', 'spine_03'].forEach((k) => { if (B[k] && rest[k]) B[k].quaternion.copy(rest[k].q); });
+      const RIDE = SETS[(ent._mount && ent._mount.id) || 'land'] || SETS.land;
+      ['pelvis'].forEach((k) => { if (B[k] && rest[k]) B[k].quaternion.copy(rest[k].q); });
       if (rest.pelvis) B.pelvis.position.copy(rest.pelvis.p);
       Object.keys(RIDE).forEach((k) => { if (B[k] && rest[k]) B[k].quaternion.copy(rest[k].q).multiply(RIDE[k]); });
     },
