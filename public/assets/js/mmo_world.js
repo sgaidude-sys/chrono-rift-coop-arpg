@@ -201,7 +201,7 @@
     // ---- terrain ground: control textures from the world layout -------------
     buildWorldGround() {
       const wg = this.worldGen;
-      const N = 768;
+      const N = Math.round(768 * W.half / 1600 / 16) * 16;   // ~4.2 m per texel
       const half = W.half;
       const ctrlA = new Uint8Array(N * N * 4);
       const ctrlB = new Uint8Array(N * N * 4);
@@ -991,8 +991,10 @@
       root.position.set(x, 0, z);
       this.scene.add(root);
       let hpMult = type.hp, dmgMult = type.dmg;
-      if (spec.elite) { hpMult *= 3.4; dmgMult *= 1.45; }
-      if (bossDef) { hpMult = spec.worldBoss ? 62 : 17; dmgMult = spec.worldBoss ? 1.9 : 1.6; }
+      if (spec.elite) { hpMult *= 3.6; dmgMult *= 1.65; }
+      // bosses are real fights: a same-level solo kill takes well over a minute and
+      // standing in two or three telegraphs is fatal; world bosses want a party
+      if (bossDef) { hpMult = spec.worldBoss ? 700 : 220; dmgMult = spec.worldBoss ? 7.0 : 5.5; }
       const maxHp = Math.round(M.mobHp(L) * hpMult);
       const modelKey = bossDef ? (bossDef.model || type.model) : type.model;
       const legacy = bossDef ? !!bossDef.legacy : !!type.legacy;
@@ -1909,6 +1911,14 @@
       this.renderWorldMap();
     },
 
+    drawSightingRing(ctx, x, y, r, rgba) {
+      ctx.save();
+      ctx.beginPath(); ctx.arc(x, y, Math.max(6, r), 0, Math.PI * 2);
+      ctx.fillStyle = rgba + '0.13)'; ctx.fill();
+      ctx.setLineDash([4, 4]); ctx.lineWidth = 1.5; ctx.strokeStyle = rgba + '0.75)'; ctx.stroke();
+      ctx.restore();
+    },
+
     renderWorldMap() {
       const cv = document.getElementById('mmo-map-canvas');
       if (!cv) return;
@@ -1931,20 +1941,24 @@
         const lv = `Lv ${z.lv[0]}–${z.lv[1]}`;
         ctx.strokeText(lv, cx, cz + 17); ctx.fillStyle = this.conColor(Math.round((z.lv[0] + z.lv[1]) / 2)); ctx.fillText(lv, cx, cz + 17);
         // boss markers
-        const [bx, bz] = P(z.bossPos[0], z.bossPos[1]);
+        const bp = this.bossMapPos ? this.bossMapPos(z, false) : { x: z.bossPos[0], z: z.bossPos[1], r: 0 };
+        const [bx, bz] = P(bp.x, bp.z);
+        if (bp.r) this.drawSightingRing(ctx, bx, bz, bp.r / (2 * W.half) * S, 'rgba(255,106,106,');
         ctx.font = 'bold 16px Inter, sans-serif';
         ctx.strokeText('☠', bx, bz); ctx.fillStyle = '#ff6a6a'; ctx.fillText('☠', bx, bz);
         if (known) {
           ctx.font = 'bold 10px Inter, sans-serif';
-          const bl = `${z.boss.name} (${z.boss.lv})`;
+          const bl = `${z.boss.name} (${z.boss.lv})${bp.r ? ' · last seen' : ''}`;
           ctx.strokeText(bl, bx, bz + 13); ctx.fillStyle = '#ffb0b0'; ctx.fillText(bl, bx, bz + 13);
         }
         if (z.worldBossPos) {
-          const [wx, wz] = P(z.worldBossPos[0], z.worldBossPos[1]);
+          const wp = this.bossMapPos ? this.bossMapPos(z, true) : { x: z.worldBossPos[0], z: z.worldBossPos[1], r: 0 };
+          const [wx, wz] = P(wp.x, wp.z);
+          if (wp.r) this.drawSightingRing(ctx, wx, wz, wp.r / (2 * W.half) * S, 'rgba(200,75,255,');
           ctx.font = 'bold 20px Inter, sans-serif';
           ctx.strokeText('🐉', wx, wz); ctx.fillStyle = '#c84bff'; ctx.fillText('🐉', wx, wz);
           ctx.font = 'bold 10px Inter, sans-serif';
-          const wl = `WORLD BOSS ${z.worldBoss.name} (${z.worldBoss.lv})`;
+          const wl = `WORLD BOSS ${z.worldBoss.name} (${z.worldBoss.lv})${wp.r ? ' · last seen' : ''}`;
           ctx.strokeText(wl, wx, wz + 15); ctx.fillStyle = '#e0a8ff'; ctx.fillText(wl, wx, wz + 15);
         }
       });

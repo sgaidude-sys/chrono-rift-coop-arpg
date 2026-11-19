@@ -48,7 +48,7 @@
       add({ tier: 2, kind: 'kill', target: mb(mobs.length - 1).type, targetName: mb(mobs.length - 1).name, count: 14, title: `Apex Predators`, text: `The ${mb(mobs.length - 1).name}s are the most dangerous creatures here. Slay 14 to prove yourself.` });
       add({ tier: 3, kind: 'elite', target: z.elites[1].name, count: 1, title: `Bounty: ${z.elites[1].name}`, text: `${z.elites[1].name} must fall. This one is worth a fortune.` });
       add({ tier: 3, kind: 'collect', target: mb(Math.max(0, mobs.length - 2)).type, targetName: mb(Math.max(0, mobs.length - 2)).name, item: items[2], count: 10, chance: 0.4, title: `${items[2]}`, text: `Ten ${items[2]} — the final ingredient for the ward I'm building against ${z.boss.name}.` });
-      add({ tier: 4, kind: 'boss', target: z.boss.name, count: 1, title: `☠ ${z.boss.name}, ${z.boss.title}`, text: `It's time. ${z.boss.name} lairs at the marked arena (☠ on your map). Learn its rotation — every ability has a tell. Watch the cast bar and move.` });
+      add({ tier: 4, kind: 'boss', target: z.boss.name, count: 1, title: `☠ ${z.boss.name}, ${z.boss.title}`, text: `It's time. ${z.boss.name} roams the zone; the ☠ on your map marks where it was last seen. Hunt it down, then learn its rotation — every ability has a tell. Watch the cast bar and move.` });
       const next = M.ZONES[zi + 1];
       if (next) {
         add({ tier: 5, kind: 'travel', target: next.id, count: 1, title: `Onward to ${next.name}`, text: `You've outgrown these lands. Follow the road through the mountain pass to ${next.name} and report to ${M.QUEST_GIVERS[next.id].name}. (Recommended level ${next.lv[0]})` });
@@ -201,7 +201,7 @@
 
     levelDiffDamageMult(mob) {
       const d = (mob.level || this.player.level) - this.player.level;
-      return d <= 0 ? 1 : Math.max(0.45, 1 - d * 0.07);
+      return d <= 0 ? 1 : Math.max(0.25, 1 - d * 0.1);      // 3 levels under: -30%, 5 under: -50%
     },
 
     getMoveSpeedMult() {
@@ -232,7 +232,8 @@
       this._lastCombatTime = performance.now();
       const L = srcLevel || p.level;
       const diff = L - p.level;
-      let d = dmg * (1 - this.mitigation(L)) * (diff > 0 ? 1 + diff * 0.08 : Math.max(0.6, 1 + diff * 0.04));
+      // out-levelled heroes get punished hard: +45% at 3 levels, +85% at 5, ×2.6 at 8
+      let d = dmg * (1 - this.mitigation(L)) * (diff > 0 ? 1 + diff * 0.12 + diff * diff * 0.01 : Math.max(0.6, 1 + diff * 0.04));
       if (p.buffTimer > 0) d *= 0.6;
       d = Math.max(1, Math.round(d));
       p.hp = Math.max(0, p.hp - d);
@@ -849,7 +850,7 @@
         const z = wg.zoneById[q.zone];
         let t = null;
         if (q.kind === 'explore') t = z.sites[q.site];
-        else if (q.kind === 'boss') t = z.bossPos;
+        else if (q.kind === 'boss') { const bp = this.bossMapPos ? this.bossMapPos(z, false) : null; t = bp ? [bp.x, bp.z] : z.bossPos; }
         else if (q.kind === 'travel') { const nz = wg.zoneById[q.target]; t = nz.outpost; }
         else if (q.kind === 'elite') {
           const c = wg.camps.find(c => c.elite && c.elite.name === q.target);

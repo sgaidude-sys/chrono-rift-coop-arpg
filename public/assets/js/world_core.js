@@ -62,8 +62,9 @@
 
     // Weighted, domain-warped Voronoi. f ≈ distance (world units) to the zone border.
     zoneAt(x, z, out = this._zr) {
-      const wx = x + (fbm(x * 0.0032, z * 0.0032, 11, 3) - 0.5) * 190;
-      const wz = z + (fbm(x * 0.0032 + 50, z * 0.0032 - 30, 23, 3) - 0.5) * 190;
+      const S = W.scale || 1, fq = 0.0032 / S;
+      const wx = x + (fbm(x * fq, z * fq, 11, 3) - 0.5) * 190 * S;
+      const wz = z + (fbm(x * fq + 50, z * fq - 30, 23, 3) - 0.5) * 190 * S;
       let b1 = 1e9, b2 = 1e9, i1 = 0, i2 = 0;
       for (let i = 0; i < this.zones.length; i++) {
         const zn = this.zones[i];
@@ -165,15 +166,16 @@
       this.zones.forEach((z) => {
         const zr = mulberry32(this.seed * 7 + z.idx * 131);
         const avoid = [z.outpost, [0, 0]];
-        z.bossPos = this.pickSite(z, zr, 230, 470, 95, avoid, 230, true, z.id === 'meadows' ? 450 : 650) || [z.center[0] + 200, z.center[1]];
+        const S = W.scale || 1;
+        z.bossPos = this.pickSite(z, zr, 230 * S, 470 * S, 95, avoid, 230 * S, true, (z.id === 'meadows' ? 450 : 650) * S) || [z.center[0] + 200 * S, z.center[1]];
         avoid.push(z.bossPos);
         if (z.worldBoss) {
-          z.worldBossPos = this.pickSite(z, zr, 180, 520, 95, avoid, 320, true, 800) || [z.center[0] - 220, z.center[1]];
+          z.worldBossPos = this.pickSite(z, zr, 180 * S, 520 * S, 95, avoid, 320 * S, true, 800 * S) || [z.center[0] - 220 * S, z.center[1]];
           avoid.push(z.worldBossPos);
         }
         z.sites = [];
         for (let s = 0; s < 2; s++) {
-          const site = this.pickSite(z, zr, 140, 420, 60, avoid, 170, false);
+          const site = this.pickSite(z, zr, 140 * S, 420 * S, 60, avoid, 170 * S, false);
           if (site) { z.sites.push(site); avoid.push(site); }
         }
       });

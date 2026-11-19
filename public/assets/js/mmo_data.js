@@ -7,7 +7,8 @@
 
   const WORLD = {
     seed: 1337,
-    half: 1600,          // world spans [-1600, 1600] on X and Z  (3.2 km across)
+    scale: 1.5,          // layout scale vs the original 3.2 km world (zone centres, site radii)
+    half: 2400,          // world spans [-2400, 2400] on X and Z  (4.8 km across)
     chunk: 64,           // prop/obstacle chunk size
     borderBand: 26,      // impassable ridge thickness between zones
     gateWidth: 14,       // half-width of the pass where a road crosses a ridge
@@ -460,6 +461,9 @@
     infernal: ['Brimstone Caldera', 'Gate of Cinders'],
     citadel: ['Hall of Broken Ages', 'Clocktower Spire']
   };
+
+  // spread the zones out to fill the larger world
+  ZONES.forEach((z) => { z.center = [Math.round(z.center[0] * WORLD.scale), Math.round(z.center[1] * WORLD.scale)]; });
 
   const MMO_EXPORT = {
     WORLD, MOB_TYPES, ABILITIES, ZONES, RARITIES, EQUIP_SLOTS, WEAPON_BASES, ARMOR_BASES,

@@ -1632,7 +1632,7 @@
           { icon: '⚔️', name: 'Sunsteel Combo', cd: 0.38, mult: '100% / 135%', desc: 'Wide golden-white crescent arcs. Every 3rd strike unleashes a Golden Sunburst Wave with bonus stagger.' },
           { icon: '🛡️', name: 'Seismic Slam', cd: 4.5, mult: '190% AoE + Stun', desc: 'Shatters the earth, erupting 6 golden-stone shock pillars around impact and stunning enemies for 1.5s.' },
           { icon: '💨', name: 'Aegis Rush', cd: 3.2, mult: '120% Path + Slam', desc: 'Surges forward leaving 3 fading golden afterimages, slamming enemies along your charge and granting guard.' },
-          { icon: '✨', name: 'Phalanx Banner', cd: 10.0, mult: '135% + 8s Aura', desc: 'Deploys a 3D Sanctuary War-Banner for 8s that pulses periodic party heals and +25% damage within 6m.' }
+          { icon: '✨', name: 'Phalanx Banner', cd: 16.0, mult: '135% + 8s Aura', desc: 'Deploys a 3D Sanctuary War-Banner for 8s that pulses periodic party heals and +25% damage within 6m.' }
         ]
       },
       ranger: {
@@ -1651,7 +1651,7 @@
           { icon: '🏹', name: 'Astral Volley', cd: 0.34, mult: '105% (3x Spread)', desc: 'Fires fast piercing emerald arrows with additive trails. Every 3rd shot unleashes a Triple Spread Volley.' },
           { icon: '🗡️', name: 'Fan of Blades', cd: 4.0, mult: '90% x7 + Mark', desc: 'Hurls 7 spinning cyan daggers that apply Hunter\'s Mark; the next hit detonates for +45% bonus crit damage.' },
           { icon: '🍃', name: 'Shadow Vault', cd: 2.8, mult: '145% Decoy AoE', desc: 'Tumbles away leaving an exploding Shadow Decoy that detonates after 0.45s for AoE damage and 3s slow.' },
-          { icon: '🌠', name: 'Starfall Rain', cd: 9.0, mult: '315% Celestial AoE', desc: 'Calls a celestial rune telegraph and rains 18 glowing emerald arrows with individual splash shockwaves.' }
+          { icon: '🌠', name: 'Starfall Rain', cd: 12.0, mult: '315% Celestial AoE', desc: 'Calls a celestial rune telegraph and rains 18 glowing emerald arrows with individual splash shockwaves.' }
         ]
       },
       arcanist: {
@@ -1670,7 +1670,7 @@
           { icon: '🔮', name: 'Reaper Sweep', cd: 0.40, mult: '100% + Homing Wave', desc: 'Violet scythe sweep launching a homing-assisted Astral Crescent Wave that pierces foes.' },
           { icon: '🌀', name: 'Anima Vortex', cd: 5.0, mult: '205% Singularity', desc: 'Conjures a 3D spinning Singularity Orb with rune rings that pulls enemies inward over 0.5s before imploding.' },
           { icon: '⚡', name: 'Chrono Blink', cd: 3.0, mult: '85% Blink Blast', desc: 'Teleports through time, leaving a shattering temporal mirror ring at origin and blasting an arcane shockwave.' },
-          { icon: '⏳', name: 'Time Freeze', cd: 11.0, mult: '150% + 4s Stasis', desc: 'Expands a cyan-blue Chrono Stasis Dome that encases nearby foes in 3D ice-crystal cages for 4s.' }
+          { icon: '⏳', name: 'Time Freeze', cd: 16.0, mult: '150% + 4s Stasis', desc: 'Expands a cyan-blue Chrono Stasis Dome that encases nearby foes in 3D ice-crystal cages for 4s.' }
         ]
       },
       berserker: {
@@ -1689,7 +1689,7 @@
           { icon: '🪓', name: 'Twin-Axe Cleave', cd: 0.35, mult: '120% Cross-Cleave', desc: 'Heavy crimson-amber X-cross cleaves scattering molten sparks across enemies in front.' },
           { icon: '🌪️', name: 'Blood Whirlwind', cd: 4.8, mult: '3x 105% Tornado', desc: 'Spins 720° inside a blazing fire-crimson tornado of orbiting flame ribbons, dealing 3 rapid AoE ticks.' },
           { icon: '☄️', name: 'Crusher Leap', cd: 3.5, mult: '185% Crater Slam', desc: 'High parabolic leap trailing comet fire, erupting crimson crater spikes on impact and stunning foes.' },
-          { icon: '🔥', name: 'Warlord Frenzy', cd: 10.5, mult: '+35% SPD / +15% Leach', desc: 'Ignites a blazing flame aura for 8s: +35% attack speed, +15% lifesteal, and fiery shockwaves on basic attacks.' }
+          { icon: '🔥', name: 'Warlord Frenzy', cd: 18.0, mult: '+35% SPD / +15% Leach', desc: 'Ignites a blazing flame aura for 8s: +35% attack speed, +15% lifesteal, and fiery shockwaves on basic attacks.' }
         ]
       }
     };
@@ -5022,14 +5022,14 @@
           if (len > 0.25) {
             const clamped = Math.min(len, maxRange);
             const target = ent.pos.clone().add(delta.normalize().multiplyScalar(clamped));
-            target.x = Math.max(-1590, Math.min(1590, target.x));
-            target.z = Math.max(-1590, Math.min(1590, target.z));
+            target.x = Math.max(-(window.MMO.WORLD.half - 10), Math.min((window.MMO.WORLD.half - 10), target.x));
+            target.z = Math.max(-(window.MMO.WORLD.half - 10), Math.min((window.MMO.WORLD.half - 10), target.z));
             return target;
           }
         }
         const fallback = ent.pos.clone().add(forward.multiplyScalar(defaultDist));
-        fallback.x = Math.max(-1590, Math.min(1590, fallback.x));
-        fallback.z = Math.max(-1590, Math.min(1590, fallback.z));
+        fallback.x = Math.max(-(window.MMO.WORLD.half - 10), Math.min((window.MMO.WORLD.half - 10), fallback.x));
+        fallback.z = Math.max(-(window.MMO.WORLD.half - 10), Math.min((window.MMO.WORLD.half - 10), fallback.z));
         return fallback;
       }
 
@@ -5073,8 +5073,9 @@
         const upAxis = new THREE.Vector3(0, 1, 0);
 
         if (!isRemoteOrAI) {
-          const cdDef = slot === 5 ? 12.0 : cls.skills[slot - 1].cd;
-          const cdrMult = (this.player.buffTimer > 0 ? 0.72 : 1.0) * (this.player.frenzyTimer > 0 ? 0.65 : 1.0);
+          const cdDef = slot === 5 ? 30.0 : cls.skills[slot - 1].cd;
+          // buffs speed up the basic kit only: big cooldowns (4) and the ultimate can't feed themselves
+          const cdrMult = slot >= 4 ? 1.0 : (this.player.buffTimer > 0 ? 0.72 : 1.0) * (this.player.frenzyTimer > 0 ? 0.65 : 1.0);
           this.player.cooldowns[slot] = cdDef * cdrMult * (1 - (this.player.haste || 0));
           const slotEl = document.getElementById('slot-' + slot);
           if (slotEl) {
@@ -5316,8 +5317,8 @@
             ent.buffTimer = Math.max(ent.buffTimer || 0, 2.4);
             const startPos = ent.pos.clone();
             const dashEnd = startPos.clone().add(forward.clone().multiplyScalar(5.0));
-            dashEnd.x = Math.max(-1590, Math.min(1590, dashEnd.x));
-            dashEnd.z = Math.max(-1590, Math.min(1590, dashEnd.z));
+            dashEnd.x = Math.max(-(window.MMO.WORLD.half - 10), Math.min((window.MMO.WORLD.half - 10), dashEnd.x));
+            dashEnd.z = Math.max(-(window.MMO.WORLD.half - 10), Math.min((window.MMO.WORLD.half - 10), dashEnd.z));
             // 3 fading golden hero afterimage ghosts along dash path
             [0.0, 0.35, 0.70].forEach((frac, idx) => {
               const ghostPos = startPos.clone().lerp(dashEnd, frac);
@@ -5377,7 +5378,7 @@
             this.spawnShockwaveRing(ent.pos, 7.2, 0x38e8ff, 0.48);
             if (ent === this.player) {
               this.spawnFloatingText(this.player.pos, 'CHRONO TIME FREEZE!', '#38e8ff', 18);
-              this.player.synergy = Math.min(100, this.player.synergy + 18);
+              this.player.synergy = Math.min(100, this.player.synergy + 6);
             }
             if (canDealLocalDamage) {
               this.monsters.forEach((m) => {
@@ -5392,14 +5393,13 @@
           } else if (ent.classId === 'berserker') {
             this.playEntityAnim(ent, 'Shield_OneShot', true);
             ent.frenzyTimer = 8.0;
-            ent.buffTimer = 8.0;
             this.spawnVFXFlipbook('eldenring', ent.pos, 5.4, 0.7, 0xff3b5c, true);
             this.spawnShockwaveRing(ent.pos, 5.4, 0xff5522, 0.42);
             if (ent === this.player) {
               this.player.cooldowns[1] = 0;
               this.player.cooldowns[2] = Math.min(this.player.cooldowns[2], 0.8);
               this.spawnFloatingText(this.player.pos, 'WARLORD FRENZY! (+35% SPD / +15% LEECH)', '#ff7788', 17);
-              this.player.synergy = Math.min(100, this.player.synergy + 20);
+              this.player.synergy = Math.min(100, this.player.synergy + 6);
             }
             if (canDealLocalDamage) {
               this.damageEnemiesInRadius(ent.pos, 4.8, Math.round(wStats.dmg * 1.25), true, ent);
@@ -5416,7 +5416,7 @@
               this.player.hp = Math.min(this.player.maxHp, this.player.hp + healAmt);
               this.aiAllies.forEach(a => { a.hp = Math.min(a.maxHp, a.hp + healAmt); });
               this.spawnFloatingText(this.player.pos, `+${healAmt} PHALANX BANNER DEPLOYED!`, '#ffd56b', 17);
-              this.player.synergy = Math.min(100, this.player.synergy + 20);
+              this.player.synergy = Math.min(100, this.player.synergy + 6);
             }
             if (canDealLocalDamage) {
               this.monsters.forEach((m) => {
@@ -5589,7 +5589,7 @@
         });
 
         if (hitAny && attacker === this.player) {
-          this.player.synergy = Math.min(100, this.player.synergy + 6);
+          this.player.synergy = Math.min(100, this.player.synergy + 2.5);
         }
       }
 
@@ -5652,7 +5652,7 @@
         this.spawnFloatingText(mob.pos, isCrit ? `${finalDmg} CRIT!` : `${finalDmg}`, isCrit ? '#ffd56b' : '#ffffff', isCrit ? 19 : 15);
 
         if (!fromNetwork && attacker === this.player) {
-          this.player.synergy = Math.min(100, this.player.synergy + 5);
+          this.player.synergy = Math.min(100, this.player.synergy + 2);
           if (this.player.frenzyTimer > 0) {
             const heal = Math.max(4, Math.round(finalDmg * 0.15));
             this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal);
@@ -8598,8 +8598,8 @@
         if (cds[1] > 0) cds[1] = Math.max(0, cds[1] - cdTick);
         if (cds[2] > 0) cds[2] = Math.max(0, cds[2] - cdTick);
         if (cds[3] > 0) cds[3] = Math.max(0, cds[3] - cdTick);
-        if (cds[4] > 0) cds[4] = Math.max(0, cds[4] - cdTick);
-        if (cds[5] > 0) cds[5] = Math.max(0, cds[5] - cdTick);
+        if (cds[4] > 0) cds[4] = Math.max(0, cds[4] - dt);       // big cooldowns aren't sped up by Frenzy
+        if (cds[5] > 0) cds[5] = Math.max(0, cds[5] - dt);
         if (cds.potion > 0) cds.potion = Math.max(0, cds.potion - dt);
 
         if (p.attackTimer > 0) p.attackTimer = Math.max(0, p.attackTimer - dt);
@@ -8722,8 +8722,8 @@
 
           p.vel.set(mx * spd, p.vy || 0, mz * spd);
           const _prevX = p.pos.x, _prevZ = p.pos.z;
-          p.pos.x = Math.max(-1590, Math.min(1590, p.pos.x + p.vel.x * dt));
-          p.pos.z = Math.max(-1590, Math.min(1590, p.pos.z + p.vel.z * dt));
+          p.pos.x = Math.max(-(window.MMO.WORLD.half - 10), Math.min((window.MMO.WORLD.half - 10), p.pos.x + p.vel.x * dt));
+          p.pos.z = Math.max(-(window.MMO.WORLD.half - 10), Math.min((window.MMO.WORLD.half - 10), p.pos.z + p.vel.z * dt));
           if (this.worldClampMove) this.worldClampMove(p.pos, _prevX, _prevZ);
           this.resolveObstacleCollisions(p.pos, 0.55);
           p.yaw = Math.atan2(mx, mz);
@@ -9868,10 +9868,10 @@
       window.game = new ChronoRiftCoOpGame();
     });
   </script>
-  <script src="assets/js/mmo_data.js?v=12"></script>
-  <script src="assets/js/world_core.js?v=18"></script>
-  <script src="assets/js/mmo_world.js?v=23"></script>
-  <script src="assets/js/mmo_rpg.js?v=11"></script>
+  <script src="assets/js/mmo_data.js?v=13"></script>
+  <script src="assets/js/world_core.js?v=19"></script>
+  <script src="assets/js/mmo_world.js?v=24"></script>
+  <script src="assets/js/mmo_rpg.js?v=12"></script>
   <script src="assets/js/mmo_audio.js?v=13"></script>
   <script src="assets/js/mmo_vfx.js?v=10"></script>
   <script src="assets/js/mmo_mobile.js?v=10"></script>
@@ -9888,7 +9888,7 @@
   <script src="assets/js/mmo_polish.js?v=5"></script>
   <script src="assets/js/mmo_realism.js?v=1"></script>
   <script src="assets/js/mmo_hud.js?v=5"></script>
-  <script src="assets/js/mmo_combat.js?v=3"></script>
+  <script src="assets/js/mmo_combat.js?v=5"></script>
   <script src="assets/js/mmo_skillvfx.js?v=1"></script>
   <script src="assets/js/mmo_talents.js?v=2"></script>
   <script src="assets/js/mmo_ui.js?v=2"></script>
@@ -9901,6 +9901,7 @@
   <script src="assets/js/mmo_bossmodels.js?v=2"></script>
   <script src="assets/js/mmo_sfx.js?v=2"></script>
   <script src="assets/js/mmo_roles.js?v=1"></script>
+  <script src="assets/js/mmo_hunt.js?v=2"></script>
   <script src="assets/js/mmo_account.js?v=1"></script>
   <script src="assets/js/mmo_heroselect.js?v=3"></script>
 </body>

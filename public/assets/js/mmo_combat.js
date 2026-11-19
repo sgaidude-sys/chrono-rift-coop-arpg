@@ -35,7 +35,7 @@
   const GLINT_LEAD = 0.25;
   const isTouch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
 
-  const postureMax = (m) => m.isBoss ? 220 : (m.isElite ? 120 : 70);
+  const postureMax = (m) => m.isBoss ? 260 : (m.isElite ? 120 : 70);
 
   function starTexture() {
     const S = 128, c = document.createElement('canvas');
@@ -222,8 +222,8 @@
       const k = 1 - Math.pow(1 - Math.min(1, r.t / r.dur), 2.2);       // ease-out: fast launch, soft landing
       const step = (k - prevK) * r.dist;
       const px = p.pos.x, pz = p.pos.z;
-      p.pos.x = Math.max(-1590, Math.min(1590, p.pos.x + r.dx * step));
-      p.pos.z = Math.max(-1590, Math.min(1590, p.pos.z + r.dz * step));
+      p.pos.x = Math.max(-(window.MMO.WORLD.half - 10), Math.min(window.MMO.WORLD.half - 10, p.pos.x + r.dx * step));
+      p.pos.z = Math.max(-(window.MMO.WORLD.half - 10), Math.min(window.MMO.WORLD.half - 10, p.pos.z + r.dz * step));
       if (this.worldClampMove) this.worldClampMove(p.pos, px, pz);
       this.resolveObstacleCollisions(p.pos, 0.55);
       p.yaw = Math.atan2(r.dx, r.dz);
@@ -472,6 +472,7 @@
     staggerMob(mob, dur, broadcast) {
       if (!mob || mob.dead) return;
       mob.staggerTimer = dur;
+      mob._riposteOpen = dur > 1;          // a real stagger opens one riposte; the 0.35 s close-out does not
       mob.posture = 0;
       mob.stunTimer = Math.max(mob.stunTimer || 0, dur);      // host AI stands down while staggered
       mob._plateDirty = true;
@@ -508,8 +509,9 @@
 
     applyDamageToMonster(mob, baseDmg, isHeavy, attacker, fromNetwork, netData, opts) {
       const local = mob && !mob.dead && !fromNetwork && (!attacker || attacker === this.player);
-      if (local && mob.staggerTimer > 0.05 && this._combat) {
-        // CRITICAL RIPOSTE on a staggered foe
+      if (local && mob.staggerTimer > 0.05 && mob._riposteOpen && this._combat) {
+        // CRITICAL RIPOSTE on a staggered foe - one per stagger
+        mob._riposteOpen = false;
         const args = Array.prototype.slice.call(arguments);
         args[1] = Math.round(baseDmg * (mob.isBoss ? 2.5 : 3) * (1 + this.tv('riposte')));
         args[2] = true;
@@ -523,7 +525,7 @@
         return undefined;
       }
       const r = orig.applyDamageToMonster.apply(this, arguments);
-      if (local && this._combat && !mob.dead) this.addPosture(mob, (isHeavy ? 12 : 5) * (mob.isBoss ? 0.6 : 1) * (1 + this.tv('postureDmg')));
+      if (local && this._combat && !mob.dead) this.addPosture(mob, (isHeavy ? 12 : 5) * (mob.isBoss ? 0.3 : 1) * (1 + this.tv('postureDmg')));
       return r;
     },
 
