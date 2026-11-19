@@ -27,7 +27,7 @@
   const WL = W.waterLevel !== undefined ? W.waterLevel : -2.0;
   const SWIM_IN = 1.32, SWIM_OUT = 1.18;      // water depth hysteresis (m)
   const MOUNTS = {
-    land: { id: 'land', key: 'B', name: 'Ashen Steed', model: 'mount/horse', file: 'models/mounts/horse.glb', clips: { idle: 'Idle', move: 'Gallop' }, unlock: 5, speed: 1.9, height: 2.2, seat: 0.6, seatZ: -0.15, tint: 0xffffff },
+    land: { id: 'land', key: 'B', name: 'Ashen Steed', model: 'mount/horse', file: 'models/mounts/horse.glb', clips: { idle: 'Idle', move: 'Gallop' }, unlock: 5, speed: 1.9, height: 2.2, seat: 0.6, seatZ: -0.25, tint: 0xffffff },
     // model units: ~16.5 long, head toward +z; saddle between the wing roots at (0, 2.7, -2)
     fly: { id: 'fly', key: 'N', name: 'Ember Drake', model: 'mount/ember_drake', file: 'models/mounts/ember_drake.glb', clips: { idle: 'Fly 2', move: 'Fly' },
       unlock: 15, speed: 2.7, scale: 0.33, offset: [0, -2.7 * 0.33, 2 * 0.33], seat: 0.0, seatZ: -0.3, alt: 11, idleRate: 0.7, tint: 0xffffff }
@@ -368,13 +368,35 @@
       }
     },
 
-    // Procedural seated pose (offsets on top of the idle clip, solved against the hero
-    // rig so knees sit forward and apart with the feet hanging below the saddle)
+    // Seated riding pose, set ABSOLUTELY from the rig's rest pose (solved against the hero
+    // skeleton): hips and spine neutral, knees forward and apart around the mount's flanks,
+    // feet hanging, hands forward on the reins. Independent of each class's idle stance.
     ridePose(ent) {
-      const B = this.travelBones(ent); if (!B.thigh_l || !B.calf_l) return;
-      const add = (bone, x, y, z) => { bone.rotation.x += x; bone.rotation.y += y; bone.rotation.z += z; };
-      add(B.thigh_l, 0.75, 0.25, 0); add(B.calf_l, -0.75, 1.0, 0.5);
-      add(B.thigh_r, -0.25, 0.75, -0.5); add(B.calf_r, -0.25, -0.75, 1.25);
+      const B = this.travelBones(ent); if (!B.thigh_l || !B.calf_l || !B.pelvis) return;
+      const rest = this.travelRestPose(ent); if (!rest) return;
+      const RIDE = this._ridePoseQ || (this._ridePoseQ = (() => {
+        const P = {
+          thigh_l: [-1.6, -0.4, -0.6], calf_l: [1.6, 0.2, -0.6], thigh_r: [-1.6, 0.4, 0.6], calf_r: [1.6, -0.2, 0.6],
+          upperarm_l: [1.2, 1.2, 0.2], lowerarm_l: [1.0, -0.6, 0.2], upperarm_r: [1.2, -1.2, -0.2], lowerarm_r: [1.0, 0.6, -0.2]
+        };
+        const out = {}, e = new THREE.Euler();
+        Object.keys(P).forEach((k) => { e.set(P[k][0], P[k][1], P[k][2]); out[k] = new THREE.Quaternion().setFromEuler(e); });
+        return out;
+      })());
+      ['pelvis', 'spine_01', 'spine_02', 'spine_03'].forEach((k) => { if (B[k] && rest[k]) B[k].quaternion.copy(rest[k].q); });
+      if (rest.pelvis) B.pelvis.position.copy(rest.pelvis.p);
+      Object.keys(RIDE).forEach((k) => { if (B[k] && rest[k]) B[k].quaternion.copy(rest[k].q).multiply(RIDE[k]); });
+    },
+
+    // rest (bind) pose of the entity's model, read once from the un-animated template
+    travelRestPose(ent) {
+      const key = ent.modelKey; if (!key || !this.modelCache[key]) return null;
+      this._restPoses = this._restPoses || {};
+      if (this._restPoses[key]) return this._restPoses[key];
+      const r = {};
+      this.modelCache[key].traverse((o) => { if (o.isBone) r[o.name] = { q: o.quaternion.clone(), p: o.position.clone() }; });
+      this._restPoses[key] = r;
+      return r;
     },
 
     swimArms(ent, T, moving, k) {

@@ -1149,8 +1149,24 @@
       transition: width 0.08s linear;
     }
   </style>
+  <style id="cr-boot-css">
+    /* boot splash: nothing else shows until the title / login screen takes over */
+    body:not(.cr-booted):not(.cr-title-on) > :not(#cr-boot):not(script):not(style):not(link) { visibility: hidden !important; }
+    #cr-boot { position: fixed; inset: 0; z-index: 2147483000; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 42%, #1a1f2e 0%, #07090f 70%);
+      transition: opacity .6s ease, visibility 0s linear .6s; font-family: 'Cinzel', Georgia, serif; color: #F5F2EB; }
+    body.cr-booted #cr-boot, body.cr-title-on #cr-boot { opacity: 0; visibility: hidden; pointer-events: none; }
+    #cr-boot .w { text-align: center; }
+    #cr-boot .t { font-weight: 900; font-size: clamp(30px, 6vw, 60px); letter-spacing: .32em; text-indent: .32em; }
+    #cr-boot .s { margin-top: 10px; font: 600 11px 'Plus Jakarta Sans', 'Inter', sans-serif; letter-spacing: .42em; color: #D4AF37; }
+    #cr-boot .bar { width: min(260px, 60vw); height: 2px; margin: 28px auto 0; background: rgba(212,175,55,.18); overflow: hidden; }
+    #cr-boot .bar i { display: block; height: 100%; width: 40%; background: linear-gradient(90deg, transparent, #D4AF37, #fff3c4, #D4AF37, transparent); animation: crBoot 1.4s ease-in-out infinite; }
+    #cr-boot .m { margin-top: 14px; font: 500 11px 'Plus Jakarta Sans', 'Inter', sans-serif; letter-spacing: .18em; color: rgba(245,242,235,.55); }
+    @keyframes crBoot { from { transform: translateX(-110%); } to { transform: translateX(260%); } }
+  </style>
 </head>
 <body>
+  <div id="cr-boot"><div class="w"><div class="t">CHRONO-RIFT</div><div class="s">CHRONICLES OF ASHENVALE</div><div class="bar"><i></i></div><div class="m" id="cr-boot-msg">Loading the realm…</div></div></div>
+  <script>setTimeout(function () { document.body.classList.add('cr-booted'); }, 20000);</script>
   <canvas id="game-canvas"></canvas>
   <div id="screen-fx"></div>
   <div id="floating-combat-text"></div>
@@ -9868,10 +9884,11 @@
   <script src="public/assets/js/mmo_tutorial.js?v=2"></script>
   <script src="public/assets/js/mmo_social.js?v=1"></script>
   <script src="public/assets/js/mmo_epic.js?v=2"></script>
-  <script src="public/assets/js/mmo_travel.js?v=2"></script>
+  <script src="public/assets/js/mmo_travel.js?v=3"></script>
   <script src="public/assets/js/mmo_party.js?v=1"></script>
   <script src="public/assets/js/mmo_envmodels.js?v=1"></script>
   <script src="public/assets/js/mmo_bossmodels.js?v=1"></script>
-  <script src="public/assets/js/mmo_heroselect.js?v=1"></script>
+  <script src="public/assets/js/mmo_account.js?v=1"></script>
+  <script src="public/assets/js/mmo_heroselect.js?v=2"></script>
 </body>
 </html>

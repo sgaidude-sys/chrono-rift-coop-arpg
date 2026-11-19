@@ -209,7 +209,7 @@
     modal.querySelector('.hs-go').addEventListener('click', () => { pop.classList.remove('on'); if (g()) g().startOrResumeGame(); });
     // keyboard: arrows / 1-4 switch hero, Enter begins (ignored while typing in a field)
     window.addEventListener('keydown', (e) => {
-      if (!modal.classList.contains('active') || document.body.classList.contains('cr-title-on')) return;
+      if (!modal.classList.contains('active') || document.body.classList.contains('cr-title-on') || document.body.classList.contains('cr-acct-on')) return;
       const typing = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
       const game = g(); if (!game) return;
       const cur = Math.max(0, CLASSES.findIndex(c => c.id === game.player.classId));
