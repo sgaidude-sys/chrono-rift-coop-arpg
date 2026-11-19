@@ -11,8 +11,9 @@
  *  Mounts (two per player, unlocked by level)
  *   • B  Ashen Steed  (land, Lv 5)  — ×1.9 speed, follows the ground.
  *        (Quaternius CC0 horse, models/mounts/horse.glb)
- *   • N  Sky Drake    (flying, Lv 15) — ×2.7 speed, cruises ~11 m above the
+ *   • N  Ember Drake  (flying, Lv 15) — ×2.7 speed, cruises ~11 m above the
  *        terrain over water and hills (zone borders still apply).
+ *        ("Low Poly Flying Dragon" by CarolaBug, CC BY 4.0, models/mounts/ember_drake.glb)
  *   • Mount/dismount with the key again, the HUD buttons, or by attacking.
  *     Can't mount in combat (recently hit / hostile mobs hunting you) or while
  *     swimming (the drake can take off from water). Taking a hit dismounts;
@@ -27,7 +28,9 @@
   const SWIM_IN = 1.32, SWIM_OUT = 1.18;      // water depth hysteresis (m)
   const MOUNTS = {
     land: { id: 'land', key: 'B', name: 'Ashen Steed', model: 'mount/horse', file: 'models/mounts/horse.glb', clips: { idle: 'Idle', move: 'Gallop' }, unlock: 5, speed: 1.9, height: 2.2, seat: 0.6, seatZ: -0.15, tint: 0xffffff },
-    fly: { id: 'fly', key: 'N', name: 'Sky Drake', model: 'qm/fly_dragon_evolved', clips: { idle: 'Idle_Loop', move: 'Jog_Fwd_Loop' }, unlock: 15, speed: 2.7, height: 3.0, seat: 1.3, seatZ: -0.75, alt: 11, tint: 0x8fd3ff }
+    // model units: ~16.5 long, head toward +z; saddle between the wing roots at (0, 2.7, -2)
+    fly: { id: 'fly', key: 'N', name: 'Ember Drake', model: 'mount/ember_drake', file: 'models/mounts/ember_drake.glb', clips: { idle: 'Fly 2', move: 'Fly' },
+      unlock: 15, speed: 2.7, scale: 0.33, offset: [0, -2.7 * 0.33, 2 * 0.33], seat: 0.0, seatZ: -0.3, alt: 11, idleRate: 0.7, tint: 0xffffff }
   };
   const ICON = {
     land: '<svg viewBox="0 0 24 24"><path d="M4 15c1-4 4-6 8-6h3l3-3 1 4-2 2v3l-2 3M8 15v4M14 17v2M6 9l2-3"/></svg>',
@@ -130,9 +133,12 @@
         if (!ok || ent._mount !== mt) return;
         const tpl = this.modelCache[d.model];
         const c = (typeof cloneSkinnedModel === 'function') ? cloneSkinnedModel(tpl) : tpl.clone();
-        const s = d.height / (tpl.userData.rawHeight || 1);
-        c.scale.setScalar(s);
-        c.position.y = -(tpl.userData.minY || 0) * s;
+        if (d.scale) { c.scale.setScalar(d.scale); c.position.set(d.offset[0], d.offset[1], d.offset[2]); }
+        else {
+          const s = d.height / (tpl.userData.rawHeight || 1);
+          c.scale.setScalar(s);
+          c.position.y = -(tpl.userData.minY || 0) * s;
+        }
         const tc = new THREE.Color(d.tint);
         c.traverse((o) => {
           o.frustumCulled = false;
@@ -340,11 +346,12 @@
         if (d.alt) {
           const ground = Math.max(0, depth);                      // never below the lake surface
           alt = ground + d.alt * (0.5 - 0.5 * Math.cos(Math.min(1, mt.k) * Math.PI)) + Math.sin(T * 1.6) * 0.35;
+          alt = Math.max(alt, ground + 1.3);          // never let the belly dip into the ground
         }
         mt.alt += (alt - mt.alt) * Math.min(1, dt * 2.5);
         mt.root.position.set(ent.pos.x, mt.alt, ent.pos.z);
         const yaw = ent.meshRoot.rotation.y;
-        mt.root.rotation.set(d.alt ? (moving ? 0.28 : 0.04) : 0, yaw, 0);
+        mt.root.rotation.set(d.alt ? (moving ? 0.12 : 0) : 0, yaw, 0);
         if (mt.ready) {
           const want = moving ? 'move' : 'idle';
           const a = mt.actions[want] || mt.actions.idle;
@@ -352,11 +359,11 @@
             Object.values(mt.actions).forEach(x => { if (x !== a) x.fadeOut(0.2); });
             a.reset().fadeIn(0.2).play(); mt.cur = want;
           }
-          mt.mixer.update(dt * (moving ? 1.25 : 1));
+          mt.mixer.update(dt * (moving ? 1.25 : (d.idleRate || 1)));
         }
         // hero on the saddle
         ent.meshRoot.position.y = mt.alt + d.seat * mt.k;
-        if (node) { node.rotation.x = d.alt && moving ? 0.22 : 0; node.position.z = d.seatZ; }
+        if (node) { node.rotation.x = d.alt && moving ? 0.1 : 0; node.position.z = d.seatZ; }
         this.ridePose(ent);
       }
     },

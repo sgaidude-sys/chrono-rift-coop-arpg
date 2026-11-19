@@ -1,2 +1,7 @@
 horse.glb — "Horse" from the Animated Animal Pack by Quaternius (https://quaternius.com),
 via Poly Pizza (https://poly.pizza/m/qvTrSG9pZF). Licence: Public Domain (CC0).
+
+ember_drake.glb — "Low Poly Flying Dragon" by CarolaBug
+(https://sketchfab.com/3d-models/low-poly-flying-dragon-811f651584814044acfaa47546ec882d).
+Licence: Creative Commons Attribution 4.0 (CC BY 4.0) — https://creativecommons.org/licenses/by/4.0/
+Used unmodified (scaled and positioned in code).
