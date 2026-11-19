@@ -111,8 +111,9 @@
       if (p._swim && id === 'land') { this.travelToast("Can't ride the steed while swimming"); return; }
       if (p._mount) this.dismount(false);
       this.mountEntity(p, id, true);
+      if (this.broadcastPlayerState) this.broadcastPlayerState(true);
       this.refreshTravelBar();
-      if (this.broadcastPlayerState) this.broadcastPlayerState(false);
+      if (this.broadcastPlayerState) this.broadcastPlayerState(true);   // also refresh presence so it can't re-mount us
     },
 
     dismount(fx) {
@@ -127,6 +128,8 @@
       const d = MOUNTS[id]; if (!d || !ent.meshRoot) return;
       const mt = { id, d, root: new THREE.Group(), mixer: null, actions: {}, cur: '', alt: 0, k: 0, ready: false };
       ent._mount = mt;
+      mt.owner = ent;
+      (this._trvMounts = this._trvMounts || new Set()).add(mt);
       this.scene.add(mt.root);
       mt.root.position.copy(ent.pos);
       this.loadMountModel(d, (ok) => {
@@ -163,12 +166,18 @@
       const mt = ent._mount; if (!mt) return;
       ent._mount = null;
       if (fx && this.near(ent, 60)) this.mountPuff(ent, mt.d, false);
-      this.scene.remove(mt.root);
-      if (mt.mixer) mt.mixer.stopAllAction();
-      mt.root.traverse((o) => { if (o.isMesh && o.material) o.material.dispose(); });
+      this.disposeMount(mt);
       if (ent.glbNode) { ent.glbNode.position.z = 0; }
       if (ent.meshRoot) ent.meshRoot.position.y = ent.pos.y || 0;
       this.stowWeapons(ent, false);
+    },
+
+    disposeMount(mt) {
+      if (this._trvMounts) this._trvMounts.delete(mt);
+      this.scene.remove(mt.root);
+      if (mt.mixer) mt.mixer.stopAllAction();
+      mt.root.traverse((o) => { if (o.isMesh && o.material) o.material.dispose(); });
+      mt.disposed = true;
     },
 
     mountPuff(ent, d, on) {
@@ -288,11 +297,16 @@
       if (pl && this.player) pl.mt = this.player._mount ? this.player._mount.id : '';
       return pl;
     },
-    handleRemotePlayerState(payload) {
+    handleRemotePlayerState(payload, fromPresence) {
       const r = orig.handleRemotePlayerState.apply(this, arguments);
       if (payload && payload.id && this.remotePeers) {
         const peer = this.remotePeers.get(payload.id);
         if (peer && this._trv) {
+          // Presence snapshots are only re-tracked every few seconds, so they can carry a
+          // stale mount (the old drake re-appeared after a dismount). Live broadcasts are
+          // authoritative; presence only seeds a peer we haven't heard from directly yet.
+          if (fromPresence && peer._mtLiveAt && performance.now() - peer._mtLiveAt < 20000) return r;
+          if (!fromPresence) peer._mtLiveAt = performance.now();
           const want = payload.mt || '';
           const cur = peer._mount ? peer._mount.id : '';
           if (want !== cur) { if (cur) this.unmountEntity(peer, true); if (want && MOUNTS[want]) this.mountEntity(peer, want, false); }
@@ -587,6 +601,13 @@
       if (!this._trv || !this.isInWorld) return;
       this.updateTravelEntity(this.player, dt, true);
       if (this.remotePeers) this.remotePeers.forEach(pe => this.updateTravelEntity(pe, dt, false));
+      // a peer that left / reconnected is dropped without unmounting: clear its orphaned mount
+      if (this._trvMounts) this._trvMounts.forEach((mt) => {
+        const o = mt.owner;
+        if (o === this.player || (o && o._mount === mt && this.remotePeers && this.remotePeers.get(o.id) === o)) return;
+        if (o && o._mount === mt) o._mount = null;
+        this.disposeMount(mt);
+      });
       if (this.player.dead && this.player._mount) this.dismount(false);
       this._trv.barT = (this._trv.barT || 0) - dt;
       if (this._trv.barT <= 0) { this._trv.barT = 1; this.refreshTravelBar(); }
