@@ -56,7 +56,7 @@
     initMMOWorld: GP.initMMOWorld, updateMMOWorld: GP.updateMMOWorld, getMoveSpeedMult: GP.getMoveSpeedMult,
     useSkill: GP.useSkill, dodgeRoll: GP.dodgeRoll, cameraRig: GP.cameraRig, renderFrame: GP.renderFrame,
     playEntityAnim: GP.playEntityAnim, damagePlayer: GP.damagePlayer, buildPlayerStatePayload: GP.buildPlayerStatePayload,
-    handleRemotePlayerState: GP.handleRemotePlayerState, gainXP: GP.gainXP
+    handleRemotePlayerState: GP.handleRemotePlayerState, gainXP: GP.gainXP, attachWeaponsToEntity: GP.attachWeaponsToEntity
   };
   const _v = new THREE.Vector3();
   const depthAt = (g, x, z) => WL - (g.terrainVisualHeight ? g.terrainVisualHeight(x, z) : 0);
@@ -168,6 +168,7 @@
       mt.root.traverse((o) => { if (o.isMesh && o.material) o.material.dispose(); });
       if (ent.glbNode) { ent.glbNode.position.z = 0; }
       if (ent.meshRoot) ent.meshRoot.position.y = ent.pos.y || 0;
+      this.stowWeapons(ent, false);
     },
 
     mountPuff(ent, d, on) {
@@ -243,6 +244,11 @@
       if (p._mount) m *= p._mount.d.speed;
       else if (p._swim) m *= 0.62;
       return m;
+    },
+
+    attachWeaponsToEntity(entity) {
+      if (entity && entity._mount) this.stowWeapons(entity, false);
+      return orig.attachWeaponsToEntity ? orig.attachWeaponsToEntity.apply(this, arguments) : undefined;
     },
 
     useSkill(slot, isRemoteOrAI, actor) {
@@ -366,7 +372,75 @@
         ent.meshRoot.position.y = mt.alt + (d.seat + bob) * mt.k;
         if (node) { node.rotation.x = d.alt && moving ? 0.1 : 0; node.position.z = d.seatZ; }
         this.ridePose(ent);
+        this.stowWeapons(ent, true);
       }
+    },
+
+    // While riding, weapons ride on the hero's back: each hand holder is re-parented to the
+    // upper spine, its long axis laid diagonally across the back (two weapons cross in an X),
+    // shields flat against it. They return to the hands on dismount.
+    stowWeapons(ent, on) {
+      const B = this.travelBones(ent);
+      const spine = B.spine_03 || B.spine_02;
+      if (!spine || !ent.glbNode) return;
+      if (!on) {
+        spine.children.slice().forEach((h) => {
+          const f = h.userData && h.userData.stowFrom;
+          if (!f) return;
+          f.bone.add(h); h.position.copy(f.pos); h.quaternion.copy(f.quat); h.scale.copy(f.scale);
+          h.userData.stowFrom = null;
+        });
+        return;
+      }
+      const holders = [];
+      [ent.handRightBone, ent.handLeftBone].forEach((hand, side) => {
+        if (hand) hand.children.forEach((h) => { if (h.userData && h.userData.isAttachedWeapon) holders.push({ h, hand, side }); });
+      });
+      if (!holders.length) return;
+      ent.glbNode.updateMatrixWorld(true);
+      const hero = ent.glbNode.matrixWorld, heroInv = new THREE.Matrix4().copy(hero).invert();
+      const spineHero = new THREE.Vector3().setFromMatrixPosition(spine.matrixWorld).applyMatrix4(heroInv);
+      const nWeapons = holders.length;
+      holders.forEach(({ h, hand, side }, i) => {
+        h.userData.stowFrom = { bone: hand, pos: h.position.clone(), quat: h.quaternion.clone(), scale: h.scale.clone() };
+        // weapon extent in holder space
+        h.updateMatrixWorld(true);
+        const hInv = new THREE.Matrix4().copy(h.matrixWorld).invert();
+        const box = new THREE.Box3(), tmp = new THREE.Box3();
+        h.traverse((o) => {
+          if (!o.isMesh || !o.geometry) return;
+          if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+          tmp.copy(o.geometry.boundingBox).applyMatrix4(new THREE.Matrix4().multiplyMatrices(hInv, o.matrixWorld));
+          box.union(tmp);
+        });
+        if (box.isEmpty()) return;
+        const sz = new THREE.Vector3(), c = new THREE.Vector3(); box.getSize(sz); box.getCenter(c);
+        const axes = [new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 1)];
+        const dims = [sz.x, sz.y, sz.z];
+        const longI = dims.indexOf(Math.max(...dims)), thinI = dims.indexOf(Math.min(...dims));
+        const spec = (typeof WEAPON_ATTACH_SPECS !== 'undefined' && WEAPON_ATTACH_SPECS[h.userData.weaponId]) || {};
+        const shield = !!spec.isShield;
+        // targets in hero space (+z forward, +y up, +x the hero's left)
+        const sgn = side === 0 ? 1 : -1;
+        const dLong = shield ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(0.62 * sgn, -1, 0).normalize();
+        const dThin = new THREE.Vector3(0, 0, -1);
+        const aLong = axes[longI], aThin = axes[thinI === longI ? (longI + 1) % 3 : thinI];
+        const S = new THREE.Matrix4().makeBasis(aLong, aThin, new THREE.Vector3().crossVectors(aLong, aThin));
+        const T = new THREE.Matrix4().makeBasis(dLong, dThin, new THREE.Vector3().crossVectors(dLong, dThin));
+        const R = new THREE.Matrix4().multiplyMatrices(T, S.clone().transpose());
+        const q = new THREE.Quaternion().setFromRotationMatrix(R);
+        const back = spineHero.clone().add(new THREE.Vector3(0, shield ? -0.05 : -0.02, -(0.2 + (shield ? 0 : 0.06 * i))));
+        const pos = back.sub(c.clone().applyQuaternion(q));
+        // hero-space transform -> world -> spine local
+        const mHero = new THREE.Matrix4().compose(pos, q, new THREE.Vector3(1, 1, 1));
+        const mWorld = new THREE.Matrix4().multiplyMatrices(hero, mHero);
+        // keep the weapon's own size (holder lived under the hand with the same hero scale)
+        const sc = new THREE.Vector3(); new THREE.Matrix4().copy(hero).decompose(new THREE.Vector3(), new THREE.Quaternion(), sc);
+        mWorld.scale(new THREE.Vector3(1 / sc.x, 1 / sc.y, 1 / sc.z));
+        const mLocal = new THREE.Matrix4().multiplyMatrices(new THREE.Matrix4().copy(spine.matrixWorld).invert(), mWorld);
+        spine.add(h);
+        mLocal.decompose(h.position, h.quaternion, h.scale);
+      });
     },
 
     // Vertical motion of the mount's spine under the saddle, relative to its running average,
@@ -406,14 +480,14 @@
         const P = {
           thigh_l: [-1.6, -0.4, -0.6], calf_l: [1.6, 0.2, -0.6], thigh_r: [-1.6, 0.4, 0.6], calf_r: [1.6, -0.2, 0.6],
           // leaning slightly forward, hands low and forward on the reins / neck
-          spine_01: [0.25, 0, 0],
-          upperarm_l: [1.2, -0.6, -0.4], lowerarm_l: [0.6, 0.8, -0.4], upperarm_r: [1.2, 0.6, 0.4], lowerarm_r: [0.6, -0.8, 0.4]
+          spine_01: [0.42, 0, 0], spine_02: [0.18, 0, 0],
+          upperarm_l: [1.6, -0.4, -0.2], lowerarm_l: [0.6, -1.4, 0.6], upperarm_r: [1.6, 0.4, 0.2], lowerarm_r: [0.6, 1.4, -0.6]
         };
         const out = {}, e = new THREE.Euler();
         Object.keys(P).forEach((k) => { e.set(P[k][0], P[k][1], P[k][2]); out[k] = new THREE.Quaternion().setFromEuler(e); });
         return out;
       })());
-      ['pelvis', 'spine_02', 'spine_03'].forEach((k) => { if (B[k] && rest[k]) B[k].quaternion.copy(rest[k].q); });
+      ['pelvis', 'spine_03'].forEach((k) => { if (B[k] && rest[k]) B[k].quaternion.copy(rest[k].q); });
       if (rest.pelvis) B.pelvis.position.copy(rest.pelvis.p);
       Object.keys(RIDE).forEach((k) => { if (B[k] && rest[k]) B[k].quaternion.copy(rest[k].q).multiply(RIDE[k]); });
     },
