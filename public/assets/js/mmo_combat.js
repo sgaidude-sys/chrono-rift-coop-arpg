@@ -26,7 +26,7 @@
  * ============================================================================= */
 (function () {
   'use strict';
-  const PARRY_WINDOW = 0.18;     // s before impact that a block press counts as a parry
+  const PARRY_WINDOW = 0.22;     // s before impact that a block press counts as a parry (Perfect Guard)
   const PARRY_LOCKOUT = 0.32;    // s before a missed parry press can open a new window
   const IFRAMES = 0.25;
   const ROLL_DUR = 0.55, ROLL_DIST = 5.6, ROLL_COST = 20;
@@ -168,8 +168,8 @@
       const p = this.player;
       if (!p || this.isAnyModalOpen || this.cutsceneActive || p.dead || !this.isInWorld) return;
       if (this.audio) this.audio.init();
-      // still busy: queue it
-      if (!this.canAct() || p.attackTimer > 0.12) {
+      // still busy: queue it (attack recovery is NOT busy: the dash cancels it)
+      if (!this.canAct()) {
         if (!fromBuffer) this._combat.buffer = { kind: 'dodge', at: this.cNow() };
         return;
       }
@@ -195,6 +195,10 @@
         dx = Math.sin(p.yaw); dz = Math.cos(p.yaw);
       }
       if (this.spendStamina) this.spendStamina(cost);
+      // dash-cancel: cut the swing / spin / flinch short and flow straight into the roll
+      const cancelled = (p.attackTimer || 0) > 0.04 || (p.spinTimer || 0) > 0 || (p._flinchT || 0) > 0;
+      p.attackTimer = 0; p.spinTimer = 0; p._flinchT = 0;
+      if (cancelled && this.onDashCancel) this.onDashCancel();
       const origin = p.pos.clone();
       this.endBlock(true);
       if (this._roll) this.resetRollAnim();
