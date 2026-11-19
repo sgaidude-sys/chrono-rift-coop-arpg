@@ -2,11 +2,12 @@
  * Chrono-Rift — epic combat presentation (loaded after the combat modules)
  *
  *  Everyday fights
- *   • Global slow-motion (this.slowMo(scale, seconds)) that eases back to real time.
+ *   • Global slow-motion (this.slowMo(scale, seconds)), used ONLY in boss fights.
  *   • Hit combo counter with grades (Fierce / Savage / Ruthless / Legendary).
  *   • Crits flash anime speed lines; every killing blow lands a slash flash, a
  *     spark burst, a camera kick and a short freeze. Clearing the last enemy of
- *     a pack, or slaying an elite, plays a brief slow-mo finisher.
+ *     a pack, or slaying an elite, adds an impact freeze, a camera punch-in,
+ *     speed lines and a ground shockwave (no slow-mo: it reads as lag).
  *   • Multi-kill callouts (Double / Triple / Quad Slay, Rampage).
  *   • Taking a big hit flashes the screen edge red.
  *
@@ -280,13 +281,21 @@
         const o = this.monsters[i];
         if (o !== mob && !o.dead && o.hp > 0 && o.aggroTimer > 0 && Math.hypot(o.pos.x - p.pos.x, o.pos.z - p.pos.z) < 20) others++;
       }
+      // No slow-mo outside boss fights (it reads as lag). Weight comes from a crisp
+      // impact freeze, a camera punch-in, speed lines and a ground shockwave instead.
+      const ring = (r, col) => { if (this.vfxShock) this.vfxShock(_v2.set(mob.pos.x, 0, mob.pos.z), r, 1.4, col, 0xffffff, { r0: 0.4, dur: 0.32 }); };
       if (mob.isElite) {
-        this.slowMo(0.25, 0.55); this.epicLines(0.7, 520); this.epicFlash(0.35, 300, '#ffe9b8');
+        this.epicFreeze(0.11); this.epicLines(0.7, 420); this.epicFlash(0.28, 240, '#ffe9b8');
+        if (this.fovPunch) this.fovPunch(-3.2);
+        this.screenShake = Math.max(this.screenShake || 0, 0.55);
         this.epicCallout('ELITE SLAIN', '#ffd56b'); this.epicBoom(1.4, 0.5);
+        ring(7, 0xffd56b);
         if (this.spawnLightPillar) this.spawnLightPillar(mob.pos.clone(), 0xffd56b, 1.6, 1.2, 16);
       } else if (others === 0 || k >= 3 || (crit && heavy)) {
-        this.slowMo(0.3, others === 0 ? 0.38 : 0.28); this.epicLines(0.45, 380);
-        if (this.fovPunch) this.fovPunch(-1.5);
+        this.epicFreeze(0.075); this.epicLines(0.45, 300);
+        if (this.fovPunch) this.fovPunch(-2);
+        this.screenShake = Math.max(this.screenShake || 0, 0.32);
+        ring(4.5, 0xffe2a0);
       }
     },
 
