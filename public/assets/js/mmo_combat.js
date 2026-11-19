@@ -411,8 +411,8 @@
       this.hitStopTimer = Math.max(this.hitStopTimer || 0, 0.05);
       this.screenShake = Math.max(this.screenShake || 0, 0.38);
       if (this.audio) {
-        this.audio.playSample && this.audio.playSample('mecha_impact', 1.65, 0.75);
-        this.audio.playSample && this.audio.playSample('chime', 1.35, 0.5);
+        // steel-on-steel (mmo_sfx adds the clash) + a heavy impact underneath; no chime
+        if (this.audio.playSample && !this.audio.playSample('fs_impact_mid', 1.2, 0.42)) this.audio.playSample('mecha_impact', 1.65, 0.75);
       }
       if (this.stamina !== undefined) this.stamina = Math.min(100, this.stamina + 12);
       orig.playEntityAnim.call(this, p, p.actions && p.actions.Sword_Block ? 'Sword_Block' : 'Idle_Shield_Loop', true);
@@ -431,7 +431,7 @@
       this.spawnHitSparks(at, dir.clone(), 0xcfe3ff, 10);
       this.spawnShockwaveRing(new THREE.Vector3(at.x, 0.9, at.z), 1.4, 0xcfe3ff, 0.18);
       this.spawnFloatingText(p.pos, 'BLOCKED', '#cfe3ff', 13);
-      if (this.audio && this.audio.playSample) this.audio.playSample('mecha_impact', 1.25, 0.45);
+      if (this.audio && this.audio.playSample && !this.audio.playSample('fs_impact_mid', 1.45, 0.2)) this.audio.playSample('mecha_impact', 1.25, 0.45);
       this.screenShake = Math.max(this.screenShake || 0, 0.18);
     },
 
@@ -639,7 +639,7 @@
         });
         m._glintFlashT = 0.14;          // restored on the frame clock (see updateWindups)
       }
-      if (this.audio && this.audio.playAt) this.audio.playAt('chime', m.pos, 1.9, 0.42, 45);
+      if (this.audio && this.audio.playAt && !this.audio.playAt('fs_parry_1', m.pos, 1.55, 0.3, 45)) this.audio.playAt('chime', m.pos, 1.9, 0.42, 45);
     },
 
     updateWindups(dt) {

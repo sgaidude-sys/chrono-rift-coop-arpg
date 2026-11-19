@@ -30,7 +30,10 @@
   });
 
   const GP = ChronoRiftCoOpGame.prototype;
-  const orig = { ensureMobModel: GP.ensureMobModel };
+  const orig = { ensureMobModel: GP.ensureMobModel, playEntityAnim: GP.playEntityAnim };
+  // Monsters must never borrow a HERO locomotion clip: its hip height comes from the hero
+  // skeleton and lifts bigger rigs off the ground (Gronk floated ~1.5 m while walking).
+  const LOCO = { Walk_Loop: ['Walk_Loop', 'Zombie_Walk_Fwd_Loop', 'Jog_Fwd_Loop'], Jog_Fwd_Loop: ['Jog_Fwd_Loop', 'Walk_Loop', 'Zombie_Walk_Fwd_Loop'], Sprint_Loop: ['Jog_Fwd_Loop', 'Walk_Loop'] };
 
   function skinnedBox(root) {
     root.updateMatrixWorld(true);
@@ -49,6 +52,18 @@
   }
 
   Object.assign(GP, {
+    playEntityAnim(entity, name, force) {
+      const mk = entity && entity.modelKey;
+      if (mk && LOCO[name] && (entity.typeKey || entity.isBoss) && this.modelAnimClips) {
+        const own = this.modelAnimClips[mk];
+        if (own && !own[name]) {
+          const alt = LOCO[name].find(n => own[n]);
+          name = alt || (own.Idle_Loop ? 'Idle_Loop' : name);
+        }
+      }
+      return orig.playEntityAnim.call(this, entity, name, force);
+    },
+
     ensureMobModel(key, cb) {
       const d = DEFS[key];
       if (!d) return orig.ensureMobModel.call(this, key, cb);

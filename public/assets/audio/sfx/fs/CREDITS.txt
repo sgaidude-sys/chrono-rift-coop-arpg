@@ -1,25 +1,28 @@
 Combat sound effects from Freesound (https://freesound.org), all CC0 1.0 (public domain).
 Trimmed, normalised and converted to mono MP3; otherwise unmodified.
 
-hit_0                "Slash2.ogg" by Wenpire — https://freesound.org/people/Wenpire/sounds/574820/
+hit_0                "Bloody Blade.wav" by Kreastricon62 — https://freesound.org/people/Kreastricon62/sounds/323525/
 hit_1                "Deep Cut / Slash / Gash" by SypherZent — https://freesound.org/people/SypherZent/sounds/420674/
-hit_2                "Slash - Rpg" by colorsCrimsonTears — https://freesound.org/people/colorsCrimsonTears/sounds/580307/
-crit_0               "Slash1.ogg" by Wenpire — https://freesound.org/people/Wenpire/sounds/574821/
-crit_1               "Hit Swing Sword" by CogFireStudios — https://freesound.org/people/CogFireStudios/sounds/547038/
-crit_2               "Punch_02.wav" by thefsoundman — https://freesound.org/people/thefsoundman/sounds/118513/
-swing_0              "Swosh Sword Swing" by qubodup — https://freesound.org/people/qubodup/sounds/59992/
-swing_1              "Fast Sword Swing Sound" by qubodup — https://freesound.org/people/qubodup/sounds/60004/
-swing_2              "Sword or Bullet Swish/Swosh 12.flac" by qubodup — https://freesound.org/people/qubodup/sounds/59999/
-swing_heavy          "FX - Swoosh - Super Heavy (for swords, sticks, punches, etc)" by bolkmar — https://freesound.org/people/bolkmar/sounds/475131/
-body_fall_0          "Thud / Falling on wooden floor / Snapping, breaking neck" by Breviceps — https://freesound.org/people/Breviceps/sounds/447922/
-body_fall_1          "Body fall_04.wav" by deleted_user_2104797 — https://freesound.org/people/deleted_user_2104797/sounds/346692/
-parry_0              "Sword Clash" by loudernoises — https://freesound.org/people/loudernoises/sounds/334169/
-parry_1              "Sword.wav" by hello_flowers — https://freesound.org/people/hello_flowers/sounds/37596/
+hit_2                "Large Swede Stab with Whoosh.wav" by minituffy — https://freesound.org/people/minituffy/sounds/385966/
+crit_0               "Sword hits the body.wav" by vdovitsky — https://freesound.org/people/vdovitsky/sounds/411122/
+crit_1               "Bloody Blade.wav" by Kreastricon62 — https://freesound.org/people/Kreastricon62/sounds/323525/ (pitched down)
+crit_2               "Large Swede Stab with Whoosh.wav" by minituffy — https://freesound.org/people/minituffy/sounds/385966/ (pitched down)
+impact_low           "Very low frequency impact.wav" by AudioPapkin — https://freesound.org/people/AudioPapkin/sounds/541029/
+impact_big           "Sound Design Elements Impact SFX PS 017" by AudioPapkin — https://freesound.org/people/AudioPapkin/sounds/755054/
+impact_mid           "Sound Design Elements Impact SFX PS 020" by AudioPapkin — https://freesound.org/people/AudioPapkin/sounds/755057/
+body_fall_0          "Body fall_02.wav" by deleted_user_2104797 — https://freesound.org/people/deleted_user_2104797/sounds/346694/
+body_fall_1          "BODY FALL - V HVY - DIRT" by leonelmail — https://freesound.org/people/leonelmail/sounds/504626/
+parry_0              "Sword_Clash (7).wav" by JohnBuhr — https://freesound.org/people/JohnBuhr/sounds/326868/
+parry_1              "Sword Clash" by loudernoises — https://freesound.org/people/loudernoises/sounds/334169/
+swing_0              "Swing Woosh" by Jofae — https://freesound.org/people/Jofae/sounds/389590/
+swing_1              "fast simple chop 5.aif" by dave.des — https://freesound.org/people/dave.des/sounds/127197/
+swing_2              "fast simple chop 1.aif" by dave.des — https://freesound.org/people/dave.des/sounds/127196/
+swing_heavy          "swosh-08.flac - "stick cutting air"" by qubodup — https://freesound.org/people/qubodup/sounds/59995/ (pitched down)
 bone_snap            "BoneSnaping.mp3" by samueleunimancer — https://freesound.org/people/samueleunimancer/sounds/578874/
-cr_critter_hurt_0    "Cartoon - Bat / Mouse Squeak" by Breviceps — https://freesound.org/people/Breviceps/sounds/445958/
+cr_critter_hurt_0    "rat-squeak.wav" by toefur — https://freesound.org/people/toefur/sounds/288941/
 cr_critter_death_0   "Rat.ogg" by egomassive — https://freesound.org/people/egomassive/sounds/536753/
-cr_slime_hurt_0      "Slime Squish" by qubodup — https://freesound.org/people/qubodup/sounds/442772/
-cr_slime_death_0     "Cartoon Splat" by Breviceps — https://freesound.org/people/Breviceps/sounds/445117/
+cr_slime_hurt_0      "Slime 28.wav" by Archos — https://freesound.org/people/Archos/sounds/433839/
+cr_slime_death_0     "splat.ogg" by gprosser — https://freesound.org/people/gprosser/sounds/360942/
 cr_beast_hurt_0      "growl6.wav" by lendrick — https://freesound.org/people/lendrick/sounds/77637/
 cr_beast_death_0     "monster_sound_medium_death.wav" by Leadstarson — https://freesound.org/people/Leadstarson/sounds/559621/
 cr_insect_hurt_0     "Beetle Squark5.wav" by warrenXG — https://freesound.org/people/warrenXG/sounds/502211/

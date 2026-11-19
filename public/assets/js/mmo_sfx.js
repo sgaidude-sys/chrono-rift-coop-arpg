@@ -21,7 +21,7 @@
   const GP = ChronoRiftCoOpGame.prototype;
   const FAMS = ['critter', 'slime', 'beast', 'insect', 'undead', 'brute', 'demon', 'alien', 'drake'];
   const SFX = ['hit_0', 'hit_1', 'hit_2', 'crit_0', 'crit_1', 'crit_2', 'swing_0', 'swing_1', 'swing_2', 'swing_heavy',
-    'body_fall_0', 'body_fall_1', 'parry_0', 'parry_1', 'bone_snap'];
+    'body_fall_0', 'body_fall_1', 'parry_0', 'parry_1', 'bone_snap', 'impact_low', 'impact_mid', 'impact_big'];
   const VOICES = [];
   FAMS.forEach((f) => { VOICES.push(`cr_${f}_hurt_0`, `cr_${f}_death_0`); });
   const rnd = (a, b) => a + Math.random() * (b - a);
@@ -45,8 +45,9 @@
   AP.preloadSamples = function () {
     orig.preloadSamples.call(this);
     const b = this.base + 'sfx/fs/';
-    SFX.forEach(k => this.loadSfxOverride('fs_' + k, b + k + '.mp3'));
-    VOICES.forEach(k => this.loadSfxOverride('vo_' + k, b + k + '.mp3'));
+    const v = '?v=2';                // bump when a file is replaced under the same name
+    SFX.forEach(k => this.loadSfxOverride('fs_' + k, b + k + '.mp3' + v));
+    VOICES.forEach(k => this.loadSfxOverride('vo_' + k, b + k + '.mp3' + v));
   };
 
   AP.fsKey = function (base, n) {
@@ -64,7 +65,8 @@
     const k = big ? this.fsKey('crit', 3) : this.fsKey('hit', 3);
     if (!k) return orig.playHit.call(this, isCrit, isHeavy);
     this.playSample(k, rnd(0.93, 1.08), big ? (isCrit ? 0.55 : 0.48) : 0.38);
-    if (big) this._thump('sine', isCrit ? 150 : 110, 40, 0.09, isCrit ? 0.2 : 0.14);
+    // weight under big hits: a recorded low impact instead of a synth sine thump
+    if (big) { if (!(this.fsKey('impact_low') && this.playSample('fs_impact_low', isCrit ? rnd(1.05, 1.15) : rnd(1.15, 1.25), isCrit ? 0.32 : 0.22))) this._thump('sine', isCrit ? 150 : 110, 40, 0.09, isCrit ? 0.2 : 0.14); }
   };
 
   AP.playSwing = function (isHeavy = false) {

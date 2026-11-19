@@ -200,6 +200,12 @@
     },
     epicBoom(low = 1, vol = 0.8) {
       const A = this.audio; if (!A || !A.ctx || A.muted) return;
+      // recorded cinematic impacts (mmo_sfx / Freesound) instead of a synth sweep when available
+      if (A.buffers && A.buffers.fs_impact_low) {
+        A.playSample('fs_impact_low', Math.max(0.7, Math.min(1.3, low)), Math.min(0.9, vol * 0.75));
+        if (vol >= 0.7 && A.buffers.fs_impact_big) A.playSample('fs_impact_big', Math.max(0.75, Math.min(1.2, low)), Math.min(0.8, vol * 0.6));
+        return;
+      }
       try {
         const ctx = A.ctx, t0 = ctx.currentTime, out = A.sfxGain || A.masterGain || ctx.destination;
         const o = ctx.createOscillator(), g = ctx.createGain();
@@ -215,6 +221,11 @@
       } catch (e) { /* audio is optional */ }
     },
     epicSample(key, rate, vol) { if (this.audio && this.audio.playSample) this.audio.playSample(key, rate, vol); },
+    // a short, heavy accent for streaks / grades (recorded impact; falls back to the low boom)
+    epicImpact(rate, vol) {
+      const A = this.audio; if (!A || !A.playSample) return;
+      if (!(A.buffers && A.buffers.fs_impact_mid && A.playSample('fs_impact_mid', rate, vol))) this.epicBoom(1.4, vol);
+    },
     epicFreeze(sec) { this.hitStopTimer = Math.max(this.hitStopTimer || 0, sec); },
 
     // ---- everyday combat ----------------------------------------------------
@@ -246,7 +257,7 @@
       const gr = GRADES.find(g => E.hits >= g[0]);
       if (gr && gr[1] !== E.grade) {
         E.grade = gr[1]; E.g.textContent = gr[1]; E.g.style.color = gr[2];
-        if (E.hits >= 25) { this.epicCallout(gr[1], gr[2]); this.epicSample('ult_swell', 1.3, 0.25); }
+        if (E.hits >= 25) { this.epicCallout(gr[1], gr[2]); this.epicImpact(1.1, 0.22); }
       }
       if (crit) {
         this.epicLines(heavy ? 0.55 : 0.32, heavy ? 300 : 200);
@@ -272,7 +283,7 @@
       const k = E.kills.length;
       if (k >= 2) {
         this.epicCallout(k < STREAK.length ? STREAK[k] : `RAMPAGE ×${k}`, k >= 4 ? '#ff9a3c' : '#F5F2EB');
-        this.epicSample('chime', 0.8 + k * 0.08, 0.3);
+        this.epicImpact(1.25 - Math.min(k, 6) * 0.05, 0.2 + Math.min(k, 6) * 0.03);
       }
       if (mob.isBoss) return;                                   // bosses get their own finale
       // finishers: elites, multi-kills, or the last foe standing in this fight
@@ -325,7 +336,6 @@
       this.epicFreeze(0.08);
       this.epicFlash(world ? 0.5 : 0.32, 600, world ? '#ffb3bd' : '#fff2cf');
       this.epicBoom(world ? 0.75 : 1, world ? 1.0 : 0.8);
-      this.epicSample('ult_swell', world ? 0.75 : 0.9, 0.5);
       this.screenShake = Math.max(this.screenShake || 0, world ? 0.85 : 0.6);
       if (this.fovPunch) this.fovPunch(world ? 7 : 5);
       const C = world ? 0xff2a4a : 0xffc75a, base = m.homePos || m.pos;
@@ -394,8 +404,7 @@
       this.epicFlash(0.9, 900, '#fff');
       this.epicLines(0.8, 900);
       this.epicBoom(0.7, 1.0);
-      this.epicSample('ult_swell', 1.15, 0.55);
-      setTimeout(() => this.epicSample('chime', 0.7, 0.5), 650);
+      setTimeout(() => this.epicImpact(0.8, 0.45), 650);
       this.screenShake = Math.max(this.screenShake || 0, 0.9);
       if (this.fovPunch) this.fovPunch(-4);
       const C = world ? 0xff6b8a : 0xffd56b;

@@ -27,10 +27,10 @@
   const WL = W.waterLevel !== undefined ? W.waterLevel : -2.0;
   const SWIM_IN = 1.32, SWIM_OUT = 1.18;      // water depth hysteresis (m)
   const MOUNTS = {
-    land: { id: 'land', key: 'B', name: 'Ashen Steed', model: 'mount/horse', file: 'models/mounts/horse.glb', clips: { idle: 'Idle', move: 'Gallop' }, unlock: 5, speed: 1.9, height: 2.2, seat: 0.6, seatZ: -0.25, tint: 0xffffff },
+    land: { id: 'land', key: 'B', name: 'Ashen Steed', model: 'mount/horse', file: 'models/mounts/horse.glb', clips: { idle: 'Idle', move: 'Gallop' }, unlock: 5, speed: 1.9, height: 2.2, seat: 0.65, seatZ: -0.25, tint: 0xffffff },
     // model units: ~16.5 long, head toward +z; saddle between the wing roots at (0, 2.7, -2)
     fly: { id: 'fly', key: 'N', name: 'Ember Drake', model: 'mount/ember_drake', file: 'models/mounts/ember_drake.glb', clips: { idle: 'Fly 2', move: 'Fly' },
-      unlock: 15, speed: 2.7, scale: 0.33, offset: [0, -2.7 * 0.33, 2 * 0.33], seat: 0.0, seatZ: -0.3, alt: 11, idleRate: 0.7, tint: 0xffffff }
+      unlock: 15, speed: 2.7, scale: 0.33, offset: [0, -2.7 * 0.33, 2 * 0.33], seat: -0.41, seatZ: -0.9, alt: 11, idleRate: 0.7, tint: 0xffffff }
   };
   const ICON = {
     land: '<svg viewBox="0 0 24 24"><path d="M4 15c1-4 4-6 8-6h3l3-3 1 4-2 2v3l-2 3M8 15v4M14 17v2M6 9l2-3"/></svg>',
@@ -361,11 +361,39 @@
           }
           mt.mixer.update(dt * (moving ? 1.25 : (d.idleRate || 1)));
         }
-        // hero on the saddle
-        ent.meshRoot.position.y = mt.alt + d.seat * mt.k;
+        // hero on the saddle, riding the mount's own body motion (gallop bob / wingbeat heave)
+        const bob = this.mountBob(ent, mt);
+        ent.meshRoot.position.y = mt.alt + (d.seat + bob) * mt.k;
         if (node) { node.rotation.x = d.alt && moving ? 0.1 : 0; node.position.z = d.seatZ; }
         this.ridePose(ent);
       }
+    },
+
+    // Vertical motion of the mount's spine under the saddle, relative to its running average,
+    // so the rider rises and falls with the gallop / wingbeats instead of floating at a fixed height.
+    mountBob(ent, mt) {
+      if (!mt.ready || !mt.model) return 0;
+      const root = mt.root;
+      if (mt.saddleBone === undefined) {
+        mt.saddleBone = null;
+        root.updateMatrixWorld(true);
+        const fwdX = Math.sin(root.rotation.y), fwdZ = Math.cos(root.rotation.y);
+        const sx = root.position.x + fwdX * (mt.d.seatZ || 0), sz = root.position.z + fwdZ * (mt.d.seatZ || 0);
+        let best = 1e9; const w = new THREE.Vector3();
+        mt.model.traverse((o) => {
+          if (!o.isBone) return;
+          o.getWorldPosition(w);
+          const dh = Math.hypot(w.x - sx, w.z - sz) - (w.y - root.position.y) * 0.05;   // nearest, prefer the higher (spine)
+          if (dh < best) { best = dh; mt.saddleBone = o; }
+        });
+        mt.bobAvg = null;
+      }
+      if (!mt.saddleBone) return 0;
+      const w = this._bobV || (this._bobV = new THREE.Vector3());
+      mt.saddleBone.getWorldPosition(w);
+      const h = w.y - root.position.y;
+      mt.bobAvg = mt.bobAvg === null ? h : mt.bobAvg + (h - mt.bobAvg) * 0.02;
+      return Math.max(-0.4, Math.min(0.4, h - mt.bobAvg));
     },
 
     // Seated riding pose, set ABSOLUTELY from the rig's rest pose (solved against the hero
@@ -377,13 +405,15 @@
       const RIDE = this._ridePoseQ || (this._ridePoseQ = (() => {
         const P = {
           thigh_l: [-1.6, -0.4, -0.6], calf_l: [1.6, 0.2, -0.6], thigh_r: [-1.6, 0.4, 0.6], calf_r: [1.6, -0.2, 0.6],
-          upperarm_l: [1.2, 1.2, 0.2], lowerarm_l: [1.0, -0.6, 0.2], upperarm_r: [1.2, -1.2, -0.2], lowerarm_r: [1.0, 0.6, -0.2]
+          // leaning slightly forward, hands low and forward on the reins / neck
+          spine_01: [0.25, 0, 0],
+          upperarm_l: [1.2, -0.6, -0.4], lowerarm_l: [0.6, 0.8, -0.4], upperarm_r: [1.2, 0.6, 0.4], lowerarm_r: [0.6, -0.8, 0.4]
         };
         const out = {}, e = new THREE.Euler();
         Object.keys(P).forEach((k) => { e.set(P[k][0], P[k][1], P[k][2]); out[k] = new THREE.Quaternion().setFromEuler(e); });
         return out;
       })());
-      ['pelvis', 'spine_01', 'spine_02', 'spine_03'].forEach((k) => { if (B[k] && rest[k]) B[k].quaternion.copy(rest[k].q); });
+      ['pelvis', 'spine_02', 'spine_03'].forEach((k) => { if (B[k] && rest[k]) B[k].quaternion.copy(rest[k].q); });
       if (rest.pelvis) B.pelvis.position.copy(rest.pelvis.p);
       Object.keys(RIDE).forEach((k) => { if (B[k] && rest[k]) B[k].quaternion.copy(rest[k].q).multiply(RIDE[k]); });
     },
