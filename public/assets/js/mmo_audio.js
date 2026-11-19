@@ -91,7 +91,10 @@
   const origPlayVoice = AP.playVoice;
   // bosses and the world announcer no longer speak (their synthesized lines sounded robotic);
   // boss fights keep their roars / slams / telegraph sound effects and the chat call-outs
-  const SILENT = /^(boss_|wb_|ann_boss_slain$|gronk_|xeno_)/;
+  // the hero's own call-outs (kills, skills, low HP, zones, level-ups…) and the narrator
+  // ("ann_*") are muted too: they fired randomly and read as a commentator. NPCs,
+  // quest-givers and cutscenes still speak.
+  const SILENT = /^(boss_|wb_|ann_|hero_|gronk_|xeno_)/;
   AP.playVoice = function (id, priority, vol) {
     if (SILENT.test(id)) return false;
     return origPlayVoice.call(this, this.pickTake(id), priority, vol);
