@@ -466,6 +466,7 @@
   ZONES.forEach((z) => { z.center = [Math.round(z.center[0] * WORLD.scale), Math.round(z.center[1] * WORLD.scale)]; });
 
   const MMO_EXPORT = {
+    BAG_SIZE: 80,
     WORLD, MOB_TYPES, ABILITIES, ZONES, RARITIES, EQUIP_SLOTS, WEAPON_BASES, ARMOR_BASES,
     CLASS_ARMOR, ARMOR_TYPE_MULT, AFFIXES, PREFIXES, SUFFIXES, QUEST_GIVERS, COLLECT_ITEMS, EXPLORE_SITES,
     // ---- shared stat curves ----

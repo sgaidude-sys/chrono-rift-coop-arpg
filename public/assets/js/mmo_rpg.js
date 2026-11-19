@@ -18,6 +18,18 @@
   M.RARITIES.forEach((r, i) => { RAR[r.id] = Object.assign({ idx: i }, r); });
   const SLOT = {};
   M.EQUIP_SLOTS.forEach(s => { SLOT[s.id] = s; });
+  const SLOT_ORDER = {};
+  M.EQUIP_SLOTS.forEach((s, i) => { SLOT_ORDER[s.id] = i; });
+  // backpack category tabs
+  const INV_CATS = [
+    { id: 'all', name: 'All', icon: '🎒', test: () => true },
+    { id: 'weapons', name: 'Weapons', icon: '⚔️', test: it => it.slot === 'weapon' || it.slot === 'offhand' },
+    { id: 'armor', name: 'Armor', icon: '🥋', test: it => ['head', 'chest', 'hands', 'legs', 'feet'].includes(it.slot) },
+    { id: 'jewelry', name: 'Jewelry', icon: '💍', test: it => it.slot === 'neck' || it.slot === 'ring' },
+    { id: 'upgrades', name: 'Upgrades', icon: '▲', test: (it, g) => g.isUpgrade(it) },
+    { id: 'junk', name: 'Junk', icon: '🪙', test: (it, g) => (it.rarity === 'common' || (it.clsList && !it.clsList.includes(g.player.classId) && RAR[it.rarity].idx < 2)) && !g.isUpgrade(it) }   // what Sell junk sells
+  ];
+  if (!M.BAG_SIZE) M.BAG_SIZE = 80;
   const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const uid = () => 'it' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -461,7 +473,7 @@
       const st = this.mmoState;
       const it = st.equip[slot];
       if (!it || slot === 'weapon') return;
-      if (st.bag.length >= 40) { this.showLootToast('🎒 Bag is full!'); return; }
+      if (st.bag.length >= M.BAG_SIZE) { this.showLootToast('🎒 Bag is full!'); return; }
       delete st.equip[slot];
       st.bag.push(it);
       this.applyEquipmentVisuals();
@@ -508,7 +520,7 @@
 
     pickupItem(it) {
       const st = this.mmoState;
-      if (st.bag.length >= 40) {
+      if (st.bag.length >= M.BAG_SIZE) {
         const now = performance.now();
         if (now - (this._bagFullToast || 0) > 4000) {
           this._bagFullToast = now;
@@ -908,10 +920,29 @@
         </div>`;
       }).join('')}</div>
       <div style="font-size:10.5px;color:var(--text-muted);margin-top:6px;">Hover to inspect • Double-click to unequip • Click a bag item to equip</div>`;
-      const bag = st.bag.slice().sort((a, b) => (RAR[b.rarity].idx - RAR[a.rarity].idx) || (b.ilvl - a.ilvl));
-      if (countEl) countEl.textContent = `${st.bag.length}/40`;
-      gridEl.innerHTML = `<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;grid-column:1/-1;">
-          <button class="mini-btn" onclick="window.game.sellJunk()">🪙 Sell junk (commons & unusable)</button>
+      const cat = INV_CATS.find(c => c.id === this.invCategory()) || INV_CATS[0];
+      const sortBy = this.invSort();
+      const order = new Map(st.bag.map((it, i) => [it, i]));
+      const sorters = {
+        rarity: (a, b) => (RAR[b.rarity].idx - RAR[a.rarity].idx) || (b.ilvl - a.ilvl),
+        ilvl: (a, b) => (b.ilvl - a.ilvl) || (RAR[b.rarity].idx - RAR[a.rarity].idx),
+        slot: (a, b) => (SLOT_ORDER[a.slot] - SLOT_ORDER[b.slot]) || (RAR[b.rarity].idx - RAR[a.rarity].idx) || (b.ilvl - a.ilvl),
+        newest: (a, b) => order.get(b) - order.get(a)
+      };
+      const bag = st.bag.filter(it => cat.test(it, this)).sort(sorters[sortBy] || sorters.rarity);
+      if (countEl) countEl.textContent = `${st.bag.length}/${M.BAG_SIZE}`;
+      const tabs = INV_CATS.map((c) => {
+        const n = st.bag.filter(it => c.test(it, this)).length;
+        return `<button class="inv-cat${c.id === cat.id ? ' on' : ''}" onclick="window.game.setInvCategory('${c.id}')">${c.icon} ${c.name} <b>${n}</b></button>`;
+      }).join('');
+      const full = st.bag.length / M.BAG_SIZE;
+      gridEl.innerHTML = `<div class="inv-cat-bar">${tabs}</div>
+        <div class="inv-tools">
+          <div class="inv-fill" title="${st.bag.length} of ${M.BAG_SIZE} slots used"><i style="width:${Math.round(full * 100)}%;background:${full >= 0.9 ? '#ff5c5c' : (full >= 0.7 ? '#ffb347' : 'var(--emerald)')}"></i></div>
+          <label class="inv-sort">Sort <select onchange="window.game.setInvSort(this.value)">
+            ${[['rarity', 'Rarity'], ['ilvl', 'Item level'], ['slot', 'Slot'], ['newest', 'Newest']].map(([v, l]) => `<option value="${v}"${v === sortBy ? ' selected' : ''}>${l}</option>`).join('')}
+          </select></label>
+          <button class="mini-btn" onclick="window.game.sellJunk()">🪙 Sell junk</button>
           <button class="mini-btn" onclick="window.game.openModal('forge-modal')">⚒️ Relic Forge</button>
         </div>` + (bag.length ? bag.map((it) => {
         const R = RAR[it.rarity];
@@ -929,7 +960,27 @@
             <button class="mini-btn" style="padding:3px 6px;font-size:10.5px;" onclick="window.game.sellItem('${it.uid}')">${it.value}🪙</button>
           </div>
         </div>`;
-      }).join('') : `<div style="color:var(--text-muted);font-size:12px;grid-column:1/-1;">Your bag is empty. Monsters, elites, bosses and quests drop gear.</div>`);
+      }).join('') : `<div style="color:var(--text-muted);font-size:12px;grid-column:1/-1;">${st.bag.length ? `No ${cat.name.toLowerCase()} in your bag.` : 'Your bag is empty. Monsters, elites, bosses and quests drop gear.'}</div>`);
+    },
+
+    invCategory() {
+      if (!this._invCat) { try { this._invCat = localStorage.getItem('cr_inv_cat') || 'all'; } catch (e) { this._invCat = 'all'; } }
+      return this._invCat;
+    },
+    setInvCategory(id) {
+      this._invCat = id;
+      try { localStorage.setItem('cr_inv_cat', id); } catch (e) { /* storage blocked */ }
+      this.hideItemTip();
+      this.renderInventoryModal();
+    },
+    invSort() {
+      if (!this._invSort) { try { this._invSort = localStorage.getItem('cr_inv_sort') || 'rarity'; } catch (e) { this._invSort = 'rarity'; } }
+      return this._invSort;
+    },
+    setInvSort(v) {
+      this._invSort = v;
+      try { localStorage.setItem('cr_inv_sort', v); } catch (e) { /* storage blocked */ }
+      this.renderInventoryModal();
     },
 
     showItemTip(uidStr, ev) {
@@ -1008,7 +1059,7 @@
       const L = this.player.level;
       const g = (30 + L * 12) * (rarity === 'epic' ? 3 : 1), s = (3 + Math.floor(L / 5)) * (rarity === 'epic' ? 3 : 1);
       if (this.player.gold < g || this.player.shards < s) { this.showLootToast(`Need ${g} 🪙 and ${s} 💠`); this.audio.playVoice('kaelen_broke', 2); return; }
-      if (this.mmoState.bag.length >= 40) { this.showLootToast('🎒 Bag is full!'); return; }
+      if (this.mmoState.bag.length >= M.BAG_SIZE) { this.showLootToast('🎒 Bag is full!'); return; }
       this.player.gold -= g; this.player.shards -= s;
       const slot = kind === 'weapon' ? (Math.random() < 0.8 ? 'weapon' : 'offhand') : (kind === 'jewel' ? pick(['neck', 'ring']) : pick(['head', 'chest', 'hands', 'legs', 'feet']));
       const it = this.generateItem({ ilvl: L + 1, rarity, slot, cls: this.player.classId });
@@ -1130,6 +1181,17 @@
         #inv-backpack-grid { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)) !important; }
         .mmo-bag-item { border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; padding: 6px 7px; background: rgba(0,0,0,0.32); display: flex; flex-direction: column; }
         .mmo-bag-item.unusable { opacity: 0.55; }
+        .inv-cat-bar { grid-column: 1/-1; display: flex; gap: 5px; flex-wrap: wrap; }
+        .inv-cat { font: 600 11.5px Inter, sans-serif; color: #c9d4ea; background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.14); border-radius: 999px; padding: 5px 10px; cursor: pointer; }
+        .inv-cat b { margin-left: 3px; color: var(--text-muted); font-weight: 700; }
+        .inv-cat:hover { border-color: rgba(255,213,107,0.55); }
+        .inv-cat.on { background: rgba(255,213,107,0.16); border-color: var(--gold-bright); color: var(--gold-bright); }
+        .inv-cat.on b { color: var(--gold-bright); }
+        .inv-tools { grid-column: 1/-1; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 2px 0 6px; }
+        .inv-fill { flex: 1 1 90px; min-width: 70px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.1); overflow: hidden; }
+        .inv-fill i { display: block; height: 100%; }
+        .inv-sort { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
+        .inv-sort select { background: rgba(0,0,0,0.45); color: #e8eefc; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; font-size: 11px; padding: 3px 4px; }
         .mmo-bag-item button:disabled { opacity: 0.4; cursor: not-allowed; }
         .mmo-up { color: #2ee68a; font-weight: 900; font-size: 14px; text-shadow: 0 0 6px rgba(46,230,138,0.7); }
         #mmo-item-tip { position: fixed; z-index: 90; display: none; max-width: 290px; background: rgba(8,10,20,0.97); border: 1px solid rgba(243,200,107,0.6); border-radius: 10px; padding: 10px 12px; font-size: 12px; color: var(--text-main); line-height: 1.5; pointer-events: none; box-shadow: 0 10px 30px rgba(0,0,0,0.7); }

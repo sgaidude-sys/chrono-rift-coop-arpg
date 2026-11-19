@@ -260,7 +260,7 @@
         if (o.item && RAR[o.rid] && RAR[o.rid].idx >= 3 && this.audio.playLootChime) this.audio.playLootChime();
       }
       if (this.vfxSparks) this.vfxSparks(new THREE.Vector3(p.pos.x, 1.1, p.pos.z), o.item ? 14 : 5, { cols: [o.color.getHex(), 0xffffff], speed: [2, 5], life: [0.2, 0.4], grav: -2, width: 0.03 });
-      if (o.item && this.mmoState && this.mmoState.bag && this.mmoState.bag.length >= 40) {
+      if (o.item && this.mmoState && this.mmoState.bag && this.mmoState.bag.length >= (window.MMO.BAG_SIZE || 80)) {
         if (this.pickupItem) this.pickupItem(o.item);       // shows the 'bag full' notice, returns false
         return false;
       }
