@@ -1,0 +1,36 @@
+Combat sound effects from Freesound (https://freesound.org), all CC0 1.0 (public domain).
+Trimmed, normalised and converted to mono MP3; otherwise unmodified.
+
+hit_0                "Slash2.ogg" by Wenpire — https://freesound.org/people/Wenpire/sounds/574820/
+hit_1                "Deep Cut / Slash / Gash" by SypherZent — https://freesound.org/people/SypherZent/sounds/420674/
+hit_2                "Slash - Rpg" by colorsCrimsonTears — https://freesound.org/people/colorsCrimsonTears/sounds/580307/
+crit_0               "Slash1.ogg" by Wenpire — https://freesound.org/people/Wenpire/sounds/574821/
+crit_1               "Hit Swing Sword" by CogFireStudios — https://freesound.org/people/CogFireStudios/sounds/547038/
+crit_2               "Punch_02.wav" by thefsoundman — https://freesound.org/people/thefsoundman/sounds/118513/
+swing_0              "Swosh Sword Swing" by qubodup — https://freesound.org/people/qubodup/sounds/59992/
+swing_1              "Fast Sword Swing Sound" by qubodup — https://freesound.org/people/qubodup/sounds/60004/
+swing_2              "Sword or Bullet Swish/Swosh 12.flac" by qubodup — https://freesound.org/people/qubodup/sounds/59999/
+swing_heavy          "FX - Swoosh - Super Heavy (for swords, sticks, punches, etc)" by bolkmar — https://freesound.org/people/bolkmar/sounds/475131/
+body_fall_0          "Thud / Falling on wooden floor / Snapping, breaking neck" by Breviceps — https://freesound.org/people/Breviceps/sounds/447922/
+body_fall_1          "Body fall_04.wav" by deleted_user_2104797 — https://freesound.org/people/deleted_user_2104797/sounds/346692/
+parry_0              "Sword Clash" by loudernoises — https://freesound.org/people/loudernoises/sounds/334169/
+parry_1              "Sword.wav" by hello_flowers — https://freesound.org/people/hello_flowers/sounds/37596/
+bone_snap            "BoneSnaping.mp3" by samueleunimancer — https://freesound.org/people/samueleunimancer/sounds/578874/
+cr_critter_hurt_0    "Cartoon - Bat / Mouse Squeak" by Breviceps — https://freesound.org/people/Breviceps/sounds/445958/
+cr_critter_death_0   "Rat.ogg" by egomassive — https://freesound.org/people/egomassive/sounds/536753/
+cr_slime_hurt_0      "Slime Squish" by qubodup — https://freesound.org/people/qubodup/sounds/442772/
+cr_slime_death_0     "Cartoon Splat" by Breviceps — https://freesound.org/people/Breviceps/sounds/445117/
+cr_beast_hurt_0      "growl6.wav" by lendrick — https://freesound.org/people/lendrick/sounds/77637/
+cr_beast_death_0     "monster_sound_medium_death.wav" by Leadstarson — https://freesound.org/people/Leadstarson/sounds/559621/
+cr_insect_hurt_0     "Beetle Squark5.wav" by warrenXG — https://freesound.org/people/warrenXG/sounds/502211/
+cr_insect_death_0    "Beetle Squark4.wav" by warrenXG — https://freesound.org/people/warrenXG/sounds/502207/
+cr_undead_hurt_0     "Zombie Hit 1.wav" by tonsil5 — https://freesound.org/people/tonsil5/sounds/555420/
+cr_undead_death_0    "Rotten Zombie Death" by scorpion67890 — https://freesound.org/people/scorpion67890/sounds/151710/
+cr_brute_hurt_0      "Angry Goblin 1_2" by Joao_Janz — https://freesound.org/people/Joao_Janz/sounds/482340/
+cr_brute_death_0     "monster_sound_big_death.wav" by Leadstarson — https://freesound.org/people/Leadstarson/sounds/568000/
+cr_demon_hurt_0      "Zombie Pain 6.wav" by tonsil5 — https://freesound.org/people/tonsil5/sounds/555425/
+cr_demon_death_0     "demon dragon.wav" by jvmyka@gmail.com — https://freesound.org/people/jvmyka@gmail.com/sounds/580766/
+cr_alien_hurt_0      "Slime Attack 1" by qubodup — https://freesound.org/people/qubodup/sounds/751338/
+cr_alien_death_0     "creature" by Leszek_Szary — https://freesound.org/people/Leszek_Szary/sounds/146732/
+cr_drake_hurt_0      "Dragon Hurt" by qubodup — https://freesound.org/people/qubodup/sounds/442966/
+cr_drake_death_0     "DRAGON_ROAR.wav" by JoelAudio — https://freesound.org/people/JoelAudio/sounds/85568/
