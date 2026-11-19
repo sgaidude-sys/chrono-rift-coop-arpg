@@ -494,8 +494,6 @@
           const [cx, cz] = z.outpost;
           // Outpost: watchtower, palisade, banners, torches, stall, campfire
           this.placeMMOProp('bg_medieval_tower.glb', cx - 14, cz - 10, 1.2, 0.3, 2.6);
-          this.placeMMOProp('bg_fence_wood.glb', cx - 9, cz + 12, 1.2, 0, 0);
-          this.placeMMOProp('bg_fence_wood.glb', cx + 9, cz + 12, 1.2, 0, 0);
           this.placeMMOProp('bg_market_stall.glb', cx + 12, cz - 6, 1.15, -0.7, 2.0);
           this.placeMMOProp('prop_banner.glb', cx - 4, cz - 4, 1.2, 0, 0);
           this.placeMMOProp('prop_banner.glb', cx + 4, cz - 4, 1.2, 0, 0);

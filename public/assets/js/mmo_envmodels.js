@@ -189,6 +189,77 @@
       this._envm.loaded++;
       this._propChunkKey = '';           // rebuild the culling blocks with the new types
       if (this.updatePropStreaming) this.updatePropStreaming(true);
+      const want = Object.keys(SET).filter(k => !(SET[k].desktopOnly && isTouch)).length;
+      if (this._envm.loaded >= want) { try { this.rebuildTownDecor(); } catch (e) { console.warn('[EnvModels] town decor', e); } }
+    },
+
+    // The decorative ring around Ashenvale Bastion used the old procedural trees on a fixed
+    // circle that ran into the houses. Re-plant it with the new models, seeded (same for every
+    // player), clear of every building, road and path, with collision for trees and rocks.
+    rebuildTownDecor() {
+      if (this._townDecorDone || !this.propVariants) return;
+      this._townDecorDone = true;
+      ['townPines', 'townAutumn', 'townRockInst'].forEach((k) => { const m = this[k]; if (m) { this.scene.remove(m); this[k] = null; } });
+      let seed = 0x5eed1234;
+      const rnd = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+      const buildings = (this.worldObstacles || []).filter(o => Math.hypot(o.x, o.z) < 60 && o.r >= 0.7);
+      const wg = this.worldGen;
+      const clearOf = (x, z, pad) => {
+        if (Math.abs(x) < 8 + pad) return false;                       // north & south paths
+        if (Math.abs(z - 9.5) < 6.5 + pad) return false;               // east-west road
+        if (wg && wg.roadDist && wg.roadDist(x, z) < 8 + pad) return false;
+        for (let i = 0; i < buildings.length; i++) { const o = buildings[i]; if (Math.hypot(x - o.x, z - o.z) < o.r + 4.5 + pad) return false; }
+        return true;
+      };
+      const placed = [];
+      const spaced = (x, z, d) => placed.every(q => Math.hypot(q.x - x, q.z - z) >= d);
+      const V = this.propVariants;
+      const oaks = V.oak || [], pines = V.pine || [], rocks = V.rock || [], bushes = V.bush || [];
+      const groups = {};
+      const put = (key, x, z, s, r) => { if (!key || !this.propInst[key]) return; (groups[key] = groups[key] || []).push({ x, z, s, r }); };
+      // trees: a loose grove ring 28-48 m out
+      for (let k = 0; k < 220 && placed.filter(q => q.tree).length < 30; k++) {
+        const a = rnd() * Math.PI * 2, rr = 28 + rnd() * 20;
+        const x = Math.cos(a) * rr, z = 9 + Math.sin(a) * rr;
+        if (!clearOf(x, z, 1.5) || !spaced(x, z, 6.5)) continue;
+        const useOak = oaks.length && rnd() < 0.55;
+        const list = useOak ? oaks : pines; if (!list.length) continue;
+        const s = useOak ? 0.9 + rnd() * 0.35 : 0.95 + rnd() * 0.35;
+        put(list[Math.floor(rnd() * list.length)], x, z, s, rnd() * 6.28);
+        placed.push({ x, z, tree: true, s });
+        if (this.worldObstacles) this.worldObstacles.push({ x, z, r: 0.55 * s });
+        // undergrowth around the trunk
+        const nb = bushes.length ? Math.floor(rnd() * 3) : 0;
+        for (let b = 0; b < nb; b++) {
+          const ba = rnd() * 6.28, br = 2.4 + rnd() * 1.6;
+          const bx = x + Math.cos(ba) * br, bz = z + Math.sin(ba) * br;
+          if (clearOf(bx, bz, 0)) put(bushes[0], bx, bz, 0.75 + rnd() * 0.5, rnd() * 6.28);
+        }
+      }
+      // rocks: small groups between the trees
+      for (let k = 0; k < 160 && placed.filter(q => q.rock).length < 14; k++) {
+        const a = rnd() * Math.PI * 2, rr = 26 + rnd() * 24;
+        const x = Math.cos(a) * rr, z = 9 + Math.sin(a) * rr;
+        if (!clearOf(x, z, 0.5) || !spaced(x, z, 3.2) || !rocks.length) continue;
+        const s = 0.55 + rnd() * 0.5;
+        put(rocks[Math.floor(rnd() * rocks.length)], x, z, s, rnd() * 6.28);
+        placed.push({ x, z, rock: true });
+        if (this.worldObstacles) this.worldObstacles.push({ x, z, r: 0.6 * s });
+      }
+      const d = new THREE.Object3D(), white = new THREE.Color(1, 1, 1);
+      this.townDecor = Object.keys(groups).map((key) => {
+        const src = this.propInst[key], list = groups[key];
+        const inst = new THREE.InstancedMesh(src.geometry, src.material, list.length);
+        list.forEach((q, i) => {
+          d.position.set(q.x, 0, q.z); d.rotation.set(0, q.r, 0); d.scale.setScalar(q.s); d.updateMatrix();
+          inst.setMatrixAt(i, d.matrix); inst.setColorAt(i, white);
+        });
+        inst.instanceMatrix.needsUpdate = true;
+        if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
+        inst.castShadow = src.castShadow; inst.receiveShadow = false;
+        this.scene.add(inst);
+        return inst;
+      });
     },
 
     updateMMOWorld(dt) {
