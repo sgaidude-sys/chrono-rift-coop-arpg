@@ -182,7 +182,7 @@
       for (let k = 0; k < ch.props.length; k++) {
         const p = ch.props[k];
         if (far && p.t !== 'ridge' && p.t !== 'mesa') continue;
-        const pk = (p.t === 'oak' && this.treeVariants) ? this.treeVariants[Math.min(this.treeVariants.length - 1, Math.floor(p.c * this.treeVariants.length))] : p.t;
+        const pk = this.propKeyFor ? this.propKeyFor(p) : ((p.t === 'oak' && this.treeVariants) ? this.treeVariants[Math.min(this.treeVariants.length - 1, Math.floor(p.c * this.treeVariants.length))] : p.t);
         if (!this.propInst[pk]) continue;
         _p.set(p.x, 0, p.z);
         _q.setFromAxisAngle(_up, p.r);
@@ -194,7 +194,7 @@
         if (p.t === 'flower') _c.setHex(T.flowers[Math.floor(p.c * T.flowers.length)]);
         else _c.setHex(tint).multiplyScalar(0.86 + p.c * 0.28);
         add(pk, _m, _c);
-        const ao = AO_PROPS[pk];
+        const ao = AO_PROPS[pk] || AO_PROPS[p.t];
         if (ao && this.propAO) {
           const r = ao[0] * p.s;
           _s.set(r, 1, r);

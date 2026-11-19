@@ -325,6 +325,19 @@
         ch.props.push({ t, x, z, r: rng() * 6.28, s, c: rng(), zone: zr.i });
         const or = PROP_COLLIDE[t];
         if (or) ch.obstacles.push({ x, z, r: or * s });
+        if (isTree && t !== 'snowpine' && t !== 'deadtree') {
+          // undergrowth bushes: separate seeded stream so every other prop keeps its place
+          const brng = mulberry32(((Math.round(x * 16) * 73856093) ^ (Math.round(z * 16) * 19349663)) >>> 0);
+          if (brng() < 0.55) {
+            const nb = 1 + Math.floor(brng() * 2);
+            for (let k = 0; k < nb; k++) {
+              const ang = brng() * 6.283, rad = 2.2 + brng() * 2.4 * s;
+              const bx = x + Math.cos(ang) * rad, bz = z + Math.sin(ang) * rad;
+              if (this.roadDist(bx, bz) < 7 || this.terrainHeight(bx, bz) < W.waterLevel + 0.3) continue;
+              ch.props.push({ t: 'bush', x: bx, z: bz, r: brng() * 6.28, s: 0.7 + brng() * 0.6, c: brng(), zone: zr.i });
+            }
+          }
+        }
         if (isTree) {
           // small glowing wildflower clusters and pebble rocks around the trunk
           const flowery = (pp.flower || 0) > 0 || zr.i <= 1;

@@ -1,0 +1,12 @@
+Environment models (all used unmodified; scaled, positioned and tinted in code).
+
+pines.glb — "Free Pack - Tree" by polyone
+  https://sketchfab.com/3d-models/free-pack-tree-196525a9936a40c1ba7e74ce5c071d59
+rocks.glb — "Free Pack - Rocks Stylized" by polyone
+  https://sketchfab.com/3d-models/free-pack-rocks-stylized-7c60b4d1b8ab4187965f30c5e0212fc0
+oak.glb — "Stylized Low Poly Fantasy Oak Tree" by Specter_1
+  https://sketchfab.com/3d-models/stylized-low-poly-fantasy-oak-tree-7487e9ceb2e14fbf9c5e31b01a93d545
+bush.glb — "Stylized Bush" by danielpetrov
+  https://sketchfab.com/3d-models/stylized-bush-9d9ce79d3ae040619e96d5b22c7de1a6
+
+Licence: Creative Commons Attribution 4.0 (CC BY 4.0) — https://creativecommons.org/licenses/by/4.0/

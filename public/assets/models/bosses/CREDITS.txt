@@ -1,0 +1,8 @@
+Boss models (used unmodified; scaled, positioned and tinted in code).
+
+mycelord.glb — "Mushroom Boss - game ready with animations" by iamjohnhult
+  https://sketchfab.com/3d-models/ee611e4925e94a98baa4cfd3d89d3449
+frostmaw_golem.glb — "Drugdör The Golem Animated" by Phons
+  https://sketchfab.com/3d-models/19c1855bdb2c4cdc89da2cfb64da48cf
+
+Licence: Creative Commons Attribution 4.0 (CC BY 4.0) — https://creativecommons.org/licenses/by/4.0/

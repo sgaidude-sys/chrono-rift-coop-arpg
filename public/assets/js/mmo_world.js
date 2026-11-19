@@ -412,7 +412,7 @@
             const p = ch.props[k];
             if (far && p.t !== 'ridge' && p.t !== 'mesa') continue;
             // procedural tree variants (mmo_foliage.js) replace the old oak prop
-            const pk = (p.t === 'oak' && this.treeVariants) ? this.treeVariants[Math.min(this.treeVariants.length - 1, Math.floor(p.c * this.treeVariants.length))] : p.t;
+            const pk = this.propKeyFor ? this.propKeyFor(p) : ((p.t === 'oak' && this.treeVariants) ? this.treeVariants[Math.min(this.treeVariants.length - 1, Math.floor(p.c * this.treeVariants.length))] : p.t);
             const inst = this.propInst[pk];
             if (!inst) continue;
             const n = counts[pk];
