@@ -6741,6 +6741,7 @@
           config: { presence: { key: this.playerToken }, broadcast: { self: false } }
         });
         this.channel = ch;
+        if (this.installNetBatch) this.installNetBatch(ch);   // bundle outgoing events (mmo_netbatch.js)
 
         ch
           .on('presence', { event: 'sync' }, () => {
@@ -9918,6 +9919,7 @@
   <script src="assets/js/mmo_overdrive.js?v=1"></script>
   <script src="assets/js/mmo_feel.js?v=1"></script>
   <script src="assets/js/mmo_mobilehud.js?v=2"></script>
+  <script src="assets/js/mmo_netbatch.js?v=2"></script>
   <script src="assets/js/mmo_account.js?v=1"></script>
   <script src="assets/js/mmo_heroselect.js?v=3"></script>
 </body>
