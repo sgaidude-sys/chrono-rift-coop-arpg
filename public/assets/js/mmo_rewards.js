@@ -32,7 +32,7 @@
     kill: { make: (L) => ({ n: 18 + Math.floor(Math.random() * 9) }), text: (b) => `Slay ${b.n} monsters` },
     elite: { make: () => ({ n: 2 }), text: (b) => `Defeat ${b.n} elites or champions` },
     role: { min: 4, make: () => ({ n: 4 }), text: (b) => `Defeat ${b.n} Chargers, Shieldbearers or Menders` },
-    slam: { make: () => ({ n: 8 }), text: (b) => `Slam ${b.n} airborne enemies` },
+    slam: { make: () => ({ n: 8 }), text: (b) => `Slam ${b.n} airborne enemies (launch, then ${window.game && window.game.touchUI ? '⤓' : 'F'})` },
     guard: { make: () => ({ n: 3 }), text: (b) => `Land ${b.n} Perfect Guards` },
     style: { make: () => ({ n: 1 }), text: () => 'Reach style rank S' },
     rift: { min: 3, make: () => ({ n: 1 }), text: () => 'Clear a Rift Surge' }

@@ -218,6 +218,9 @@
         anim(ranged ? 'Spell_Simple_Shoot' : 'Sword_Heavy_Combo');
         if (local && airborne) ent.vy = -22;                         // dive with it
         const c = ranged ? (this.getClampedAimPos ? this.getClampedAimPos(ent, 8, 5) : ent.pos.clone().addScaledVector(fwd, 5)) : null;
+        // foes already airborne where the smash will land hang there until it connects (no frame-perfect timing)
+        const at0 = c || ent.pos.clone().addScaledVector(fwd, 2);
+        if (this.ccArea) this.ccArea(at0, 4.2, 'hold', { dur: 0.75 }, ent);
         setTimeout(() => {
           const at = c || ent.pos.clone().addScaledVector(fwd, 2);
           if (this.ccArea) this.ccArea(at, 3.6, 'slam', {}, ent);
