@@ -82,8 +82,13 @@
         if (local && c.jug >= 2) this.ccText(m, c.jug >= 6 ? `SKY JUGGLE ×${c.jug}!` : 'SKY JUGGLE!', '#7fe3ff', 15);
         return true;
       }
+      if (tag === 'hold') {
+        if (c.st !== ST_AIR) return false;
+        c.hold = Math.max(c.hold || 0, (o.dur || 2.5) * (elite ? 0.4 : 1));
+        return true;
+      }
       if (tag === 'slam') {
-        if (c.st === ST_AIR) { c.slam = true; c.vy = -30; this.ccInterrupt(m); return true; }
+        if (c.st === ST_AIR) { c.hold = 0; c.slam = true; c.vy = -30; this.ccInterrupt(m); return true; }
         this.ccKnockDown(m, o.down);
         return true;
       }
@@ -168,7 +173,11 @@
           if (P.t <= 0) c.pull = null;
         }
         // vertical arc
-        if (c.st === ST_AIR || (m.dead && c.y > 0)) {
+        if (c.st === ST_AIR && c.hold > 0 && !m.dead) {
+          // suspended in time (Arcanist stasis): float in place, don't count toward the juggle cap
+          c.hold -= dt; c.vy = 0;
+          c.y += (Math.max(0.6, c.y) - c.y) * Math.min(1, dt * 6);
+        } else if (c.st === ST_AIR || (m.dead && c.y > 0)) {
           c.air += dt;
           const g = GRAV * (1 + c.jug * JUGGLE_GRAV) * (c.air > MAX_AIR ? 2.5 : 1);
           c.vy -= g * dt;
