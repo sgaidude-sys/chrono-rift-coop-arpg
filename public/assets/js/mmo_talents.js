@@ -242,13 +242,27 @@
     },
 
     // ---- backend (best effort: needs an `arpg_heroes.talents jsonb` column) ----
+    // Characters from the account system already carry their talents in their own
+    // cloud save (arpg_characters.save_data), so the legacy column is only used for
+    // old saves; once it is known to be missing we stop asking (no 400s every load).
+    talentsRemoteOff() {
+      if (this._talentsNoColumn) return true;
+      try { if (localStorage.getItem('cr_talents_nocol') === '1') { this._talentsNoColumn = true; return true; } } catch (e) { /* storage blocked */ }
+      return !!(window.CR_ACCOUNT && window.CR_ACCOUNT.playing);
+    },
+
+    talentsMarkNoColumn() {
+      this._talentsNoColumn = true;
+      try { localStorage.setItem('cr_talents_nocol', '1'); } catch (e) { /* storage blocked */ }
+    },
+
     async syncTalentsRemote() {
-      if (!this.supabase || this._talentsNoColumn || !this.heroSaveToken) return;
+      if (!this.supabase || this.talentsRemoteOff() || !this.heroSaveToken) return;
       try {
         const { error } = await this.supabase.from('arpg_heroes').update({ talents: this._talentStore }).eq('player_token', this.heroSaveToken);
         if (error) {
           if (/column|talents/i.test(error.message || '')) {
-            this._talentsNoColumn = true;
+            this.talentsMarkNoColumn();
             console.info('[Talents] Supabase column arpg_heroes.talents missing; talents are saved locally. See README for the one-line migration.');
           }
         }
@@ -263,10 +277,10 @@
 
     async loadOrInitHeroFromSupabase() {
       const r = await orig.loadOrInitHeroFromSupabase.apply(this, arguments);
-      if (!this.supabase || this._talentsNoColumn) return r;
+      if (!this.supabase || this.talentsRemoteOff()) return r;
       try {
         const { data, error } = await this.supabase.from('arpg_heroes').select('talents').eq('player_token', this.heroSaveToken).maybeSingle();
-        if (error) { if (/column|talents/i.test(error.message || '')) this._talentsNoColumn = true; return r; }
+        if (error) { if (/column|talents/i.test(error.message || '') || error.code === '42703' || error.code === 'PGRST204') this.talentsMarkNoColumn(); return r; }
         const remote = data && data.talents;
         if (remote && typeof remote === 'object') {
           if (!this._talentStore) this.loadTalentStore();
