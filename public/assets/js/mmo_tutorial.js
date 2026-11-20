@@ -87,8 +87,10 @@
   `;
 
   const SHEET = [
-    ['Movement', [['Move', ['W', 'A', 'S', 'D']], ['Sprint', ['Hold move']], ['Dodge roll (i-frames)', ['SPACE']], ['Jump', ['ALT']], ['Orbit / tilt camera', ['RMB drag', 'Q', 'E', 'Z', 'X']], ['Zoom', ['Wheel']]]],
-    ['Combat', [['Combo attack', ['LMB', '1']], ['Block · Perfect Parry', ['RMB', 'G']], ['Heavy skill', ['2']], ['Movement skill', ['SHIFT', '3']], ['Class skill', ['4', 'V']], ['Convergence (ultimate)', ['R']]]],
+    ['Movement', [['Move', ['W', 'A', 'S', 'D']], ['Sprint', ['Hold move']], ['Dodge roll · cancels attacks', ['SPACE']], ['Jump', ['ALT']], ['Orbit / tilt camera', ['RMB drag', 'Q', 'E', 'Z', 'X']], ['Zoom', ['Wheel']]]],
+    ['Combat', [['Combo attack', ['LMB', '1']], ['Block · Perfect Guard (tap just before a hit)', ['RMB', 'G']], ['Heavy skill', ['2']], ['Movement skill', ['SHIFT', '3']], ['Class skill', ['4', 'V']], ['Awakened Overdrive (100% synergy)', ['R']]]],
+    ['Combo moves', [['Lunge at an enemy ahead', ['W', '+ LMB']], ['Launch into the air', ['S', '+ LMB']], ['Slam down (Breaker)', ['F']], ['Juggle', ['Hit airborne foes']], ['Down attack +30%', ['Hit floored foes']], ['Style rank D→SSS', ['Mix moves', 'Avoid hits']]]],
+    ['Class specials', [['Berserker · Meteor Crash', ['3 in mid-air']], ['Vanguard · Shield Counter', ['Perfect Guard']], ['Ranger · Hover Fire', ['Attack in mid-air']], ['Arcanist · Suspend foes', ['4']]]],
     ['Items & world', [['Elixir', ['C']], ['Interact / talk', ['F']], ['World map', ['M']], ['Quest log', ['O']], ['Chat', ['Enter']]]],
     ['Menus', [['Talents', ['K']], ['Emote wheel (hold)', ['T']], ['Inventory', ['I']], ['Controls (this sheet)', ['F1', 'H']], ['Close any window', ['ESC']]]]
   ];

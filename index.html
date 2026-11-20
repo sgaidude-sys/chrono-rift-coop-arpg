@@ -8027,17 +8027,17 @@
         const keyMap = { '1': 'LMB / 1', '2': '2', '3': 'SHIFT / 3', '4': '4 / V', 'jump': 'SPACE', 'potion': 'C', '5': 'R / 5' };
         let title = '', meta = '', desc = '';
         if (slotKey === 'jump') {
-          title = 'Vault Jump';
-          meta = 'Instant • 3D Vertical Leap & Telegraph Dodge';
-          desc = 'Leap high into the air to vault over low ground shockwaves and enemy projectiles in full Co-Op 3D.';
+          title = 'Dodge Roll';
+          meta = 'Stamina • Brief invulnerability • Cancels attacks';
+          desc = 'Roll out of danger with a moment of invulnerability. Press it mid-swing, mid-spin or while staggered to cancel straight into the roll. (Jump is ALT.)';
         } else if (slotKey === 'potion') {
           title = 'Ashenvale Elixir';
           meta = 'CD: 4.0s • Restores 48% HP & 100% Aether';
           desc = `Drink an enchanted sanctuary vial (${this.player.potions} remaining). Refills at High Cleric Seraphina.`;
         } else if (slotKey === '5') {
-          title = 'Astral Convergence';
-          meta = 'Requires 100% Co-Op Synergy • 380% AoE + Full Heal';
-          desc = 'Channels party synergy into a massive temporal supernova, fully healing nearby allies and obliterating foes.';
+          title = 'Awakened Overdrive';
+          meta = 'Requires 100% Synergy • CD 45s • 380% AoE';
+          desc = 'A temporal supernova that launches nearby foes and heals 15%, then AWAKENS you for 12 s: super armor, skills recharge 40% faster and every attack throws a phantom strike. Two heroes awakening within 3 s trigger DUAL CONVERGENCE.';
         } else {
           const idx = parseInt(slotKey, 10) - 1;
           const sk = cls.skills[idx];
@@ -9901,7 +9901,7 @@
   <script src="public/assets/js/mmo_skillvfx.js?v=1"></script>
   <script src="public/assets/js/mmo_talents.js?v=2"></script>
   <script src="public/assets/js/mmo_ui.js?v=2"></script>
-  <script src="public/assets/js/mmo_tutorial.js?v=2"></script>
+  <script src="public/assets/js/mmo_tutorial.js?v=3"></script>
   <script src="public/assets/js/mmo_social.js?v=2"></script>
   <script src="public/assets/js/mmo_epic.js?v=3"></script>
   <script src="public/assets/js/mmo_travel.js?v=7"></script>
@@ -9920,6 +9920,7 @@
   <script src="public/assets/js/mmo_feel.js?v=1"></script>
   <script src="public/assets/js/mmo_mobilehud.js?v=2"></script>
   <script src="public/assets/js/mmo_netbatch.js?v=2"></script>
+  <script src="public/assets/js/mmo_teach.js?v=3"></script>
   <script src="public/assets/js/mmo_account.js?v=1"></script>
   <script src="public/assets/js/mmo_heroselect.js?v=3"></script>
 </body>
