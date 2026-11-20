@@ -20,7 +20,7 @@
 (function () {
   'use strict';
   const FLUSH_MS = 200, URGENT_MS = 60, MAX_BYTES = 200 * 1024;
-  const URGENT = { boss_cast: 1, mob_attack: 1, mob_stagger: 1, portal_wave: 1, wave_sync: 1, foe_ability: 1 };
+  const URGENT = { boss_cast: 1, mob_attack: 1, mob_stagger: 1, portal_wave: 1, wave_sync: 1, foe_ability: 1, rift_state: 1, rift_req: 1 };
   const LATEST_ONLY = { player_state: 1 };
 
   const GP = ChronoRiftCoOpGame.prototype;
