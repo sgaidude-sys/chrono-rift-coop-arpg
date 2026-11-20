@@ -129,6 +129,8 @@
       return true;
     },
 
+    teachAddTips(o) { Object.assign(TIPS, o || {}); },
+
     teachHideTip() { const T = this._tips; if (!T) return; T.el.classList.remove('on'); T.showing = 0; },
 
     // the first launch the hero lands unlocks the slam tip
