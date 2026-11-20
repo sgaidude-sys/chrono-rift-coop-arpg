@@ -5073,7 +5073,7 @@
         const upAxis = new THREE.Vector3(0, 1, 0);
 
         if (!isRemoteOrAI) {
-          const cdDef = slot === 5 ? 30.0 : cls.skills[slot - 1].cd;
+          const cdDef = slot === 5 ? 45.0 : cls.skills[slot - 1].cd;
           // buffs speed up the basic kit only: big cooldowns (4) and the ultimate can't feed themselves
           const cdrMult = slot >= 4 ? 1.0 : (this.player.buffTimer > 0 ? 0.72 : 1.0) * (this.player.frenzyTimer > 0 ? 0.65 : 1.0);
           this.player.cooldowns[slot] = cdDef * cdrMult * (1 - (this.player.haste || 0));
@@ -5444,8 +5444,8 @@
           this.spawnVFXFlipbook('eldenring', ent.pos, 9.5, 0.95, 0xf3c86b, true);
           this.spawnShockwaveRing(ent.pos, 11.5, 0x38e8ff, 0.55);
 
-          this.player.hp = this.player.maxHp;
-          this.aiAllies.forEach(a => { a.hp = a.maxHp; });
+          // Awakened Overdrive (mmo_overdrive.js) adds the minor heal; no more full heal
+          this.aiAllies.forEach(a => { a.hp = Math.min(a.maxHp, a.hp + a.maxHp * 0.15); });
           if (canDealLocalDamage) {
             this.damageEnemiesInRadius(ent.pos, 11.5, Math.round(wStats.dmg * 3.8), true, ent);
           }
@@ -9907,6 +9907,7 @@
   <script src="assets/js/mmo_flow.js?v=1"></script>
   <script src="assets/js/mmo_moves.js?v=1"></script>
   <script src="assets/js/mmo_kits.js?v=1"></script>
+  <script src="assets/js/mmo_overdrive.js?v=1"></script>
   <script src="assets/js/mmo_account.js?v=1"></script>
   <script src="assets/js/mmo_heroselect.js?v=3"></script>
 </body>
