@@ -278,7 +278,7 @@
       if (M.uiT <= 0 && M.ui) {
         M.uiT = 0.1;
         for (const k in M.ui) M.ui[k].classList.toggle('cd', M.cd[k] > 0);
-        const show = this.isInWorld && !this.cutsceneActive && !document.body.classList.contains('cr-acct-on');
+        const show = this.isInWorld && !this.cutsceneActive && !document.body.classList.contains('cr-acct-on') && !document.body.classList.contains('touch-ui');
         const el = document.getElementById('dir-moves');
         if (el && el._show !== show) { el._show = show; el.style.display = show ? 'flex' : 'none'; }
         if (el && show) this.dirMovesPlace(el);
