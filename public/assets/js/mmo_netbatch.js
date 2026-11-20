@@ -16,12 +16,18 @@
  *  Receivers unpack a bundle and hand each event to the same listeners as
  *  before, so the rest of the game code is untouched.
  *  (Everyone in a room must be on this version; older clients ignore bundles.)
+ *
+ *  Solo: while nobody else is in the room nothing is sent at all (except the
+ *  hello / wave-sync handshake). A friend arriving shows up through presence,
+ *  which re-enables sending at once and pushes a fresh state ~0.1 s later.
  * ============================================================================= */
 (function () {
   'use strict';
   const FLUSH_MS = 200, URGENT_MS = 60, MAX_BYTES = 200 * 1024;
   const URGENT = { boss_cast: 1, mob_attack: 1, mob_stagger: 1, portal_wave: 1, wave_sync: 1, foe_ability: 1, rift_state: 1, rift_req: 1 };
   const LATEST_ONLY = { player_state: 1 };
+  // handshake events still go out when alone, so a friend who just arrived can say hello
+  const ALWAYS = { hello_sync: 1, request_wave_sync: 1 };
 
   const GP = ChronoRiftCoOpGame.prototype;
 
@@ -40,13 +46,15 @@
       if (!ch || ch.__netBatch) return;
       const game = this;
       const origSend = ch.send.bind(ch);
-      const B = ch.__netBatch = { q: [], timer: null, last: 0, sent: 0, events: 0 };
+      const B = ch.__netBatch = { q: [], timer: null, last: 0, sent: 0, events: 0, skipped: 0 };
+      const alone = () => !game.remotePeers || game.remotePeers.size === 0;
 
       const flush = () => {
         B.timer = null;
         if (!B.q.length) return;
         if (game.channel !== ch || ch.state !== 'joined') { B.q.length = 0; return; }
         let items = B.q; B.q = [];
+        if (alone()) { items = items.filter(it => ALWAYS[it.e]); if (!items.length) return; }   // nobody to hear it
         // split very large bundles (big host snapshots) to stay well under the 256 KB payload cap
         while (items.length) {
           let n = items.length, body = JSON.stringify(items);
@@ -67,6 +75,8 @@
 
       ch.send = function (msg, opts) {
         if (!msg || msg.type !== 'broadcast' || msg.event === 'bundle') return origSend(msg, opts);
+        // solo: nobody else is in the room, so nothing needs sending (Supabase counts every message)
+        if (alone() && !ALWAYS[msg.event]) { B.skipped++; return Promise.resolve('ok'); }
         B.events++;
         const e = msg.event, p = msg.payload;
         if (LATEST_ONLY[e]) {
@@ -109,7 +119,7 @@
 
     netBatchStats() {
       const B = this.channel && this.channel.__netBatch;
-      return B ? { bundlesSent: B.sent, eventsQueued: B.events } : null;
+      return B ? { bundlesSent: B.sent, eventsQueued: B.events, skippedAlone: B.skipped } : null;
     }
   });
 
