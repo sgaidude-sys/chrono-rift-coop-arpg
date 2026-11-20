@@ -26,6 +26,15 @@
   const R_RARE = RIDX.rare, R_EPIC = RIDX.epic, R_LEG = RIDX.legendary, R_MYTH = RIDX.mythic;
   const RID = M.RARITIES.map(r => r.id);
   const ARMOR_SLOTS = ['head', 'chest', 'hands', 'legs', 'feet'];
+  // Gear effects level (Settings -> Comfort): how strongly rarity shows on heroes
+  const GFX_LV = {
+    full: { tint: 1, em: 1, spark: 1, aura: 1, ring: true },
+    subtle: { tint: 0.35, em: 0.4, spark: 0.2, aura: 0.25, ring: false },
+    off: { tint: 0, em: 0, spark: 0, aura: 0, ring: false }
+  };
+  let FXL = 'subtle';
+  try { const v = localStorage.getItem('cr_gearfx'); if (GFX_LV[v]) FXL = v; } catch (e) { /* default */ }
+  const gfx = () => GFX_LV[FXL];
   const SKIP_MESH = /^(Eyes|Eyebrows|Hair_|Super[Hh]ero_)/;
   // which armor slot a hero mesh belongs to (by its part name)
   function meshSlot(n) {
@@ -109,7 +118,7 @@
 
   const orig = {
     initMMOWorld: GP.initMMOWorld, updateMMOWorld: GP.updateMMOWorld, updateWeaponTrails: GP.updateWeaponTrails,
-    renderInventoryModal: GP.renderInventoryModal, equipItem: GP.equipItem,
+    renderInventoryModal: GP.renderInventoryModal, equipItem: GP.equipItem, renderComfort: GP.renderComfort,
     buildPlayerStatePayload: GP.buildPlayerStatePayload, handleRemotePlayerState: GP.handleRemotePlayerState
   };
   const _v = new THREE.Vector3(), _b = new THREE.Box3(), _c = new THREE.Color();
@@ -150,7 +159,7 @@
     // ---- weapons ----------------------------------------------------------------------------------
     flairScan(ent, F) {
       const st = ent._flair || (ent._flair = { holders: [], ring: null, emb: 0, aura: 0, key: '' });
-      const key = `${F.w}|${F.o}|${F.wm}|${F.om}|${F.pw.join(',')}|${F.myth}`;
+      const key = `${F.w}|${F.o}|${F.wm}|${F.om}|${F.pw.join(',')}|${F.myth}|${FXL}`;
       const fresh = st.holders.length && st.holders.every(h => h.holder.parent);
       if (st.key === key && fresh) return st;
       st.key = key;
@@ -174,15 +183,15 @@
             mats.push(m);
           });
         });
-        if (r >= R_RARE) {
+        if (r >= R_RARE && gfx().em > 0) {
           const col = RCOL[RID[r]];
-          mats.forEach((m) => { m.emissive.setHex(col); m.emissiveIntensity = r >= R_LEG ? 0.8 : (r >= R_EPIC ? 0.55 : 0.35); });
+          mats.forEach((m) => { m.emissive.setHex(col); m.emissiveIntensity = (r >= R_LEG ? 0.8 : (r >= R_EPIC ? 0.55 : 0.35)) * gfx().em; });
         } else mats.forEach((m) => { m.emissive.setHex(m.userData.flBase.e); m.emissiveIntensity = m.userData.flBase.i; });
         st.holders.push({ holder, mats, r });
       });
       // rune ring under the feet for any legendary power
       if (st.ring) { if (st.ring.parent) st.ring.parent.remove(st.ring); st.ring.geometry.dispose(); st.ring.material.dispose(); st.ring = null; }
-      if (F.pw.length && ent.meshRoot) {
+      if (F.pw.length && ent.meshRoot && gfx().ring) {
         const g = new THREE.RingGeometry(1.0, 1.12, 6, 1);
         const ring = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: F.myth ? 0xff3b5c : 0xff9a2e, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
         ring.rotation.x = -Math.PI / 2; ring.position.y = 0.05; ring.renderOrder = 5;
@@ -206,11 +215,11 @@
         const h = st.holders[i];
         if (h.r < R_EPIC) continue;
         const myth = h.r >= R_MYTH;
-        if (h.r >= R_LEG) {
-          const k = myth ? 0.75 + 0.45 * Math.abs(Math.sin(t * 5.5)) : 0.55 + 0.3 * Math.sin(t * 3);
+        if (h.r >= R_LEG && gfx().em > 0) {
+          const k = gfx().em * (myth ? 0.75 + 0.45 * Math.abs(Math.sin(t * 5.5)) : 0.55 + 0.3 * Math.sin(t * 3));
           for (let j = 0; j < h.mats.length; j++) h.mats[j].emissiveIntensity = k;
         }
-        if (emit && this.vfxSparks && (h.r >= R_LEG || Math.random() < 0.5)) {
+        if (emit && this.vfxSparks && Math.random() < gfx().spark && (h.r >= R_LEG || Math.random() < 0.5)) {
           _b.setFromObject(h.holder);
           if (_b.isEmpty()) continue;
           _b.getCenter(_v);
@@ -222,10 +231,10 @@
       this.armorTick(ent, F, dt, t);
       // legendary ring + power auras
       if (st.ring) { st.ring.rotation.z += dt * 0.8; st.ring.material.opacity = 0.5 + 0.2 * Math.sin(t * 2.4); }
-      if (F.pw.length && this.vfxSparks) {
+      if (F.pw.length && this.vfxSparks && gfx().aura > 0) {
         st.aura -= dt;
         if (st.aura <= 0) {
-          st.aura = 0.3;
+          st.aura = 0.3 / gfx().aura;
           const pw = F.pw[Math.floor(Math.random() * F.pw.length)];
           const A = AURA[pw];
           if (A) {
@@ -243,7 +252,7 @@
     armorScan(ent, F) {
       const A = ent._armor || (ent._armor = { parts: [], bones: {}, key: '', cape: null, halo: null, emit: 0 });
       const glb = ent.glbNode || ent.meshRoot;
-      const key = F.a.join(',') + '|' + (glb ? glb.uuid : '');
+      const key = F.a.join(',') + '|' + (glb ? glb.uuid : '') + '|' + this.wingPref(ent) + '|' + FXL;
       if (A.key === key && A.parts.every(pt => pt.mesh.parent)) return A;
       A.key = key; A.parts = []; A.bones = {};
       if (!ent.meshRoot) return A;
@@ -268,8 +277,8 @@
           if (m.roughness !== undefined) m.roughness = b.rg;
           if (T) {
             const col = RCOL[RID[r]];
-            m.color.lerp(_c.setHex(col), T.lerp);
-            if (m.emissive) { m.emissive.setHex(col); m.emissiveIntensity = T.em; }
+            m.color.lerp(_c.setHex(col), T.lerp * gfx().tint);
+            if (m.emissive && gfx().em > 0) { m.emissive.setHex(col); m.emissiveIntensity = T.em * gfx().em; }
             if (m.metalness !== undefined) m.metalness = Math.max(b.mt || 0, T.metal);
             if (T.rough !== undefined && m.roughness !== undefined) m.roughness = Math.min(b.rg === undefined ? 1 : b.rg, T.rough);
           }
@@ -285,7 +294,7 @@
         for (let i = 0; i < gp.count; i++) { const d = -gp.getY(i); gp.setX(i, gp.getX(i) * (0.62 + 0.5 * d)); }   // narrow at the shoulders, flared hem
         const col = RCOL[RID[chest]];
         const tex = capeTexture(col, chest >= R_LEG);
-        const mat = new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: 0xffffff, emissiveIntensity: chest >= R_LEG ? 0.55 : 0.3, roughness: 0.8, metalness: 0.05, side: THREE.DoubleSide });
+        const mat = new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: 0xffffff, emissiveIntensity: (chest >= R_LEG ? 0.55 : 0.3) * Math.max(0.35, gfx().em), roughness: 0.8, metalness: 0.05, side: THREE.DoubleSide });
         A.cape = new THREE.Mesh(g, mat); A.cape.userData.flairFx = true; A.cape.castShadow = true;
         A.cape.userData.base = Float32Array.from(g.attributes.position.array);
         this.scene.add(A.cape);
@@ -293,21 +302,25 @@
       // floating crown halo for a legendary+ helm
       const head = F.a[0] || 0;
       if (A.halo) { this.scene.remove(A.halo); A.halo.geometry.dispose(); A.halo.material.dispose(); A.halo = null; }
-      if (head >= R_MYTH && A.bones.Head) {
+      if (head >= R_MYTH && A.bones.Head && gfx().ring) {
         const col = RCOL[RID[head]];
         A.halo = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.025, 8, 28), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
         A.halo.rotation.x = Math.PI / 2; A.halo.userData.flairFx = true;
         this.scene.add(A.halo);
       }
-      const wingKind = chest >= R_LEG ? (DEMON_CLS[ent.classId] ? 'wings_demon' : 'wings_angel') : null;
-      const wantW = wingKind ? wingKind + ':' + chest : '';
+      const pref = this.wingPref(ent);
+      const wingKind = chest >= R_LEG ? (pref === 'angel' ? 'wings_angel' : (pref === 'demon' ? 'wings_demon' : (DEMON_CLS[ent.classId] ? 'wings_demon' : 'wings_angel'))) : null;
+      const wantW = wingKind ? wingKind + ':' + chest + ':' + FXL : '';
       if (A.wingsKey !== wantW) { this.cosDrop(A, 'wings'); A.wingsKey = wantW; }
-      const wantC = head >= R_LEG ? 'crown_fantasy:' + head : '';
+      const wantC = head >= R_LEG ? 'crown_fantasy:' + head + ':' + FXL : '';
       if (A.crownKey !== wantC) { this.cosDrop(A, 'crown'); A.crownKey = wantC; }
       return A;
     },
 
     // ---- downloaded cosmetics (Sketchfab, see credits in mmo_flair.js header) ------------------
+    // wing style chosen in the Rift Cache collection: 'auto' (by class), 'angel' or 'demon'
+    wingPref(ent) { const C = this.cosOf ? this.cosOf(ent) : null; return (C && (C.wg === 'angel' || C.wg === 'demon')) ? C.wg : 'auto'; },
+
     cosTemplate(file) {
       const T = this._cosTpl || (this._cosTpl = {});
       if (T[file]) return T[file].gl || null;
@@ -342,7 +355,7 @@
       const mats = [];
       inner.traverse((o) => {
         if (!o.isMesh) return;
-        o.material = [].concat(o.material).map((m) => { const c = m.clone(); if (c.emissive) { c.emissive.setHex(col); c.emissiveIntensity = fit.em; } if (fit.tint) c.color.lerp(_c.setHex(col), fit.tint); mats.push(c); return c; });
+        o.material = [].concat(o.material).map((m) => { const c = m.clone(); if (c.emissive) { c.emissive.setHex(col); c.emissiveIntensity = fit.em * gfx().em; } if (fit.tint) c.color.lerp(_c.setHex(col), fit.tint * Math.max(0.4, gfx().tint)); mats.push(c); return c; });
         if (o.material.length === 1) o.material = o.material[0];
       });
       inner.scale.setScalar(fit.k);
@@ -384,12 +397,12 @@
           (W.acts.all || []).forEach(a => a.setEffectiveTimeScale(moving ? 1.8 : 1));
           if (W.root.visible) W.mixer.update(dt);
         }
-        if (W.rar >= R_MYTH) {
-          const k = 0.45 + 0.35 * Math.abs(Math.sin(t * 4));
+        if (W.rar >= R_MYTH && gfx().em > 0) {
+          const k = (0.45 + 0.35 * Math.abs(Math.sin(t * 4))) * gfx().em;
           for (let i = 0; i < W.mats.length; i++) if (W.mats[i].emissive) W.mats[i].emissiveIntensity = k;
           W.spark = (W.spark || 0) - dt;
-          if (W.spark <= 0 && this.vfxSparks && W.root.visible) {
-            W.spark = 0.12;
+          if (W.spark <= 0 && this.vfxSparks && W.root.visible && gfx().spark > 0) {
+            W.spark = 0.12 / gfx().spark;
             const side = Math.random() < 0.5 ? -1 : 1, rx = Math.cos(ent.yaw || 0), rz = -Math.sin(ent.yaw || 0);
             _v.set(W.root.position.x + rx * side * (0.5 + Math.random() * 0.4) - fx * 0.3, W.root.position.y + Math.random() * 0.6, W.root.position.z + rz * side * (0.5 + Math.random() * 0.4) - fz * 0.3);
             this.vfxSparks(_v, 2, { cols: [RCOL[RID[W.rar]], 0xffffff], speed: [0.3, 1.2], life: [0.4, 0.8], grav: 1.5, width: 0.04 });
@@ -407,7 +420,7 @@
         C.root.position.set(_v.x, _v.y + 0.36 + Math.sin(t * 2.2) * 0.035, _v.z);
         C.root.rotation.y += dt * 0.9;
         C.root.visible = vis;
-        const k = (C.rar >= R_MYTH ? 0.55 : 0.4) + 0.2 * Math.sin(t * 3);
+        const k = ((C.rar >= R_MYTH ? 0.55 : 0.4) + 0.2 * Math.sin(t * 3)) * gfx().em;
         for (let i = 0; i < C.mats.length; i++) if (C.mats[i].emissive) C.mats[i].emissiveIntensity = k;
       }
     },
@@ -420,13 +433,14 @@
       for (let i = 0; i < A.parts.length; i++) {
         const pt = A.parts[i], r = F.a[pt.sl] || 0, T = ARMOR_TUNE[r];
         if (!T || !T.pulse) continue;
-        const k = T.em + T.pulse * Math.sin(t * (r >= R_MYTH ? 5 : 2.6) + pt.sl);
+        if (gfx().em <= 0) continue;
+        const k = (T.em + T.pulse * Math.sin(t * (r >= R_MYTH ? 5 : 2.6) + pt.sl)) * gfx().em;
         for (let j = 0; j < pt.mats.length; j++) if (pt.mats[j].emissive) pt.mats[j].emissiveIntensity = k;
       }
       // sparks from legendary+ pieces
       A.emit -= dt;
-      if (A.emit <= 0 && this.vfxSparks) {
-        A.emit = 0.22;
+      if (A.emit <= 0 && this.vfxSparks && gfx().spark > 0) {
+        A.emit = 0.22 / gfx().spark;
         const hot = [];
         for (let s = 0; s < 5; s++) if ((F.a[s] || 0) >= R_LEG) hot.push(s);
         if (hot.length) {
@@ -493,6 +507,26 @@
           this.remotePeers.forEach((pe) => { if (pe && pe.pos && pe.pos.distanceToSquared(p0) < 1600) this.flairTick(pe, dt, t); });
         }
       } catch (e) { if (!this._flairErr) { this._flairErr = 1; console.warn('[flair]', e); } }
+    },
+
+    setGearFx(v) {
+      if (!GFX_LV[v]) return;
+      FXL = v;
+      try { localStorage.setItem('cr_gearfx', v); } catch (e) { /* session only */ }
+      this.renderComfort && document.getElementById('comfort-modal') && this.renderComfort();
+    },
+
+    renderComfort() {
+      const r = orig.renderComfort ? orig.renderComfort.apply(this, arguments) : undefined;
+      const body = document.querySelector('#comfort-modal .cf-body');
+      if (body && !body.querySelector('[data-gfx]')) {
+        const row = document.createElement('div'); row.className = 'cf-row';
+        row.innerHTML = '<div>Gear effects<small>How strongly rare gear glows and sparkles on heroes</small></div><div class="cf-seg">' +
+          [['full', 'Full'], ['subtle', 'Subtle'], ['off', 'Off']].map(([v, l]) => `<button data-gfx="${v}" class="${FXL === v ? 'on' : ''}">${l}</button>`).join('') + '</div>';
+        row.addEventListener('click', (e) => { const b = e.target.closest('[data-gfx]'); if (!b) return; e.stopPropagation(); this.setGearFx(b.dataset.gfx); });
+        body.appendChild(row);
+      }
+      return r;
     },
 
     // ---- equip flourish -------------------------------------------------------------------------------

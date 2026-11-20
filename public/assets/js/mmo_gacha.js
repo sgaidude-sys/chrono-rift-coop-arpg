@@ -174,6 +174,8 @@
           if (t) { this._gcTab = t.dataset.tab; this.gcRender(); return; }
           const pb = e.target.closest('[data-pull]');
           if (pb && !pb.classList.contains('off')) { this.gcPull(pb.dataset.pull); return; }
+          const wb = e.target.closest('[data-wing]');
+          if (wb) { const G = this.gc(); G.wing = wb.dataset.wing; this.saveMMOState && this.saveMMOState(); this.gcRender(); this.broadcastPlayerState && this.broadcastPlayerState(false); return; }
           const eqb = e.target.closest('[data-equip]');
           if (eqb) { this.gcEquip(eqb.dataset.equip); return; }
         });
@@ -222,7 +224,10 @@
       const body = m.querySelector('.gc-body');
       if (this._gcTab === 'coll') {
         const kinds = [['trail', 'Trail dyes'], ['aura', 'Auras'], ['title', 'Titles']];
-        body.innerHTML = kinds.map(([k, label]) => `<div style="font:800 10px Inter,sans-serif;letter-spacing:2px;color:#c9b6ea;margin:8px 0 6px;">${label.toUpperCase()}</div><div class="gc-coll">` +
+        const wg = G.wing || 'auto';
+        const wopt = [['auto', 'By class', 'Feathered: Vanguard, Arcanist · Demon: Berserker, Ranger'], ['angel', '🪽 Feathered wings', 'Eagle-style feathered wings'], ['demon', '🦇 Demon wings', 'Leathery bat-like wings']];
+        body.innerHTML = `<div style="font:800 10px Inter,sans-serif;letter-spacing:2px;color:#c9b6ea;margin:4px 0 6px;">WING STYLE <span style="letter-spacing:0;font-weight:600;color:rgba(230,220,245,.55);">· shown on Legendary &amp; Mythic chest armor</span></div><div class="gc-coll">` +
+          wopt.map(([v, n, d]) => `<div class="gc-ci ${wg === v ? 'on' : ''}" data-wing="${v}" style="cursor:pointer"><div class="k">${wg === v ? 'selected' : 'tap to choose'}</div>${n}<br><span style="font-size:10.5px;color:rgba(255,255,255,.55);font-weight:500">${d}</span></div>`).join('') + '</div>' + kinds.map(([k, label]) => `<div style="font:800 10px Inter,sans-serif;letter-spacing:2px;color:#c9b6ea;margin:8px 0 6px;">${label.toUpperCase()}</div><div class="gc-coll">` +
           Object.keys(COS).filter(id => COS[id].kind === k).map((id) => {
             const c = COS[id], own = G.own.includes(id), on = G[k] === id;
             return `<div class="gc-ci ${own ? '' : 'lock'} ${on ? 'on' : ''}"><div class="k">${'★'.repeat(c.star)} ${k}</div>${c.icon} ${esc(c.name)}${own ? `<br><button data-equip="${id}">${on ? 'Unequip' : 'Equip'}</button>` : ''}</div>`;
@@ -393,7 +398,7 @@
     },
 
     cosOf(ent) {
-      if (ent === this.player) { const G = this.mmoState && this.mmoState.gacha; return G ? { tr: G.trail, au: G.aura, ti: G.title } : null; }
+      if (ent === this.player) { const G = this.mmoState && this.mmoState.gacha; return G ? { tr: G.trail, au: G.aura, ti: G.title, wg: G.wing || 'auto' } : null; }
       return ent._cosNet || null;
     },
 
@@ -450,7 +455,7 @@
     buildPlayerStatePayload() {
       const p = orig.buildPlayerStatePayload.apply(this, arguments);
       const G = this.mmoState && this.mmoState.gacha;
-      if (p && G) p.cos = { tr: G.trail || '', au: G.aura || '', ti: G.title || '' };
+      if (p && G) p.cos = { tr: G.trail || '', au: G.aura || '', ti: G.title || '', wg: G.wing || 'auto' };
       return p;
     },
 
