@@ -122,6 +122,9 @@
     buildPlayerStatePayload: GP.buildPlayerStatePayload, handleRemotePlayerState: GP.handleRemotePlayerState
   };
   const _v = new THREE.Vector3(), _b = new THREE.Box3(), _c = new THREE.Color();
+  const _v2 = new THREE.Vector3(), _u = new THREE.Vector3(), _f = new THREE.Vector3(), _f2 = new THREE.Vector3(), _r = new THREE.Vector3(), _m4 = new THREE.Matrix4();
+  let CAPE_BACK = 0.13;
+  window.CR_CAPEBACK = (v) => { CAPE_BACK = v; };
 
   Object.assign(GP, {
     initMMOWorld() {
@@ -254,7 +257,7 @@
       const glb = ent.glbNode || ent.meshRoot;
       const key = F.a.join(',') + '|' + (glb ? glb.uuid : '') + '|' + this.wingPref(ent) + '|' + FXL;
       if (A.key === key && A.parts.every(pt => pt.mesh.parent)) return A;
-      A.key = key; A.parts = []; A.bones = {};
+      A.key = key; A.parts = []; A.bones = {}; A.capeFit = undefined;
       if (!ent.meshRoot) return A;
       let hasCloak = false;
       ent.meshRoot.traverse((o) => {
@@ -425,6 +428,31 @@
       }
     },
 
+    // how far behind the shoulder line the hero's own armor sticks out (pauldrons, spikes,
+    // quivers, belts) so the cape hangs just outside it instead of cutting through
+    capeDepth(ent, A, mid, fwd, up) {
+      let back = CAPE_BACK, waist = 0;
+      const right = _r.clone();
+      const pt = new THREE.Vector3(), rel = new THREE.Vector3();
+      ent.meshRoot.traverse((o) => {
+        if (!o.isSkinnedMesh || o.userData.flairFx || /^(Eyes|Eyebrows|Hair_|Super[Hh]ero_)/.test(o.name)) return;
+        const pos = o.geometry.attributes.position;
+        for (let i = 0; i < pos.count; i += 2) {
+          pt.fromBufferAttribute(pos, i); o.boneTransform(i, pt); pt.applyMatrix4(o.matrixWorld);
+          rel.copy(pt).sub(mid);
+          const h = rel.dot(up);
+          if (h < -0.75 || h > 0.08 || Math.abs(rel.dot(right)) > 0.32) continue;
+          const d = -rel.dot(fwd);
+          if (d >= 0.6) continue;
+          if (h > -0.28) { if (d > back) back = d; }            // shoulders / upper back
+          else if (d > waist) waist = d;                          // belt / quiver bottom
+        }
+      });
+      const top = Math.min(0.36, back + 0.03);
+      const need = waist + 0.04 - top;                          // how far the hem must swing out at ~0.6 m down
+      return { top, tilt: need > 0 ? Math.min(0.5, Math.atan2(need, 0.6)) : 0 };
+    },
+
     armorTick(ent, F, dt, t) {
       if (!F.a) return;
       const A = this.armorScan(ent, F);
@@ -455,13 +483,24 @@
       }
       // cape follows the back and sways (lifts while moving)
       if (A.cape && A.bones.spine_03) {
-        A.bones.spine_03.getWorldPosition(_v);
-        const fx = Math.sin(ent.yaw || 0), fz = Math.cos(ent.yaw || 0);
-        A.cape.position.set(_v.x - fx * 0.17, _v.y + 0.12, _v.z - fz * 0.17);
-        A.cape.rotation.set(0, ent.yaw || 0, 0);
+        // hang from the middle of the shoulders and follow the body's real facing and spine lean
+        const B = A.bones, cl = B.clavicle_l, cr = B.clavicle_r, nk = B.neck_01 || B.Head, pv = B.pelvis;
+        if (cl && cr) { cl.getWorldPosition(_v); cr.getWorldPosition(_v2); _v.add(_v2).multiplyScalar(0.5); } else B.spine_03.getWorldPosition(_v);
+        if (ent.meshRoot) ent.meshRoot.getWorldDirection(_f); else _f.set(0, 0, 1);
+        _f.y = 0;
+        if (_f.lengthSq() < 1e-4) _f.set(Math.sin(ent.yaw || 0), 0, Math.cos(ent.yaw || 0));
+        _f.normalize();
+        if (nk && pv) { nk.getWorldPosition(_u); pv.getWorldPosition(_v2); _u.sub(_v2); if (_u.lengthSq() < 1e-4) _u.set(0, 1, 0); _u.normalize(); } else _u.set(0, 1, 0);
+        _r.crossVectors(_u, _f).normalize();
+        _f2.crossVectors(_r, _u).normalize();
+        _m4.makeBasis(_r, _u, _f2);
+        A.cape.quaternion.setFromRotationMatrix(_m4);
+        if (A.capeFit === undefined) A.capeFit = this.capeDepth(ent, A, _v, _f2, _u);
+        A.cape.position.copy(_v).addScaledVector(_f2, -A.capeFit.top).addScaledVector(_u, 0.03);
+        if (A.capeFit.tilt) A.cape.rotateX(A.capeFit.tilt);          // flare the hem out over belts / quivers
         A.cape.visible = !!(ent.meshRoot && ent.meshRoot.visible) && !ent.dead && !ent._mount;
         const moving = !!(ent.isMovingNow || ent.isMoving || (ent === this.player && this.keys && (this.keys.w || this.keys.a || this.keys.s || this.keys.d)));
-        const lift = moving ? 0.55 : 0.12;
+        const lift = moving ? 0.6 : 0.22;
         A._lift = (A._lift || 0) + (lift - (A._lift || 0)) * Math.min(1, dt * 4);
         const pos = A.cape.geometry.attributes.position, base = A.cape.userData.base;
         for (let i = 0; i < pos.count; i++) {

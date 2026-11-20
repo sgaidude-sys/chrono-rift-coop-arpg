@@ -32,7 +32,7 @@
     kill: { make: (L) => ({ n: 18 + Math.floor(Math.random() * 9) }), text: (b) => `Slay ${b.n} monsters` },
     elite: { make: () => ({ n: 2 }), text: (b) => `Defeat ${b.n} elites or champions` },
     role: { min: 4, make: () => ({ n: 4 }), text: (b) => `Defeat ${b.n} Chargers, Shieldbearers or Menders` },
-    slam: { make: () => ({ n: 8 }), text: (b) => `Slam ${b.n} airborne enemies (launch, then ${window.game && window.game.touchUI ? '⤓' : 'F'})` },
+    slam: { make: () => ({ n: 6 }), text: (b) => `Slam ${b.n} enemies (${window.game && window.game.touchUI ? '⤓' : 'F'}) — airborne ones count double` },
     guard: { make: () => ({ n: 3 }), text: (b) => `Land ${b.n} Perfect Guards` },
     style: { make: () => ({ n: 1 }), text: () => 'Reach style rank S' },
     rift: { min: 3, make: () => ({ n: 1 }), text: () => 'Clear a Rift Surge' }
@@ -258,8 +258,9 @@
     ccApply(m, tag, o, caster) {
       const local = !caster || caster === this.player;
       const wasAir = local && tag === 'slam' && m && this.ccState && this.ccState(m) === 'air';
+      const isSlam = local && tag === 'slam' && m && !m.dead;
       const r = orig.ccApply.apply(this, arguments);
-      if (r && wasAir) this.bountyAdd('slam');
+      if (r && isSlam) this.bountyAdd('slam', wasAir ? 2 : 1);      // any slam counts; airborne slams count double
       return r;
     },
 
