@@ -28,17 +28,17 @@
 (function () {
   'use strict';
   const MOVES = {
-    mv_lunge: { name: 'Rift Lunge', key: 'W + Attack', cd: 3.0 },
-    mv_rise: { name: 'Rising Strike', key: 'S + Attack', cd: 4.0 },
-    mv_break: { name: 'Rift Breaker', key: 'F', cd: 5.0 }
+    mv_lunge: { name: 'Lunge', key: 'W+Atk', cd: 3.0 },
+    mv_rise: { name: 'Launch', key: 'S+Atk', cd: 4.0 },
+    mv_break: { name: 'Breaker', key: 'F', cd: 5.0 }
   };
   const RANGED = { ranger: 1, arcanist: 1 };
   const COL = { vanguard: 0xf3c86b, berserker: 0xff3b5c, ranger: 0x2ee68a, arcanist: 0xb266ff };
 
   const css = `
-  #dir-moves { position: fixed; left: 50%; bottom: 112px; transform: translateX(-50%); display: none; gap: 6px; z-index: 40; pointer-events: none; }
-  #dir-moves .mv { font: 700 10px 'Plus Jakarta Sans', Inter, sans-serif; letter-spacing: .5px; color: #f5f2eb; background: rgba(8,12,22,.62);
-    border: 1px solid rgba(255,213,107,.35); border-radius: 999px; padding: 3px 9px; white-space: nowrap; transition: opacity .15s, border-color .15s; }
+  #dir-moves { position: fixed; left: 0; bottom: 0; display: none; gap: 5px; z-index: 12; pointer-events: none; }
+  #dir-moves .mv { font: 700 9.5px 'Plus Jakarta Sans', Inter, sans-serif; letter-spacing: .3px; color: rgba(245,242,235,.9); background: rgba(8,12,22,.55);
+    border: 1px solid rgba(255,213,107,.28); border-radius: 999px; padding: 2px 8px; white-space: nowrap; transition: opacity .15s, border-color .15s; }
   #dir-moves .mv b { color: #ffd56b; margin-right: 4px; }
   #dir-moves .mv.cd { opacity: .45; border-color: rgba(255,255,255,.12); }
   #dir-moves .mv.fire { border-color: #ffd56b; box-shadow: 0 0 10px rgba(255,213,107,.6); }
@@ -228,6 +228,16 @@
       }
     },
 
+    // sit just above skill slots 1-4 (left of the mount buttons, which are centred over the hotbar)
+    dirMovesPlace(el) {
+      const s1 = document.getElementById('slot-1');
+      if (!s1) return;
+      const r = s1.getBoundingClientRect();
+      if (!r.width) return;
+      const left = Math.round(r.left), bottom = Math.round(window.innerHeight - r.top + 6);
+      if (el._l !== left || el._b !== bottom) { el._l = left; el._b = bottom; el.style.left = left + 'px'; el.style.bottom = bottom + 'px'; }
+    },
+
     dirImpact(at, col, kick) {
       if (this.spawnShockwaveRing) this.spawnShockwaveRing(new THREE.Vector3(at.x, 0.06, at.z), 3.2, col, 0.28);
       if (this.vfxSparks) this.vfxSparks(_v.set(at.x, 0.9, at.z), 16, { cols: [0xffffff, col], speed: [4, 9], life: [0.2, 0.45], grav: 6, width: 0.05 });
@@ -271,6 +281,7 @@
         const show = this.isInWorld && !this.cutsceneActive && !document.body.classList.contains('cr-acct-on');
         const el = document.getElementById('dir-moves');
         if (el && el._show !== show) { el._show = show; el.style.display = show ? 'flex' : 'none'; }
+        if (el && show) this.dirMovesPlace(el);
       }
     }
   });
