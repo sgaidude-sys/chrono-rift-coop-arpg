@@ -387,10 +387,11 @@
         A.wings = this.cosBuild(file, +r, FIT[file]);
       }
       if (A.wings && A.bones.spine_03) {
-        const W = A.wings, fx = Math.sin(ent.yaw || 0), fz = Math.cos(ent.yaw || 0);
+        const W = A.wings;
+        const by = this.bodyYaw(A, ent), fx = Math.sin(by), fz = Math.cos(by);
         A.bones.spine_03.getWorldPosition(_v);
         W.root.position.set(_v.x - fx * 0.14, _v.y + WING_LIFT, _v.z - fz * 0.14);
-        W.root.rotation.set(0, ent.yaw || 0, 0);
+        W.root.rotation.set(0, by, 0);
         W.root.visible = vis && !ent._mount;
         if (W.mixer) {
           const fly = moving ? 1 : 0;
@@ -428,6 +429,16 @@
       }
     },
 
+    // the way the torso actually faces (from the shoulder bones), falling back to the heading
+    bodyYaw(A, ent) {
+      const cl = A.bones.clavicle_l, cr = A.bones.clavicle_r;
+      if (!cl || !cr) return ent.yaw || 0;
+      const L = cl.getWorldPosition(new THREE.Vector3()), Rr = cr.getWorldPosition(new THREE.Vector3());
+      const rx = Rr.x - L.x, rz = Rr.z - L.z;                 // right-shoulder direction (flat)
+      if (rx * rx + rz * rz < 1e-6) return ent.yaw || 0;
+      return Math.atan2(rz, -rx);                              // forward = up x right = (rz, 0, -rx)
+    },
+
     // how far behind the shoulder line the hero's own armor sticks out (pauldrons, spikes,
     // quivers, belts) so the cape hangs just outside it instead of cutting through
     capeDepth(ent, A, mid, fwd, up) {
@@ -435,7 +446,7 @@
       const right = _r.clone();
       const pt = new THREE.Vector3(), rel = new THREE.Vector3();
       ent.meshRoot.traverse((o) => {
-        if (!o.isSkinnedMesh || o.userData.flairFx || /^(Eyes|Eyebrows|Hair_|Super[Hh]ero_)/.test(o.name)) return;
+        if (!o.isSkinnedMesh || o.userData.flairFx || /^(Eyes|Eyebrows|Hair_)/.test(o.name)) return;      // body included: the back sits well behind the shoulder joints
         const pos = o.geometry.attributes.position;
         for (let i = 0; i < pos.count; i += 2) {
           pt.fromBufferAttribute(pos, i); o.boneTransform(i, pt); pt.applyMatrix4(o.matrixWorld);
@@ -448,7 +459,7 @@
           else if (d > waist) waist = d;                          // belt / quiver bottom
         }
       });
-      const top = Math.min(0.36, back + 0.03);
+      const top = Math.min(0.5, back + 0.03);
       const need = waist + 0.04 - top;                          // how far the hem must swing out at ~0.6 m down
       return { top, tilt: need > 0 ? Math.min(0.5, Math.atan2(need, 0.6)) : 0 };
     },
@@ -486,11 +497,13 @@
         // hang from the middle of the shoulders and follow the body's real facing and spine lean
         const B = A.bones, cl = B.clavicle_l, cr = B.clavicle_r, nk = B.neck_01 || B.Head, pv = B.pelvis;
         if (cl && cr) { cl.getWorldPosition(_v); cr.getWorldPosition(_v2); _v.add(_v2).multiplyScalar(0.5); } else B.spine_03.getWorldPosition(_v);
-        if (ent.meshRoot) ent.meshRoot.getWorldDirection(_f); else _f.set(0, 0, 1);
-        _f.y = 0;
-        if (_f.lengthSq() < 1e-4) _f.set(Math.sin(ent.yaw || 0), 0, Math.cos(ent.yaw || 0));
-        _f.normalize();
         if (nk && pv) { nk.getWorldPosition(_u); pv.getWorldPosition(_v2); _u.sub(_v2); if (_u.lengthSq() < 1e-4) _u.set(0, 1, 0); _u.normalize(); } else _u.set(0, 1, 0);
+        // facing straight from the skeleton: up x (right shoulder - left shoulder)
+        if (cl && cr) { cr.getWorldPosition(_v2); cl.getWorldPosition(_f); _v2.sub(_f); _f.crossVectors(_u, _v2); }
+        else _f.set(Math.sin(ent.yaw || 0), 0, Math.cos(ent.yaw || 0));
+        _f.y = 0;
+        if (_f.lengthSq() < 1e-6) _f.set(Math.sin(ent.yaw || 0), 0, Math.cos(ent.yaw || 0));
+        _f.normalize();
         _r.crossVectors(_u, _f).normalize();
         _f2.crossVectors(_r, _u).normalize();
         _m4.makeBasis(_r, _u, _f2);
