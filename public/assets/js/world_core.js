@@ -219,7 +219,10 @@
           const cands = zone.mobs.filter(m => c.level >= m.lv[0] && c.level <= m.lv[1]);
           const pick = (cands.length ? cands : zone.mobs)[Math.floor(rng() * (cands.length || zone.mobs.length))];
           c.mob = pick;
-          c.count = 3 + Math.floor(rng() * 3);
+          // big packs in the open zones so AoE pulls / launches have crowds to work on;
+          // the tighter forest / crypt / citadel keep smaller groups
+          const tight = zone.id === 'whisperwood' || zone.id === 'catacombs' || zone.id === 'citadel' || c.level <= 3;   // + gentle starter camps
+          c.count = tight ? 4 + Math.floor(rng() * 3) : 6 + Math.floor(rng() * 4);
         });
         // Named elites: take the farthest-from-road camp near their level
         zone.elites.forEach((el, ei) => {

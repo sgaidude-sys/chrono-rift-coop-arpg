@@ -210,7 +210,9 @@
         if (!c || !m.meshRoot) continue;
         const wantTilt = c.st === ST_DOWN ? 1.25 : (c.st === ST_AIR ? 0.45 + Math.min(0.5, c.jug * 0.08) : 0);
         c.tilt += (wantTilt - c.tilt) * Math.min(1, dt * (c.st === ST_DOWN ? 14 : 8));
-        m.meshRoot.position.y += c.y + (c.st === ST_DOWN ? 0.12 : 0);
+        // live mobs get their root y reset every frame by the core loop; corpses don't, so set it absolutely
+        if (m.dead) m.meshRoot.position.y = c.y;
+        else m.meshRoot.position.y += c.y + (c.st === ST_DOWN ? 0.12 : 0);
         if (c.tilt > 0.01) m.meshRoot.rotation.x = -c.tilt;
       }
     },

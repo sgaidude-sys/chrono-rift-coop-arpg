@@ -922,7 +922,7 @@
       let spec;
       const rng = mulberry32((c.id * 977 + slotIdx * 31 + gen * 7) >>> 0);
       const ang = (slotIdx / Math.max(1, c.count)) * Math.PI * 2 + rng();
-      const rad = c.count > 1 ? 3 + rng() * 4 : 0;
+      const rad = c.count > 1 ? 3 + rng() * (2 + c.count * 0.6) : 0;     // bigger packs spread a little wider
       const x = c.x + Math.cos(ang) * rad, z = c.z + Math.sin(ang) * rad;
       if (c.kind === 'boss' || c.kind === 'worldboss') {
         spec = { type: c.boss.type, name: c.boss.name, level: c.boss.lv, bossDef: c.boss, worldBoss: c.kind === 'worldboss' };
