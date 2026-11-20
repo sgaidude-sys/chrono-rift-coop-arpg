@@ -11,6 +11,11 @@
  *  • Inventory: Epic / Legendary / Mythic items get animated, shining borders.
  *  • Co-op: weapon rarities and active powers ride along in the normal player
  *    state, so partners see your glow, trails and auras too.
+ *
+ *  Downloaded cosmetics (Sketchfab), shown on Legendary+ gear:
+ *   - "Ultra low poly angel wings (Animated)" by Leonardo Carvalho (Sketchfab Standard licence)
+ *   - "Low Poly Demon Wings (animated)" by Leonardo Carvalho (Sketchfab Standard licence)
+ *   - "Low-poly Fantasy Crown" by Levi Zacharias (CC BY 4.0)
  * ============================================================================= */
 (function () {
   'use strict';
@@ -51,6 +56,16 @@
     CAPE_TEX[k] = t;
     return t;
   }
+  // downloaded cosmetic models: sizes measured from the skinned meshes (model units)
+  const ASSET_DIR = 'assets/models/cosmetics/';
+  const DEMON_CLS = { berserker: 1, ranger: 1 };
+  let WING_LIFT = 0.5;
+  window.CR_WINGLIFT = (v) => { WING_LIFT = v; };
+  const FIT = {
+    wings_angel: { k: 1.75 / 459, cx: 0, cy: 231, cz: -28, em: 0.3, tint: 0.25 },
+    wings_demon: { k: 1.85 / 441, cx: -4, cy: 249, cz: 45, em: 0.3, tint: 0.2 },
+    crown_fantasy: { k: 0.4 / 0.19, cx: 0, cy: 0.054, cz: 0.404, em: 0.4, tint: 0.3 }
+  };
   const SLOT_BONES = [['Head'], ['spine_03', 'clavicle_l', 'clavicle_r'], ['hand_l', 'hand_r'], ['thigh_l', 'thigh_r'], ['foot_l', 'foot_r']];
   const ARMOR_TUNE = [
     null, { lerp: 0.06, em: 0.05, metal: 0.05 },                     // common, uncommon
@@ -104,6 +119,15 @@
       const r = orig.initMMOWorld ? orig.initMMOWorld.apply(this, arguments) : undefined;
       if (!document.getElementById('cr-flair-css')) {
         const s = document.createElement('style'); s.id = 'cr-flair-css'; s.textContent = css; document.head.appendChild(s);
+      }
+      // credits for the downloaded cosmetic models (CC BY needs a visible credit)
+      const box = document.querySelector('#settings-modal .modal-box');
+      if (box && !document.getElementById('cr-credits')) {
+        const c = document.createElement('div'); c.id = 'cr-credits';
+        c.style.cssText = 'margin-top:12px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08);font:500 10.5px/1.5 Inter,sans-serif;color:rgba(245,242,235,.5);';
+        c.innerHTML = 'Model credits (Sketchfab): "Ultra low poly angel wings (Animated)" and "Low Poly Demon Wings (animated)" by Leonardo Carvalho; ' +
+          '"Low-poly Fantasy Crown" by Levi Zacharias, licensed under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener" style="color:inherit;">CC BY 4.0</a>.';
+        box.appendChild(c);
       }
       return r;
     },
@@ -255,7 +279,7 @@
       // cape for an epic+ chest (heroes that already wear a cloak keep theirs)
       const chest = F.a[1] || 0;
       if (A.cape) { this.scene.remove(A.cape); A.cape.geometry.dispose(); A.cape.material.dispose(); A.cape = null; }
-      if (chest >= R_EPIC && !hasCloak && A.bones.spine_03) {
+      if (chest === R_EPIC && !hasCloak && A.bones.spine_03) {
         const g = new THREE.PlaneGeometry(0.62, 1.0, 4, 10); g.translate(0, -0.5, 0);
         const gp = g.attributes.position;
         for (let i = 0; i < gp.count; i++) { const d = -gp.getY(i); gp.setX(i, gp.getX(i) * (0.62 + 0.5 * d)); }   // narrow at the shoulders, flared hem
@@ -269,18 +293,129 @@
       // floating crown halo for a legendary+ helm
       const head = F.a[0] || 0;
       if (A.halo) { this.scene.remove(A.halo); A.halo.geometry.dispose(); A.halo.material.dispose(); A.halo = null; }
-      if (head >= R_LEG && A.bones.Head) {
+      if (head >= R_MYTH && A.bones.Head) {
         const col = RCOL[RID[head]];
         A.halo = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.025, 8, 28), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
         A.halo.rotation.x = Math.PI / 2; A.halo.userData.flairFx = true;
         this.scene.add(A.halo);
       }
+      const wingKind = chest >= R_LEG ? (DEMON_CLS[ent.classId] ? 'wings_demon' : 'wings_angel') : null;
+      const wantW = wingKind ? wingKind + ':' + chest : '';
+      if (A.wingsKey !== wantW) { this.cosDrop(A, 'wings'); A.wingsKey = wantW; }
+      const wantC = head >= R_LEG ? 'crown_fantasy:' + head : '';
+      if (A.crownKey !== wantC) { this.cosDrop(A, 'crown'); A.crownKey = wantC; }
       return A;
+    },
+
+    // ---- downloaded cosmetics (Sketchfab, see credits in mmo_flair.js header) ------------------
+    cosTemplate(file) {
+      const T = this._cosTpl || (this._cosTpl = {});
+      if (T[file]) return T[file].gl || null;
+      T[file] = { gl: null };
+      this.loader.load(ASSET_DIR + file + '.glb', (gl) => {
+        gl.scene.traverse((o) => {
+          if (!o.isMesh) return;
+          o.frustumCulled = false; o.castShadow = true;
+          [].concat(o.material).forEach((m) => {                       // no env map in this game: drop metal / normal maps so it isn't black
+            m.metalnessMap = null; m.roughnessMap = null; m.normalMap = null;
+            m.metalness = 0.2; m.roughness = 0.55; m.needsUpdate = true;
+          });
+        });
+        T[file].gl = gl;
+      }, undefined, () => { T[file].failed = true; });
+      return null;
+    },
+
+    cosDrop(A, slot) {
+      const c = A[slot]; if (!c) return;
+      if (c.mixer) c.mixer.stopAllAction();
+      if (c.root.parent) c.root.parent.remove(c.root);
+      c.root.traverse((o) => { if (o.isMesh) [].concat(o.material).forEach(m => m.dispose()); });
+      A[slot] = null;
+    },
+
+    cosBuild(file, rar, fit) {
+      const gl = this.cosTemplate(file);
+      if (!gl) return null;
+      const inner = (typeof cloneSkinnedModel === 'function') ? cloneSkinnedModel(gl.scene) : gl.scene.clone(true);
+      const col = RCOL[RID[rar]];
+      const mats = [];
+      inner.traverse((o) => {
+        if (!o.isMesh) return;
+        o.material = [].concat(o.material).map((m) => { const c = m.clone(); if (c.emissive) { c.emissive.setHex(col); c.emissiveIntensity = fit.em; } if (fit.tint) c.color.lerp(_c.setHex(col), fit.tint); mats.push(c); return c; });
+        if (o.material.length === 1) o.material = o.material[0];
+      });
+      inner.scale.setScalar(fit.k);
+      inner.position.set(-fit.cx * fit.k, -fit.cy * fit.k, -fit.cz * fit.k);
+      const root = new THREE.Group(); root.add(inner); root.userData.flairFx = true;
+      this.scene.add(root);
+      const c = { root, inner, mats, mixer: null, acts: {}, rar };
+      if (gl.animations && gl.animations.length) {
+        c.mixer = new THREE.AnimationMixer(inner);
+        gl.animations.forEach((clip) => {
+          const kind = /Fly(?!\.001)/.test(clip.name) ? 'fly' : (/Idle/.test(clip.name) ? 'idle' : (/Fly\.001/.test(clip.name) ? 'skip' : 'all'));
+          if (kind === 'skip') return;
+          const a = c.mixer.clipAction(clip); a.play(); a.setEffectiveWeight(kind === 'fly' ? 0 : 1);
+          (c.acts[kind] || (c.acts[kind] = [])).push(a);
+        });
+      }
+      return c;
+    },
+
+    cosTick(ent, A, F, dt, t) {
+      const vis = !!(ent.meshRoot && ent.meshRoot.visible) && !ent.dead;
+      const moving = !!(ent.isMovingNow || ent.isMoving || (ent === this.player && this.keys && (this.keys.w || this.keys.a || this.keys.s || this.keys.d)));
+      // wings on the back
+      if (A.wingsKey && !A.wings && A.bones.spine_03) {
+        const [file, r] = A.wingsKey.split(':');
+        A.wings = this.cosBuild(file, +r, FIT[file]);
+      }
+      if (A.wings && A.bones.spine_03) {
+        const W = A.wings, fx = Math.sin(ent.yaw || 0), fz = Math.cos(ent.yaw || 0);
+        A.bones.spine_03.getWorldPosition(_v);
+        W.root.position.set(_v.x - fx * 0.14, _v.y + WING_LIFT, _v.z - fz * 0.14);
+        W.root.rotation.set(0, ent.yaw || 0, 0);
+        W.root.visible = vis && !ent._mount;
+        if (W.mixer) {
+          const fly = moving ? 1 : 0;
+          W.flyW = (W.flyW || 0) + (fly - (W.flyW || 0)) * Math.min(1, dt * 5);
+          (W.acts.fly || []).forEach(a => a.setEffectiveWeight(W.flyW));
+          (W.acts.idle || []).forEach(a => a.setEffectiveWeight(1 - W.flyW));
+          (W.acts.all || []).forEach(a => a.setEffectiveTimeScale(moving ? 1.8 : 1));
+          if (W.root.visible) W.mixer.update(dt);
+        }
+        if (W.rar >= R_MYTH) {
+          const k = 0.45 + 0.35 * Math.abs(Math.sin(t * 4));
+          for (let i = 0; i < W.mats.length; i++) if (W.mats[i].emissive) W.mats[i].emissiveIntensity = k;
+          W.spark = (W.spark || 0) - dt;
+          if (W.spark <= 0 && this.vfxSparks && W.root.visible) {
+            W.spark = 0.12;
+            const side = Math.random() < 0.5 ? -1 : 1, rx = Math.cos(ent.yaw || 0), rz = -Math.sin(ent.yaw || 0);
+            _v.set(W.root.position.x + rx * side * (0.5 + Math.random() * 0.4) - fx * 0.3, W.root.position.y + Math.random() * 0.6, W.root.position.z + rz * side * (0.5 + Math.random() * 0.4) - fz * 0.3);
+            this.vfxSparks(_v, 2, { cols: [RCOL[RID[W.rar]], 0xffffff], speed: [0.3, 1.2], life: [0.4, 0.8], grav: 1.5, width: 0.04 });
+          }
+        }
+      }
+      // crown floating above the head
+      if (A.crownKey && !A.crown && A.bones.Head) {
+        const [file, r] = A.crownKey.split(':');
+        A.crown = this.cosBuild(file, +r, FIT.crown_fantasy);
+      }
+      if (A.crown && A.bones.Head) {
+        const C = A.crown;
+        A.bones.Head.getWorldPosition(_v);
+        C.root.position.set(_v.x, _v.y + 0.36 + Math.sin(t * 2.2) * 0.035, _v.z);
+        C.root.rotation.y += dt * 0.9;
+        C.root.visible = vis;
+        const k = (C.rar >= R_MYTH ? 0.55 : 0.4) + 0.2 * Math.sin(t * 3);
+        for (let i = 0; i < C.mats.length; i++) if (C.mats[i].emissive) C.mats[i].emissiveIntensity = k;
+      }
     },
 
     armorTick(ent, F, dt, t) {
       if (!F.a) return;
       const A = this.armorScan(ent, F);
+      this.cosTick(ent, A, F, dt, t);
       // pulse legendary / mythic pieces
       for (let i = 0; i < A.parts.length; i++) {
         const pt = A.parts[i], r = F.a[pt.sl] || 0, T = ARMOR_TUNE[r];
