@@ -30,7 +30,7 @@
   ];
   const PER_RANK = 100, MAX = PER_RANK * RANKS.length - 1;
   const FRESH = [1, 0.6, 0.35, 0.2, 0.12];
-  const BASE = { b: 4, s2: 9, s3: 9, s4: 9, ult: 14 };
+  const BASE = { b: 4, s2: 9, s3: 9, s4: 9, ult: 14, mv_lunge: 8, mv_rise: 9, mv_break: 9 };
   const CAST_CAP = 40;
   const SHOW_AT = 6;                         // points before the gauge appears
 
@@ -130,11 +130,7 @@
       if (!local || !S || this._styleInSkill) return r;
       const after = p.cooldowns ? p.cooldowns[slot] || 0 : 0;
       if (after <= before + 0.001) return r;                       // refused
-      const kind = slot === 1 ? 'b' : (slot === 5 ? 'ult' : 's' + slot);
-      const same = S.hist.filter(k => k === kind).length;
-      S.hist.push(kind); if (S.hist.length > 5) S.hist.shift();
-      S.cast = { kind, fresh: FRESH[Math.min(same, FRESH.length - 1)], at: performance.now() };
-      S.castPts = 0;
+      this.styleNoteCast(slot === 1 ? 'b' : (slot === 5 ? 'ult' : 's' + slot));
       // rank bonus: faster attacks (the basic attack swing and its cooldown)
       const asp = 1 - this.styleRank() * 0.03;
       if (asp < 1) {
@@ -142,6 +138,15 @@
         if (p.attackTimer > 0) p.attackTimer *= asp;
       }
       return r;
+    },
+
+    // a new move started: later hits score by it, with less for recently repeated moves
+    styleNoteCast(kind) {
+      const S = this._style; if (!S) return;
+      const same = S.hist.filter(k => k === kind).length;
+      S.hist.push(kind); if (S.hist.length > 5) S.hist.shift();
+      S.cast = { kind, fresh: FRESH[Math.min(same, FRESH.length - 1)], at: performance.now() };
+      S.castPts = 0;
     },
 
     applyDamageToMonster(mob, baseDmg, isHeavy, attacker, fromNetwork) {
@@ -153,7 +158,7 @@
       const r = orig.applyDamageToMonster.apply(this, arguments);
       if (!wasAlive) return r;
       const c = S.cast && performance.now() - S.cast.at < 1500 ? S.cast : { kind: 'b', fresh: 0.5 };
-      let pts = BASE[c.kind] * c.fresh;
+      let pts = (BASE[c.kind] || 6) * c.fresh;
       if (st === 'air') pts += 5;
       else if (st === 'down') pts += 4;
       const room = CAST_CAP - S.castPts;
