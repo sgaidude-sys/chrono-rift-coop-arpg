@@ -9,8 +9,10 @@
  *     gold, terracotta), with blood-red eyes and a violet rift as accents.
  *   • Jagged ink wipes between shots, a hand-drawn dialogue box typing the
  *     chapter's existing voice lines (the Kokoro clips still play), skip button.
- *   • Stingers over gameplay: an ink name band for boss intros and a gold ink
- *     card for Legendary / Mythic loot.
+ *   • Stinger over gameplay: a gold ink card for Legendary / Mythic loot (boss
+ *     intros keep the original title card).
+ *   • Chronicles menu (story button in the quest tracker, and in Settings): watch
+ *     any chapter, including ones not reached yet.
  *  Story progress, voice lines and the Skip/ESC handling are unchanged; only the
  *  picture is new. Nothing is downloaded: it is all drawn on a <canvas>.
  * ============================================================================= */
@@ -241,7 +243,8 @@
       } }] }
   };
 
-  const orig = { playCutscene: GP.playCutscene, skipCutscene: GP.skipCutscene, epicCard: GP.epicCard, pickupItem: GP.pickupItem, epicCallout: GP.epicCallout };
+  const orig = { playCutscene: GP.playCutscene, skipCutscene: GP.skipCutscene, pickupItem: GP.pickupItem, epicCallout: GP.epicCallout, initMMOWorld: GP.initMMOWorld };
+  const UNLOCK = { ch1: 'plays on your first adventure', ch2: 'enter the Bestiary Catacombs (Lv 12–18)', ch3: 'enter The Astral Breach (Lv 32–39)', ch4: 'enter the Chrono Citadel (Lv 46–50)', ch5: 'defeat Archon Malakor' };
 
   function overlay(id, z, blocking) {
     let el = document.getElementById(id);
@@ -271,10 +274,12 @@
       if (!isReplay && this.storyState.seen.has(chapterId)) return;
       if (this._ink) this.inkEnd();
       this.audio && this.audio.init && this.audio.init();
-      this.storyState.seen.add(chapterId);
-      this.storyState.activeChapter = chapterId;
-      this.saveStoryState && this.saveStoryState();
-      this.updateStoryTrackerUI && this.updateStoryTrackerUI();
+      if (!isReplay) {                      // rewatching (Chronicles) never changes story progress
+        this.storyState.seen.add(chapterId);
+        this.storyState.activeChapter = chapterId;
+        this.saveStoryState && this.saveStoryState();
+        this.updateStoryTrackerUI && this.updateStoryTrackerUI();
+      }
       // stretch shots that carry a voice line so the line is never cut off
       const shots = S.shots.map((s) => {
         let dur = s.dur;
@@ -344,6 +349,54 @@
       return orig.skipCutscene.apply(this, arguments);
     },
 
+    // ---- Chronicles: watch any chapter (seen or not yet reached) -------------------------------------
+    openChronicles() {
+      let m = document.getElementById('chronicles-modal');
+      if (!m) {
+        m = document.createElement('div'); m.id = 'chronicles-modal'; m.className = 'modal-backdrop';
+        m.innerHTML = '<div class="modal-box" style="max-width:560px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="font:700 18px Cinzel,serif;letter-spacing:3px;margin:0">📖 Chronicles</h2><button class="mini-btn" data-close>✕ Close</button></div><div class="chr-list" style="display:flex;flex-direction:column;gap:8px"></div></div>';
+        document.body.appendChild(m);
+        m.querySelector('[data-close]').onclick = () => this.closeModals();
+        m.addEventListener('click', (e) => {
+          const b = e.target.closest('[data-ch]'); if (!b) return;
+          this.closeModals();
+          setTimeout(() => this.playCutscene(b.dataset.ch, true), 60);
+        });
+      }
+      const seen = (this.storyState && this.storyState.seen) || new Set();
+      m.querySelector('.chr-list').innerHTML = ['ch1', 'ch2', 'ch3', 'ch4', 'ch5'].map((id) => {
+        const S = SEQ[id], ok = seen.has(id);
+        return `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,${ok ? '.22' : '.1'});background:rgba(255,255,255,${ok ? '.05' : '.02'})">
+          <div style="flex:1"><div style="font:700 10px Arial,sans-serif;letter-spacing:2px;color:${ok ? '#D4A359' : 'rgba(255,255,255,.45)'}">${S.badge}</div>
+          <div style="font:600 16px Georgia,serif;color:#f5f2eb;margin-top:2px">${S.name}</div>
+          <div style="font:500 11.5px Inter,sans-serif;color:rgba(245,242,235,.55);margin-top:2px">${ok ? '✓ Seen' : 'Not reached yet · ' + UNLOCK[id]}</div></div>
+          <button class="mini-btn" data-ch="${id}" style="white-space:nowrap">${ok ? '▶ Watch' : '▶ Watch anyway'}</button></div>`;
+      }).join('');
+      this.openModal('chronicles-modal');
+    },
+
+    // the old "Story" button and a Settings entry (works on phones, where the tracker button is hidden)
+    inkWireChronicles() {
+      const b = document.getElementById('btn-story-replay');
+      if (b && !b._chr) { b._chr = true; b.onclick = (e) => { e.preventDefault(); this.openChronicles(); }; b.textContent = '📖 Chronicles'; }
+      const box = document.querySelector('#settings-modal .modal-box');
+      if (box && !document.getElementById('btn-chronicles')) {
+        const c = document.createElement('button');
+        c.id = 'btn-chronicles'; c.className = 'mini-btn'; c.textContent = '📖 Chronicles — watch story chapters';
+        c.style.cssText = 'margin-top:10px;display:block';
+        c.onclick = () => { this.closeModals(); setTimeout(() => this.openChronicles(), 60); };
+        const credits = document.getElementById('cr-credits');
+        if (credits) box.insertBefore(c, credits); else box.appendChild(c);
+      }
+    },
+
+    initMMOWorld() {
+      const r = orig.initMMOWorld ? orig.initMMOWorld.apply(this, arguments) : undefined;
+      try { this.inkWireChronicles(); } catch (e) { /* UI not ready */ }
+      setTimeout(() => { try { this.inkWireChronicles(); } catch (e) { /* ignore */ } }, 1500);
+      return r;
+    },
+
     // ---- stingers over gameplay --------------------------------------------------------------------
     inkSting(kind, data) {
       const el = overlay('ink-sting', 4500, false);
@@ -397,12 +450,6 @@
       txt(String(d.name || '').slice(0, 34), W / 2, 392, 19, ph(t, 1.4, 2.2), INK, 'italic 19px Georgia, serif');
       if (d.power) txt('✦ ' + d.power, W / 2, 420, 15, ph(t, 1.9, 2.5), TERRA, '500 15px Arial, sans-serif');
       x.globalAlpha = 1;
-    },
-
-    // boss intro: the ink band replaces the old title card
-    epicCard(eyebrow, name, sub, ms, red) {
-      if (eyebrow === 'BOSS' || eyebrow === 'WORLD BOSS') { this.inkSting('boss', { name, sub, world: eyebrow === 'WORLD BOSS' }); return; }
-      return orig.epicCard ? orig.epicCard.apply(this, arguments) : undefined;
     },
 
     // legendary / mythic pickups get the gold ink card (the text callout is skipped while it shows)
