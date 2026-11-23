@@ -22,3 +22,7 @@ node_modules/
 /Basic Monsters/
 /More Monsters/
 /Ultimate Monsters/
+
+# offline edition build output and its CDN download cache
+dist/
+tools/vendor_cache/
