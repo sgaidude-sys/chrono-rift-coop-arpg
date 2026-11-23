@@ -1,11 +1,13 @@
 # Zip the offline edition (index.html at the zip root, as itch.io / CrazyGames expect).
-#   powershell -ExecutionPolicy Bypass -File tools/zip_offline.ps1
+#   powershell -ExecutionPolicy Bypass -File tools/zip_offline.ps1                       (offline edition)
+#   powershell -ExecutionPolicy Bypass -File tools/zip_offline.ps1 -Flavor crazygames    (CrazyGames build)
 # Writes entries with forward slashes: Windows PowerShell's Compress-Archive uses
 # backslashes, which web servers (itch.io, CrazyGames) treat as part of the file name.
+param([string]$Flavor = 'offline')
 $root = Split-Path -Parent $PSScriptRoot
-$src = Join-Path $root 'dist\chrono-rift-offline'
-$zip = Join-Path $root 'dist\chrono-rift-offline.zip'
-if (-not (Test-Path (Join-Path $src 'index.html'))) { Write-Error 'Run node tools/build_offline.js first.'; exit 1 }
+$src = Join-Path $root "dist\chrono-rift-$Flavor"
+$zip = Join-Path $root "dist\chrono-rift-$Flavor.zip"
+if (-not (Test-Path (Join-Path $src 'index.html'))) { Write-Error 'Run node tools/build_offline.js first (add --crazygames for that flavor).'; exit 1 }
 if (Test-Path $zip) { Remove-Item $zip -Force }
 Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -19,4 +21,4 @@ try {
   }
 } finally { $archive.Dispose(); $fs.Dispose() }
 $mb = [math]::Round((Get-Item $zip).Length / 1MB, 1)
-Write-Output "zipped: dist\chrono-rift-offline.zip ($mb MB)"
+Write-Output "zipped: dist\chrono-rift-$Flavor.zip ($mb MB)"

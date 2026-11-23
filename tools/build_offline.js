@@ -1,9 +1,10 @@
 /* Build the standalone offline edition for game portals (CrazyGames, itch.io).
  *
- *   node tools/build_offline.js
+ *   node tools/build_offline.js                 -> dist/chrono-rift-offline/    (itch.io, any portal)
+ *   node tools/build_offline.js --crazygames    -> dist/chrono-rift-crazygames/ (adds the CrazyGames SDK)
  *
- * Output: dist/chrono-rift-offline/   (index.html at the root — upload as an HTML5 game)
- *         then zip it:  powershell -File tools/zip_offline.ps1
+ * index.html sits at the root of the folder — upload it as an HTML5 game. Then zip it:
+ *   powershell -File tools/zip_offline.ps1 [-Flavor crazygames]
  *
  * What it does
  *   • copies public/ (the live game) into dist/chrono-rift-offline/
@@ -11,11 +12,15 @@
  *   • removes the Supabase library, so the game never contacts your Supabase project
  *   • bundles three.js, its loaders/post-processing and the fonts into vendor/, so the
  *     game makes no requests outside its own folder (no Vercel, no CDNs)
+ *   • --crazygames: loads https://sdk.crazygames.com/crazygames-sdk-v3.js (the one external
+ *     script, required by CrazyGames); mmo_crazy.js then handles saves, ads and events
  * Vendor files are downloaded once from the public CDNs the game already uses and cached
  * in tools/vendor_cache/.
  */
 const fs = require('fs'), path = require('path');
-const ROOT = path.join(__dirname, '..'), SRC = path.join(ROOT, 'public'), OUT = path.join(ROOT, 'dist', 'chrono-rift-offline');
+const CRAZY = process.argv.includes('--crazygames');
+const CG_SDK = 'https://sdk.crazygames.com/crazygames-sdk-v3.js';
+const ROOT = path.join(__dirname, '..'), SRC = path.join(ROOT, 'public'), OUT = path.join(ROOT, 'dist', CRAZY ? 'chrono-rift-crazygames' : 'chrono-rift-offline');
 const CACHE = path.join(__dirname, 'vendor_cache');
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36';
 
@@ -81,13 +86,14 @@ async function cached(url, name, binary) {
   for (const [url, name] of Object.entries(SCRIPTS)) html = html.split(`src="${url}"`).join(`src="vendor/${name}"`);
   html = html.replace(/<link rel="preconnect" href="https:\/\/fonts\.(googleapis|gstatic)\.com"[^>]*>\s*/g, '');
   html = html.split(`href="${FONT_CSS.replace(/&/g, '&amp;')}"`).join('href="vendor/fonts.css"').split(`href="${FONT_CSS}"`).join('href="vendor/fonts.css"');
-  html = html.replace('<head>', '<head>\n  <script>window.CR_OFFLINE = true;</script>');
+  html = html.replace('<head>', '<head>\n  <script>window.CR_OFFLINE = true;</script>' + (CRAZY ? `\n  <script src="${CG_SDK}"></script>` : ''));
   // the offline edition never talks to Supabase: don't ship the project address or key
   html = html.replace(/const SUPABASE_URL = "[^"]*";/, 'const SUPABASE_URL = "";').replace(/const SUPABASE_KEY = "[^"]*";/, 'const SUPABASE_KEY = "";');
   fs.writeFileSync(idxF, html);
 
   // report anything still pointing outside the folder
-  const ext = [...html.matchAll(/(?:src|href)="(https?:\/\/[^"]+)"/g)].map(m => m[1]);
+  const ext = [...html.matchAll(/(?:src|href)="(https?:\/\/[^"]+)"/g)].map(m => m[1]).filter(u => u !== CG_SDK);
+  if (CRAZY) console.log('CrazyGames SDK: ' + (html.includes(CG_SDK) ? 'added' : 'MISSING'));
   const size = (d) => fs.readdirSync(d, { withFileTypes: true }).reduce((a, e) => a + (e.isDirectory() ? size(path.join(d, e.name)) : fs.statSync(path.join(d, e.name)).size), 0);
   const count = (d) => fs.readdirSync(d, { withFileTypes: true }).reduce((a, e) => a + (e.isDirectory() ? count(path.join(d, e.name)) : 1), 0);
   console.log(`built ${path.relative(ROOT, OUT)}: ${count(OUT)} files, ${(size(OUT) / 1048576).toFixed(1)} MB`);

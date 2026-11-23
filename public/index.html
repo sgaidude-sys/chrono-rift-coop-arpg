@@ -9880,7 +9880,8 @@
       }
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
+      if (window.CR_BOOT) { try { await window.CR_BOOT; } catch (e) { /* play without the portal SDK */ } }
       window.game = new ChronoRiftCoOpGame();
     });
   </script>
@@ -9937,5 +9938,6 @@
   <script src="assets/js/mmo_account.js?v=1"></script>
   <script src="assets/js/mmo_heroselect.js?v=3"></script>
   <script src="assets/js/mmo_offline.js?v=2"></script>
+  <script src="assets/js/mmo_crazy.js?v=1"></script>
 </body>
 </html>
