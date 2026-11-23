@@ -8337,7 +8337,13 @@
       triggerStoryChapter(chapterId) {
         if (!STORY_CHAPTERS[chapterId]) return;
         if (this.storyState.seen.has(chapterId)) {
-          this.storyState.activeChapter = chapterId;
+          // already watched: only ever move the current chapter forward (joining the world
+          // re-triggers Chapter I and used to reset a later chapter back to the prologue)
+          const order = ['ch1', 'ch2', 'ch3', 'ch4', 'ch5'];
+          if (order.indexOf(chapterId) > order.indexOf(this.storyState.activeChapter || 'ch1')) {
+            this.storyState.activeChapter = chapterId;
+            this.saveStoryState && this.saveStoryState();
+          }
           this.updateStoryTrackerUI();
           return;
         }
