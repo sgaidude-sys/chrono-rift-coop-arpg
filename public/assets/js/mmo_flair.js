@@ -328,7 +328,7 @@
       const T = this._cosTpl || (this._cosTpl = {});
       if (T[file]) return T[file].gl || null;
       T[file] = { gl: null };
-      this.loader.load(ASSET_DIR + file + '.glb', (gl) => {
+      this.loader.load(ASSET_DIR + file + '.glb?v=2', (gl) => {
         gl.scene.traverse((o) => {
           if (!o.isMesh) return;
           o.frustumCulled = false; o.castShadow = true;
