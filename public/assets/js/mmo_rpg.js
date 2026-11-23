@@ -316,7 +316,7 @@
       const mult = mob.isWorldBoss ? 60 : (mob.isBoss ? 25 : (mob.isElite ? 4 : 1));
       const xp = Math.max(1, Math.round(M.mobXp(L) * mult * f));
       this.gainXP(xp, true);
-      p.shards += mob.isWorldBoss ? 25 : (mob.isBoss ? 10 : (mob.isElite ? 3 : (Math.random() < 0.15 ? 1 : 0)));
+      p.shards += mob.isWorldBoss ? 25 : (mob.isBoss ? 10 : (mob.isElite ? 2 : (Math.random() < 0.06 ? 1 : 0)));
       p.synergy = Math.min(100, p.synergy + 14);
       this.questOnKill(mob);
       if (diff <= -6 && !this._grayWarned) {

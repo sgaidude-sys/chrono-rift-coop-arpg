@@ -149,7 +149,7 @@
     },
 
     // earn sigils from the reward loop
-    jackpot() { const r = orig.jackpot ? orig.jackpot.apply(this, arguments) : undefined; this.sigilAdd(1, 'jackpot'); return r; },
+    jackpot() { const r = orig.jackpot ? orig.jackpot.apply(this, arguments) : undefined; const S = this.rwSess && this.rwSess(); if (S && S.jackpots % 3 === 0) this.sigilAdd(1, 'every 3rd jackpot'); return r; },
     bountyBoard() { const r = orig.bountyBoard ? orig.bountyBoard.apply(this, arguments) : undefined; this.sigilAdd(2, 'bounty board'); return r; },
     grantKillRewards(mob, fromNetwork) {
       const R = this.mmoState && this.mmoState.rw, d0 = R ? R.daily : null;
@@ -157,7 +157,7 @@
       if (R && R.daily !== d0) this.sigilAdd(1, 'daily first win');
       return r;
     },
-    riftReward(rf) { const r = orig.riftReward ? orig.riftReward.apply(this, arguments) : undefined; this.sigilAdd(1 + Math.floor(((rf && rf.tier) || 1) / 3), 'rift cleared'); return r; },
+    riftReward(rf) { const r = orig.riftReward ? orig.riftReward.apply(this, arguments) : undefined; this.sigilAdd(1, 'rift cleared'); return r; },
 
     initMMOWorld() {
       const r = orig.initMMOWorld ? orig.initMMOWorld.apply(this, arguments) : undefined;

@@ -26,7 +26,7 @@
 
   const JACKPOT = 100, FRENZY_S = 45, RESTED_MS = 15 * 60 * 1000;
   const RIFT_TIME = 180, RIFT_R = 12;
-  const FILL = { kill: 3, role: 4.5, elite: 12, boss: 30, world: 60 };
+  const FILL = { kill: 1.6, role: 2.6, elite: 10, boss: 30, world: 60 };   // economy pass: a jackpot every ~5 min of fighting
 
   const BOUNTY_KINDS = {
     kill: { make: (L) => ({ n: 18 + Math.floor(Math.random() * 9) }), text: (b) => `Slay ${b.n} monsters` },
@@ -139,8 +139,8 @@
       const n = ++S.jackpots;
       const L = p.level || 1;
       // escalating payout
-      const items = 2 + Math.min(3, Math.floor(n / 2));
-      const legendChance = Math.min(0.5, 0.06 + 0.06 * (n - 1));
+      const items = 2 + (n >= 4 ? 1 : 0);
+      const legendChance = Math.min(0.08, 0.02 + 0.01 * (n - 1));
       const minR = n >= 3 ? 'epic' : 'rare';
       const at = p.pos.clone();
       for (let i = 0; i < items; i++) {
@@ -150,7 +150,7 @@
       }
       const gold = Math.round((60 + L * 25) * (1 + 0.3 * (n - 1)));
       for (let i = 0; i < 6; i++) this.spawnItemDrop(at, null, Math.round(gold / 6), null);
-      p.shards = (p.shards || 0) + 2 + n;
+      p.shards = (p.shards || 0) + 2;
       this._rwFrenzy = FRENZY_S;
       S.frenzy++;
       // fanfare
@@ -195,25 +195,25 @@
       this.rwSess().bounties++;
       const it = this.generateItem({ ilvl: L, minRarity: 'rare', rarity: this.rollRarity(1.5), cls: p.classId });
       this.spawnItemDrop(p.pos.clone(), it, Math.round(L * 12), null);
-      p.shards = (p.shards || 0) + 2;
+      p.shards = (p.shards || 0) + 1;
       if (this.epicCallout) this.epicCallout('BOUNTY COMPLETE', '#5be39b');
       if (this.vfxPillar) this.vfxPillar(_v.set(p.pos.x, 0, p.pos.z), 8, 1.2, 0x5be39b, 0xffffff, 0);
       if (this.audio && this.audio.playLootChime) this.audio.playLootChime();
       this.addChatMessage && this.addChatMessage('Bounty', `🎯 Bounty complete: ${BOUNTY_KINDS[b.k].text(b)}`, 'sys-loot');
-      this.fortuneAdd(15);
+      this.fortuneAdd(12);
     },
 
     bountyBoard() {
       const p = this.player, L = p.level || 1, R = this.rw();
       R.boards = (R.boards || 0) + 1;
-      const leg = Math.random() < 0.25;
+      const leg = Math.random() < 0.1;
       const it = this.generateItem({ ilvl: L + 1, minRarity: 'epic', rarity: leg ? 'legendary' : 'epic', cls: p.classId });
       this.spawnItemDrop(p.pos.clone(), it, Math.round(L * 30), null);
       p.shards = (p.shards || 0) + 5;
       if (this.slowMo) this.slowMo(0.4, 0.5);
       if (this.epicCallout) this.epicCallout('BOUNTY BOARD CLEARED', '#ffd56b');
       this.addChatMessage && this.addChatMessage('Bounty', '🏆 All three bounties done! A bounty chest bursts open — new bounties posted.', 'sys-loot');
-      this.fortuneAdd(25);
+      this.fortuneAdd(20);
       this.rwNewBoard();
     },
 
@@ -403,7 +403,7 @@
       if (left <= 0) { this.riftEnd(false); return; }
       if (!alive.length && rf.ids.length) {
         if (rf.wave >= rf.waves) this.riftEnd(true);
-        else { this.fortuneAdd(10); this.riftNextWave(); }
+        else { this.fortuneAdd(8); this.riftNextWave(); }
       }
     },
 
@@ -437,13 +437,13 @@
       const p = this.player, R = this.rw(), T = rf.tier, L = Math.max(p.level || 1, rf.lv);
       this.rwSess().rifts++;
       const n = Math.min(6, 2 + Math.floor(T / 2) + (left >= 60 ? 1 : 0));
-      const legChance = Math.min(0.5, 0.08 + 0.03 * T);
+      const legChance = Math.min(0.15, 0.04 + 0.012 * T);
       for (let i = 0; i < n; i++) {
         const leg = i === 0 && Math.random() < legChance;
         const it = this.generateItem({ ilvl: L + (T >= 5 ? 1 : 0), minRarity: i === 0 ? (T >= 4 ? 'epic' : 'rare') : 'uncommon', rarity: leg ? 'legendary' : this.rollRarity(0.5 + T * 0.3), cls: i < 2 ? p.classId : undefined });
         this.spawnItemDrop(p.pos.clone(), it, i === 0 ? Math.round(L * 15 * T) : 0, null);
       }
-      p.shards = (p.shards || 0) + 2 * T;
+      p.shards = (p.shards || 0) + T;
       if (M.mobXp) this.gainXP(Math.round(M.mobXp(L) * (3 + T)), true);
       const prev = R.riftTier || 1;
       if (T >= prev) R.riftTier = T + 1;
@@ -454,7 +454,7 @@
       if (this.vfxPillar) this.vfxPillar(_v.set(p.pos.x, 0, p.pos.z), 18, 2, 0xb266ff, 0xffffff, 0);
       if (this.audio && this.audio.playLootChime) this.audio.playLootChime();
       this.addChatMessage && this.addChatMessage('Rift', `🏆 Tier ${T} Rift cleared with ${left}s to spare! ${n} items burst out.${T >= prev ? ` Tier ${T + 1} unlocked.` : ''}`, 'sys-loot');
-      this.fortuneAdd(20);
+      this.fortuneAdd(14);
       this.bountyAdd('rift');
       this.saveMMOState && this.saveMMOState();
     },

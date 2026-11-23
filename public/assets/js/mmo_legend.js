@@ -307,7 +307,7 @@
         const p = this.player, st = this.mmoState;
         if (mob && st && p && (mob.isElite || mob.isBoss) && Math.hypot(p.pos.x - mob.pos.x, p.pos.z - mob.pos.z) <= 110) {
           st.lgPity = (st.lgPity || 0) + (mob.isWorldBoss ? 6 : (mob.isBoss ? 3 : 1));
-          const chance = 0.02 + st.lgPity * 0.004;
+          const chance = 0.008 + st.lgPity * 0.0016;   // economy pass: ~1 bonus legendary per ~25 elite kills
           if (Math.random() < chance) {
             st.lgPity = 0;
             const it = this.generateItem({ ilvl: mob.level || 1, rarity: 'legendary', cls: p.classId });

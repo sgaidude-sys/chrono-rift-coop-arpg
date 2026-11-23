@@ -473,7 +473,7 @@
     mobHp: (L) => Math.round(150 * Math.pow(1.09, L - 1)),
     mobDmg: (L) => Math.round(19 * Math.pow(1.085, L - 1)),
     mobXp: (L) => Math.round(12 + 6 * L),
-    xpToNext: (L) => Math.round((12 + 6 * L) * (8 + 1.2 * L) * 1.05),
+    xpToNext: (L) => Math.round((12 + 6 * L) * (8 + 1.2 * L) * 1.05 * (1.8 + 0.05 * Math.max(0, L - 5))),   // economy pass: ~8-9 h of active play to 50
     weaponDmg: (ilvl) => 42 * Math.pow(1.085, ilvl - 1),
     armorBudget: (ilvl) => (40 + 22 * ilvl) * 0.45,
     heroHp: (base, L) => Math.round(base * Math.pow(1.08, L - 1))
