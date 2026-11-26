@@ -253,44 +253,108 @@
     else { path([[cx - 10, cy + 14], [cx + 6, cy - 12]], p, 2.5, c); path([[cx + 10, cy + 14], [cx - 6, cy - 12]], p, 2.5, c); arc(cx + 6, cy - 12, 6, -Math.PI, 0.3, p, 2, c); arc(cx - 6, cy - 12, 6, Math.PI - 0.3, 0, p, 2, c); }
   }
   function riftLine(cx) { return [[cx + 40, 0], [cx, 70], [cx + 55, 120], [cx - 20, 190], [cx + 28, 232], [cx - 50, 300], [cx - 15, 340], [cx - 80, 400]]; }
+
+  // Inked character silhouettes for the story beats: one body, then the gear that makes each one
+  // readable at a glance. kind: lyra | vanguard | ranger | arcanist | berserker. raise 0..1 lifts the
+  // weapon arm; d = 1 faces right, -1 faces left.
+  function champion(kind, cx, base, P, p, tick, raise, d) {
+    d = d || 1; raise = raise || 0;
+    const ink = P.ink, w = (tick % 4) * 3, hy = base - 118;            // head centre
+    const wide = kind === 'berserker' ? 1.35 : 1, sh = base - 100;     // shoulders
+    // legs, torso, shoulders
+    if (kind === 'arcanist') path([[cx - 22, base], [cx - 6, base - 60], [cx + 6, base - 60], [cx + 22, base], [cx - 22, base]], p, 3, ink);   // robe
+    else { path([[cx, base - 55], [cx - 14, base]], p, 4, ink); path([[cx, base - 55], [cx + 14, base]], p, 4, ink); }
+    path([[cx, base - 104], [cx, base - 55]], p, kind === 'berserker' ? 6 : 4, ink);
+    path([[cx - 13 * wide, sh], [cx + 13 * wide, sh]], p, kind === 'berserker' ? 6 : 3, ink);
+    arc(cx, hy, 13, 0, Math.PI * 2, p, 3, ink);
+    // back arm
+    path([[cx - 12 * wide * d, sh], [cx - 24 * wide * d, base - 70]], p, 3.5, ink);
+    // weapon arm (raised by `raise`)
+    const hx = cx + (16 + 14 * (1 - raise)) * d, hand = [hx, base - 72 - 60 * raise];
+    path([[cx + 12 * wide * d, sh], hand], p, 3.5, ink);
+    if (kind === 'lyra') {
+      // long hair streaming behind, a rift-gem circlet, a cloak in the rift colour, quiver and bow
+      path([[cx - 6 * d, hy - 10], [cx - 20 * d, hy + 4], [cx - (30 + w) * d, hy + 30], [cx - (36 + w) * d, hy + 46]], p, 3, ink);
+      path([[cx - 2 * d, hy - 12], [cx - 14 * d, hy + 10], [cx - (22 + w) * d, hy + 38]], p, 2.5, ink);
+      path([[cx - 11, hy - 6], [cx + 11, hy - 6]], p, 2, P.gold); dot(cx, hy - 7, 3.2, P.rift);
+      path([[cx - 4 * d, sh], [cx - (34 + w) * d, base - 30], [cx - (20 + w) * d, base - 24], [cx - 4 * d, base - 60]], p, 3, P.rift);
+      path([[cx - 8 * d, sh - 8], [cx - 16 * d, base - 66]], p, 3, ink); path([[cx - 10 * d, sh - 12], [cx - 6 * d, sh - 18]], p, 2, ink);
+      arc(hand[0], hand[1], 26, -Math.PI / 2, Math.PI / 2, p, 3, ink); path([[hand[0], hand[1] - 26], [hand[0], hand[1] + 26]], p, 1.5, ink);
+    } else if (kind === 'vanguard') {
+      // plumed helm, kite shield on the back arm, sword up
+      path([[cx - 13, hy - 2], [cx - 13, hy - 12], [cx, hy - 18], [cx + 13, hy - 12], [cx + 13, hy - 2]], p, 3, ink);
+      path([[cx, hy - 18], [cx - 6 * d, hy - 34], [cx - (18 + w) * d, hy - 30]], p, 3, P.b);
+      const sx = cx - 30 * d, sy = base - 74;
+      path([[sx, sy - 24], [sx + 18 * d, sy - 18], [sx + 15 * d, sy + 8], [sx, sy + 24], [sx - 15 * d, sy + 8], [sx - 18 * d, sy - 18], [sx, sy - 24]], p, 3.5, ink);
+      path([[sx, sy - 18], [sx, sy + 16]], p, 2, P.gold);
+      path([hand, [hand[0] + 10 * d, hand[1] - 58]], p, 4, ink); path([[hand[0] - 9 * d, hand[1] - 6], [hand[0] + 9 * d, hand[1] + 2]], p, 3, ink);
+    } else if (kind === 'ranger') {
+      // pointed hood, short cloak, drawn bow with an arrow
+      path([[cx - 14, hy + 4], [cx - 8 * d, hy - 24], [cx + 14, hy + 2]], p, 3, ink);
+      path([[cx - 4 * d, sh], [cx - (26 + w) * d, base - 50], [cx - 6 * d, base - 62]], p, 3, ink);
+      arc(hand[0] + 6 * d, hand[1], 28, d > 0 ? -Math.PI / 2 : Math.PI / 2, d > 0 ? Math.PI / 2 : Math.PI * 1.5, p, 3, ink);
+      path([[hand[0] + 6 * d, hand[1] - 28], [hand[0] - 8 * d, hand[1]], [hand[0] + 6 * d, hand[1] + 28]], p, 1.5, ink);
+      path([[hand[0] - 10 * d, hand[1]], [hand[0] + 44 * d, hand[1]]], p, 2, ink);
+    } else if (kind === 'arcanist') {
+      // tall hat, staff with a glowing orb
+      path([[cx - 20, hy - 6], [cx + 20, hy - 6]], p, 3, ink); path([[cx - 13, hy - 6], [cx - 4 * d, hy - 46], [cx + 13, hy - 6]], p, 3, ink);
+      const top = [hand[0] + 4 * d, hand[1] - 52];
+      path([[hand[0] - 4 * d, hand[1] + 50], top], p, 3.5, ink);
+      arc(top[0], top[1] - 8, 8 + (tick % 3), 0, Math.PI * 2, p, 3, P.rift);
+      if (p >= 1) for (let i = 0; i < 4; i++) { const a = tick * 0.6 + i * 1.6; dot(top[0] + Math.cos(a) * 16, top[1] - 8 + Math.sin(a) * 16, 2, P.rift); }
+    } else if (kind === 'berserker') {
+      // horned helm, twin axes
+      path([[cx - 13, hy - 4], [cx - 22, hy - 22], [cx - 18, hy - 32]], p, 3, ink); path([[cx + 13, hy - 4], [cx + 22, hy - 22], [cx + 18, hy - 32]], p, 3, ink);
+      const axe = (hx2, hy2, s) => { path([[hx2, hy2 + 30], [hx2, hy2 - 22]], p, 3.5, ink); path([[hx2, hy2 - 22], [hx2 + 16 * s, hy2 - 30], [hx2 + 20 * s, hy2 - 12], [hx2 + 4 * s, hy2 - 8]], p, 3, ink); };
+      axe(hand[0], hand[1], d); axe(cx - 26 * d, base - 66, -d);
+    }
+  }
+  const KIND = { VANGUARD: 'vanguard', RANGER: 'ranger', ARCANIST: 'arcanist', BERSERKER: 'berserker' };
+  // vo: voice clip id (shot stretches to fit it); line: [speaker, text] typed in the dialogue box
   const BEATS = {
     call: { mood: 'dread', shots: [
-      { dur: 3.8, line: ['Rift Gatekeeper Lyra', 'There are too many… I can\'t seal it alone.'], draw(t, P, tick) {
+      { dur: 3.4, vo: 'call_0', line: ['Rift Gatekeeper Lyra', 'There are too many… I can\'t seal it alone.'], draw(t, P, tick) {
         path([[0, 400], [W, 398]], ph(t, 0, 0.5), 3, P.ink);
         hatch(0, 0, W, 450, ph(t, 0, 1) * 0.45, P.a, 12, 1);
         const c = riftLine(650); path(c, ph(t, 0.1, 1.0), 12, P.ink); path(c, ph(t, 0.3, 1.2), 4, P.rift);
-        hero(300, 400, P, ph(t, 0, 0.8), tick, 0.35);
+        champion('lyra', 300, 400, P, ph(t, 0, 0.8), tick, 0.15);
+        txt('LYRA', 300, 425, 13, ph(t, 0.4, 0.9), P.b, '600 13px Arial, sans-serif');
         const n = Math.min(10, Math.floor(t * 3.2));
-        for (let i = 0; i < n; i++) { const ix = 640 - ((tick * 5 + i * 44) % 300); imp(ix, 400, 0.9 + (i % 3) * 0.15, P); }
+        for (let i = 0; i < n; i++) { const ix = 640 - ((tick * 5 + i * 44) % 280); imp(ix, 400, 0.9 + (i % 3) * 0.15, P); }
       } },
-      { dur: 3.8, line: ['Rift Gatekeeper Lyra', 'Across every timeline… hear me. Answer my call!'], draw(t, P, tick) {
+      { dur: 3.6, vo: 'call_1', line: ['Rift Gatekeeper Lyra', 'Across every timeline… hear me. Answer my call!'], draw(t, P, tick) {
         path([[0, 400], [W, 398]], ph(t, 0, 0.4), 3, P.ink);
-        const c = riftLine(560); path(c, 1, 10, P.ink); path(c, 1, 4, P.rift);
-        rays(480, 236, 50, 330, 16, ph(t, 0.7, 2.0), GOLD, tick);
-        hero(480, 400, P, 1, tick, ph(t, 0.3, 1.2));
-        if (t > 1.2) arc(520, 236, 22 + (tick % 3) * 4, 0, Math.PI * 2, 1, 3, GOLD);
+        const c = riftLine(600); path(c, 1, 10, P.ink); path(c, 1, 4, P.rift);
+        rays(470, 236, 50, 330, 16, ph(t, 0.7, 2.0), GOLD, tick);
+        champion('lyra', 470, 400, P, 1, tick, ph(t, 0.3, 1.2));
+        if (t > 1.2) arc(470, 236, 22 + (tick % 3) * 4, 0, Math.PI * 2, 1, 3, GOLD);
       } },
-      { dur: 6.4, draw(t, P, tick) {
+      { dur: 6.4, vo: 'call_2', draw(t, P, tick) {
         path([[0, 420], [W, 418]], ph(t, 0, 0.4), 3, P.ink);
         CLASS_ROW.forEach(([name, kind], i) => {
           const cx = 150 + i * 220, p0 = 0.2 + i * 0.25;
-          path([[cx - 70, 420], [cx - 70, 200]], ph(t, p0, p0 + 0.5), 3.5, P.ink); arc(cx, 200, 70, Math.PI, Math.PI * 2, ph(t, p0 + 0.3, p0 + 0.8), 3.5, P.ink); path([[cx + 70, 200], [cx + 70, 420]], ph(t, p0 + 0.5, p0 + 0.9), 3.5, P.ink);
-          if (t > p0 + 0.9) { path([[W / 2, -10], [cx, 150]], ph(t, p0 + 0.9, p0 + 1.4), 2, GOLD); hero(cx, 415, P, ph(t, p0 + 1.1, p0 + 1.9), tick, 0.25 + 0.5 * ((tick + i) % 2)); }
+          path([[cx - 70, 420], [cx - 70, 215]], ph(t, p0, p0 + 0.5), 3.5, P.ink); arc(cx, 215, 70, Math.PI, Math.PI * 2, ph(t, p0 + 0.3, p0 + 0.8), 3.5, P.ink); path([[cx + 70, 215], [cx + 70, 420]], ph(t, p0 + 0.5, p0 + 0.9), 3.5, P.ink);
+          if (t > p0 + 0.9) { path([[W / 2, 110], [cx, 160]], ph(t, p0 + 0.9, p0 + 1.4), 2, GOLD); champion(KIND[name], cx, 412, P, ph(t, p0 + 1.1, p0 + 1.9), tick, 0.35 + 0.25 * ((tick + i) % 2)); }
           sigil(kind, cx, 448, ph(t, p0 + 1.3, p0 + 1.8), P.b);
           txt(name, cx, 486, 16, ph(t, p0 + 1.5, p0 + 2.1), P.ink, '600 16px Arial, sans-serif');
         });
-        if (t > 3.2) { x.fillStyle = P.paper; x.globalAlpha = 0.9 * ph(t, 3.2, 3.6); x.fillRect(0, 150, W, 170); x.globalAlpha = 1; title(P, t, 3.3, 'HER CALL ECHOES THROUGH FOUR TIMELINES', 'Who answers?'); }
+        // title above the doorways (never over the champions)
+        txt('HER CALL ECHOES THROUGH FOUR TIMELINES', W / 2, 36, 14, ph(t, 3.6, 4.2), P.b, '500 14px Arial, sans-serif');
+        txt('Who answers?', W / 2, 84, 44, ph(t, 4.0, 5.0), P.ink, '500 44px Georgia, serif');
       } }] },
     answer: { mood: 'hope', shots: [
-      { dur: 5.2, draw(t, P, tick, S, D) {
+      { dur: 5.2, vo: 'answer_0', draw(t, P, tick, S, D) {
         path([[0, 400], [W, 398]], ph(t, 0, 0.4), 3, P.ink);
         const c = riftLine(420); path(c, 1, 10, P.ink); path(c, 1, 4, P.rift);
         rays(400, 230, 40, 260, 12, ph(t, 0, 1.2), GOLD, tick);
         const k = ph(t, 0.4, 2.2);
-        hero(400 - 80 * k, 400, P, ph(t, 0.3, 1.0), tick, 0.6);                         // the champion steps out of the rift
-        hero(700, 400, P, ph(t, 0.0, 0.6), tick, 0.3, true);                             // Lyra, waiting
+        champion((D && D.kind) || 'vanguard', 390 - 90 * k, 400, P, ph(t, 0.3, 1.0), tick, 0.5);   // the champion steps out of the rift
+        champion('lyra', 700, 400, P, ph(t, 0.0, 0.6), tick, 0.1, -1);                           // Lyra, waiting
         txt('LYRA', 700, 425, 13, ph(t, 0.5, 0.9), P.b, '600 13px Arial, sans-serif');
-        if (t > 2.0) { x.fillStyle = P.paper; x.globalAlpha = 0.9 * ph(t, 2.0, 2.4); x.fillRect(0, 150, W, 170); x.globalAlpha = 1; title(P, t, 2.1, 'THE CALL IS ANSWERED', (D && D.title) || 'A champion arrives'); }
+        // title across the top (never over the champion or Lyra)
+        if (t > 2.4) { x.fillStyle = P.paper; x.globalAlpha = 0.88 * ph(t, 2.4, 2.8); x.fillRect(0, 8, W, 120); x.globalAlpha = 1;
+          txt('THE CALL IS ANSWERED', W / 2, 40, 15, ph(t, 2.5, 3.0), P.b, '500 15px Arial, sans-serif');
+          txt((D && D.title) || 'A champion arrives', W / 2, 90, 42, ph(t, 2.8, 3.9), P.ink, '500 42px Georgia, serif'); }
       } }] }
   };
 
@@ -379,6 +443,7 @@
       x.fillStyle = P.paper; x.fillRect(0, 0, W, H); grain(tick);
       s.draw(lt, P, lTick, I.S, I.data || { noFlash: document.body.classList.contains('cr-noflash') });
       if (s.line) say(P, lt, s.line[0], s.line[1], 0.3);
+      if (s.vo && !I.voiced[i] && lt >= 0.25) { I.voiced[i] = true; if (this.audio && this.audio.playVoice) this.audio.playVoice(s.vo, 3); }
       if (s.voice !== undefined) {
         const line = I.chap.shots[s.voice];
         if (line) say(P, lt, String(line.speaker || '').replace(/^[^A-Za-z]+/, ''), line.text, 0.4);
@@ -413,7 +478,10 @@
       const el = overlay('ink-cine', 5000, true);
       el.style.display = 'flex';
       const ctx = el.querySelector('canvas').getContext('2d');
-      const shots = S.shots, total = shots.reduce((a, s) => a + s.dur, 0);
+      const A = this.audio;
+      const shots = S.shots.map((s) => { const v = s.vo && A && A.voiceDuration ? A.voiceDuration(s.vo) : 0; return v ? Object.assign({}, s, { dur: Math.max(s.dur, v + 1.0) }) : s; });
+      if (A && A.preloadVoice) A.preloadVoice(S.shots.filter(s => s.vo).map(s => s.vo));
+      const total = shots.reduce((a, s) => a + s.dur, 0);
       const I = this._ink = { id: key, S, shots, total, chap: { shots: [] }, data: data || {}, onEnd, t0: performance.now(), ctx, el, voiced: {}, raf: 0 };
       const step = (now) => {
         if (this._ink !== I) return;

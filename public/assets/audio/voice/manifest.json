@@ -59,6 +59,60 @@
   "speaker": "Rift Gatekeeper Lyra",
   "text": "Victory belongs to your party! Prepare yourselves. The Endless Rift escalates to the next tier!"
  },
+ "pro_open": {
+  "file": "assets/audio/voice/pro_open.mp3",
+  "dur": 5.352,
+  "speaker": "Lorekeeper Aldous",
+  "text": "Ashenvale. The night the sky tore open... and the Rift Gatekeeper stood alone."
+ },
+ "pro_lyra_0": {
+  "file": "assets/audio/voice/pro_lyra_0.mp3",
+  "dur": 5.472,
+  "speaker": "Rift Gatekeeper Lyra",
+  "text": "I'm Lyra, keeper of the Rift Gate. The breach is right outside the walls. I have to hold it!"
+ },
+ "pro_lyra_1": {
+  "file": "assets/audio/voice/pro_lyra_1.mp3",
+  "dur": 1.728,
+  "speaker": "Rift Gatekeeper Lyra",
+  "text": "More of them! They're pouring through!"
+ },
+ "pro_lyra_surge": {
+  "file": "assets/audio/voice/pro_lyra_surge.mp3",
+  "dur": 2.016,
+  "speaker": "Rift Gatekeeper Lyra",
+  "text": "No... the breach is tearing wider!"
+ },
+ "call_0": {
+  "file": "assets/audio/voice/call_0.mp3",
+  "dur": 2.328,
+  "speaker": "Rift Gatekeeper Lyra",
+  "text": "There are too many... I can't seal it alone."
+ },
+ "call_1": {
+  "file": "assets/audio/voice/call_1.mp3",
+  "dur": 3.048,
+  "speaker": "Rift Gatekeeper Lyra",
+  "text": "Across every timeline... hear me. Answer my call!"
+ },
+ "call_2": {
+  "file": "assets/audio/voice/call_2.mp3",
+  "dur": 7.08,
+  "speaker": "Lorekeeper Aldous",
+  "text": "Her call echoed through four timelines. Four champions turned toward the light... but only one would answer."
+ },
+ "answer_0": {
+  "file": "assets/audio/voice/answer_0.mp3",
+  "dur": 6.384,
+  "speaker": "Lorekeeper Aldous",
+  "text": "The call was answered. A champion stepped out of the rift, and the battle for Ashenvale began."
+ },
+ "town_lyra_0": {
+  "file": "assets/audio/voice/town_lyra_0.mp3",
+  "dur": 6.0,
+  "speaker": "Rift Gatekeeper Lyra",
+  "text": "You came... Then the rift chose well. Take my reserve weapon, and clear the Meadows before more break through."
+ },
  "kaelen_greet": {
   "file": "assets/audio/voice/kaelen_greet.mp3",
   "dur": 7.56,

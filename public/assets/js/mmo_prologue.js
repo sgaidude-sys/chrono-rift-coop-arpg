@@ -116,6 +116,8 @@
   #cr-op-talk .nm { font: 800 11px 'Plus Jakarta Sans', Inter, sans-serif; letter-spacing: .14em; color: #ffd56b; text-transform: uppercase; }
   #cr-op-talk .tx { font: 600 14px/1.45 'Plus Jakarta Sans', Inter, sans-serif; color: #F5F2EB; margin-top: 3px; min-height: 20px; }
   body.cr-lyra-call #hero-modal .hs-back { display: none !important; }
+  /* playing Lyra's prologue: no quests, bounties or rift surges, just the fight */
+  body.cr-prologue #story-tracker { visibility: hidden !important; }
   /* nothing but the champion choice while Lyra's call is on screen */
   body.cr-lyra-call #combat-tip, body.cr-lyra-call #epic-call, body.cr-lyra-call #cr-op-tip, body.cr-lyra-call #hud-top, body.cr-lyra-call #hud-bottom,
   body.cr-lyra-call #chat-panel, body.cr-lyra-call #minimap-wrap, body.cr-lyra-call #ui-quick, body.cr-lyra-call #ui-status, body.cr-lyra-call #ui-avatar,
@@ -151,6 +153,34 @@
   }
   function hideTalk() { clearInterval(typeTimer); clearTimeout(talkTimer); const el = document.getElementById('cr-op-talk'); if (el) el.classList.remove('on'); }
   const LYRA = ['Rift Gatekeeper Lyra', '🌀'];
+  // a large centred caption ("PROLOGUE · You are Lyra…") that fades in and out
+  function caption(small, big, secs) {
+    let el = document.getElementById('cr-op-cap');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'cr-op-cap';
+      el.style.cssText = "position:fixed;left:50%;top:26%;transform:translateX(-50%);z-index:46;pointer-events:none;text-align:center;color:#F5F2EB;text-shadow:0 2px 16px rgba(0,0,0,.9);opacity:0;transition:opacity .8s;width:min(92vw,680px);";
+      document.body.appendChild(el);
+    }
+    el.innerHTML = `<div style="font:800 12px 'Plus Jakarta Sans',Inter,sans-serif;letter-spacing:.42em;color:#ffd56b">${small}</div><div style="font:900 clamp(20px,3vw,34px) 'Cinzel',serif;letter-spacing:.08em;margin-top:8px">${big}</div>`;
+    setTimeout(() => { el.style.opacity = '1'; }, 30);
+    setTimeout(() => { el.style.opacity = '0'; }, (secs || 4) * 1000);
+  }
+  // voice line + matching typed text; browsers keep audio locked until the first click/key, so a line
+  // asked for before that waits for the player's first input (instead of playing silently)
+  function voiced(game, id, who, icon, text, secs) {
+    const A = game.audio;
+    const play = () => { talk(who, icon, text, secs || Math.max(4, (A && A.voiceDuration ? A.voiceDuration(id) : 0) + 1.5)); if (A && A.playVoice) A.playVoice(id, 3); };
+    if (A && A.ctx && A.ctx.state === 'running') { play(); return; }
+    const once = () => { window.removeEventListener('pointerdown', once, true); window.removeEventListener('keydown', once, true); setTimeout(play, 120); };
+    window.addEventListener('pointerdown', once, true); window.addEventListener('keydown', once, true);
+  }
+  // dissolve the game into the storybook's paper before an ink scene starts
+  function paperFade(then) {
+    let el = document.getElementById('cr-op-fade');
+    if (!el) { el = document.createElement('div'); el.id = 'cr-op-fade'; el.style.cssText = 'position:fixed;inset:0;z-index:4999;pointer-events:none;background:#E8E5DF;opacity:0;transition:opacity .9s ease;'; document.body.appendChild(el); }
+    setTimeout(() => { el.style.opacity = '1'; }, 30);
+    setTimeout(() => { then();setTimeout(() => { el.style.transition = 'none'; el.style.opacity = '0'; void el.offsetWidth; el.style.transition = 'opacity .9s ease'; }, 300); }, 950);
+  }
   function banner(title, count, frac, cls) {
     ensureUi();
     const b = document.getElementById('cr-op-banner');
@@ -220,10 +250,15 @@
       const r = orig.initMMOWorld.apply(this, arguments);
       // Lyra's temporary saves can be written back as the page unloads (after her record was
       // deleted): sweep any that don't belong to a Lyra currently being played
+      const asLyra = !!(window.CR_ACCOUNT && CR_ACCOUNT.playing && CR_ACCOUNT.playing.prologue);
       try {
-        const asLyra = !!(window.CR_ACCOUNT && CR_ACCOUNT.playing && CR_ACCOUNT.playing.prologue);
         if (!asLyra) Object.keys(localStorage).filter(k => k.indexOf('g_lyra-') >= 0).forEach(k => localStorage.removeItem(k));
       } catch (e) { /* storage blocked */ }
+      // Lyra only speaks with her own voice: the Ranger class's combat barks stay quiet in her prologue
+      if (asLyra && this.audio && this.audio.playVoice && !this.audio._lyraMuted) {
+        const A = this.audio, pv = A.playVoice.bind(A); A._lyraMuted = true;
+        A.playVoice = (id, ...rest) => (/^hero_/.test(String(id)) ? false : pv(id, ...rest));
+      }
       // SPACE skips cinematics too (ESC and the button already do)
       window.addEventListener('keydown', (e) => {
         if (!this.cutsceneActive || (e.key !== ' ' && e.code !== 'Space')) return;
@@ -314,7 +349,14 @@
       // played as Lyra: set the scene in her voice
       this._opLyra = !!(window.CR_ACCOUNT && CR_ACCOUNT.playing && CR_ACCOUNT.playing.prologue);
       if (this._opLyra) {
-        talk(LYRA[0], LYRA[1], 'Ashenvale, the night the sky tore open… The breach is right outside the gate. Hold it!', 6);
+        // make it clear up front: this is a prologue, and you are Lyra (your own hero comes later)
+        ensureUi(); document.body.classList.add('cr-prologue');
+        caption('PROLOGUE', 'You are Lyra, keeper of the Rift Gate', 5);
+        const A = this.audio;
+        if (A && A.preloadVoice) A.preloadVoice(['pro_open', 'pro_lyra_0', 'pro_lyra_1', 'pro_lyra_surge', 'call_0', 'call_1', 'call_2', 'answer_0']);
+        voiced(this, 'pro_open', 'Lorekeeper Aldous', '📜', 'Ashenvale. The night the sky tore open… and the Rift Gatekeeper stood alone.');
+        const next = () => voiced(this, 'pro_lyra_0', LYRA[0], LYRA[1], 'I\'m Lyra, keeper of the Rift Gate. The breach is right outside the walls. I have to hold it!');
+        setTimeout(next, ((A && A.voiceDuration && A.voiceDuration('pro_open')) || 5.4) * 1000 + 900);
       }
     },
 
@@ -330,16 +372,16 @@
       this.prologueWave([['meadow_slime', 1], ['field_rat', 1], ['cluckbeast', 2], ['field_rat', 1], ['meadow_slime', 1]], 4);
       this.screenShake = Math.max(this.screenShake || 0, 0.6);
       if (this.spawnVFXFlipbook) this.spawnVFXFlipbook('vortex', O.C, 9, 1.2, 0xb070ff);
-      // a moment of the surge in-world, then the story takes over in ink: Lyra calls across time and
-      // four champions turn toward the light ("Who answers?"); the choice screen follows
+      voiced(this, 'pro_lyra_surge', LYRA[0], LYRA[1], 'No… the breach is tearing wider!', 3);
+      // a moment of the surge in-world, then the game dissolves into the storybook: Lyra calls across
+      // time and four champions turn toward the light ("Who answers?"); the choice screen follows
       setTimeout(() => {
         if (this._op !== O) return;
         if (this.spawnVFXFlipbook) this.spawnVFXFlipbook('eldenring', p.pos, 6, 1.0, 0xffd56b);
         if (this.audio && this.audio.playSpell) this.audio.playSpell('ult');
-        hideBanner(); hideTalk();
         const go = () => { if (this._op === O) this.openChampionCall(); };
-        if (this.inkPlayBeat) this.inkPlayBeat('call', {}, go); else go();
-      }, 1900);
+        paperFade(() => { hideBanner(); hideTalk(); if (this.inkPlayBeat) this.inkPlayBeat('call', {}, go); else go(); });
+      }, 2300);
     },
 
     // the hero-select screen, framed as the champions Lyra's call reaches; picks a class + name
@@ -376,7 +418,7 @@
         const args = arguments, cls = String(c.cls || '');
         const title = `${c.name}, the ${cls.charAt(0).toUpperCase() + cls.slice(1)}`;
         const go = () => orig.acctPlay.apply(this, args);
-        if (this.inkPlayBeat) { this.inkPlayBeat('answer', { title }, go); return undefined; }
+        if (this.inkPlayBeat) { this.inkPlayBeat('answer', { title, kind: cls }, go); return undefined; }
         return go();
       }
       return orig.acctPlay.apply(this, arguments);
@@ -449,7 +491,7 @@
       if (st.fromLyra && !st.gifted) {
         // the Lyra the player just was is standing at the gate: she recognises who answered
         st.gifted = true; this.saveMMOState && this.saveMMOState();
-        talk(LYRA[0], LYRA[1], 'You came… then the rift chose well. Take my reserve weapon, and clear the Meadows before more break through.', 7);
+        voiced(this, 'town_lyra_0', LYRA[0], LYRA[1], 'You came… then the rift chose well. Take my reserve weapon, and clear the Meadows before more break through.', 7.5);
         setTimeout(() => {
           try {
             const it = this.generateItem({ ilvl: 2, rarity: 'rare', slot: 'weapon', cls: p.classId });
@@ -523,6 +565,7 @@
         else if (O.wave === 1 && O.kills >= 3) {
           O.wave = 2;
           banner('MORE ARE COMING THROUGH!', `${O.kills} / ${KILLS} defeated`, O.kills / KILLS, 'pop');
+          if (this._opLyra) voiced(this, 'pro_lyra_1', LYRA[0], LYRA[1], 'More of them! They\'re pouring through!', 3.5);
           setTimeout(() => { if (this._op === O && !O.done) this.prologueWave([['field_rat', 1], ['cluckbeast', 2], ['meadow_slime', 1]], 2.8); }, 900);
         } else banner('HOLD THE RIFT BREACH', `${O.kills} / ${KILLS} defeated`, O.kills / KILLS, 'pop');
       } else {
@@ -558,7 +601,8 @@
     gainXP(amount) {
       const before = this.player.level;
       const r = orig.gainXP.apply(this, arguments);
-      if (this.player.level > before && before === 1) {
+      const asLyra = !!(window.CR_ACCOUNT && CR_ACCOUNT.playing && CR_ACCOUNT.playing.prologue);
+      if (this.player.level > before && before === 1 && !asLyra) {
         tip(isTouch() ? '✦ Talent point earned! Open ☰ → Talents' : '✦ Talent point earned! Press [K] to spend it', 7);
       }
       return r;

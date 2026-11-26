@@ -84,6 +84,17 @@ LINES = {
     "cs_ch5_0": ("aldous", "Malakor falls, and golden light breaks across Ashenvale. Yet deeper echoes stir, beyond the Endless Rift..."),
     "cs_ch5_1": ("lyra", "Victory belongs to your party! Prepare yourselves. The Endless Rift escalates to the next tier!"),
 
+    # --- First-run prologue: played as Lyra, then "Answer the call" (mmo_prologue.js / mmo_inkcine.js) ---
+    "pro_open": ("aldous", "Ashenvale. The night the sky tore open... and the Rift Gatekeeper stood alone."),
+    "pro_lyra_0": ("lyra", "I'm Lyra, keeper of the Rift Gate. The breach is right outside the walls. I have to hold it!"),
+    "pro_lyra_1": ("lyra", "More of them! They're pouring through!"),
+    "pro_lyra_surge": ("lyra", "No... the breach is tearing wider!"),
+    "call_0": ("lyra", "There are too many... I can't seal it alone."),
+    "call_1": ("lyra", "Across every timeline... hear me. Answer my call!"),
+    "call_2": ("aldous", "Her call echoed through four timelines. Four champions turned toward the light... but only one would answer."),
+    "answer_0": ("aldous", "The call was answered. A champion stepped out of the rift, and the battle for Ashenvale began."),
+    "town_lyra_0": ("lyra", "You came... Then the rift chose well. Take my reserve weapon, and clear the Meadows before more break through."),
+
     # --- NPC greetings & services ---
     "kaelen_greet": ("kaelen", "Hail, hero! The Chrono-Rifts warped steel and starlight alike. Bring me your blades, and I'll temper them hot enough to cleave an Archon."),
     "kaelen_temper": ("kaelen", "Hah! Feel that edge? That'll bite."),

@@ -2007,7 +2007,7 @@
         this._barkCooldownUntil = 0;
         this._lastStepIdx = {};
         this.voiceManifest = {};
-        this.voiceVer = 'v=3';   // bump when voice clips are regenerated (busts browser caches)
+        this.voiceVer = 'v=4';   // bump when voice clips are regenerated (busts browser caches)
         this.manifestReady = fetch(this.base + 'voice/manifest.json?' + this.voiceVer)
           .then(r => r.ok ? r.json() : {})
           .then(m => { this.voiceManifest = m || {}; })
@@ -9986,11 +9986,11 @@
   <script src="assets/js/mmo_rewards.js?v=4"></script>
   <script src="assets/js/mmo_flair.js?v=9"></script>
   <script src="assets/js/mmo_gacha.js?v=3"></script>
-  <script src="assets/js/mmo_inkcine.js?v=4"></script>
+  <script src="assets/js/mmo_inkcine.js?v=5"></script>
   <script src="assets/js/mmo_account.js?v=2"></script>
   <script src="assets/js/mmo_heroselect.js?v=3"></script>
   <script src="assets/js/mmo_offline.js?v=2"></script>
-  <script src="assets/js/mmo_prologue.js?v=3"></script>
+  <script src="assets/js/mmo_prologue.js?v=4"></script>
   <script src="assets/js/mmo_crazy.js?v=1"></script>
 </body>
 </html>
