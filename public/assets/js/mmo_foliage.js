@@ -584,8 +584,8 @@
 
     buildGrass() {
       // dense meadow: clumps live in a deterministic world grid within ~55 m of the hero
-      const COUNT = LOW ? 24000 : 40000;
-      const TILE = LOW ? 96 : 110;
+      const COUNT = LOW ? 30000 : 40000;
+      const TILE = LOW ? 100 : 110;
       const geo = buildTuftGeometry();
       const off = new Float32Array(COUNT * 3);
       const rng = CW.mulberry32(424242);
@@ -607,7 +607,7 @@
         uTile: { value: TILE },
         uTime: this.foliageU.uTime,
         uWindDir: this.foliageU.uWindDir,
-        uFade: { value: new THREE.Vector2(LOW ? 40 : 45, LOW ? 50 : 55) },
+        uFade: { value: new THREE.Vector2(LOW ? 42 : 45, LOW ? 52 : 55) },
         uCamPos: { value: new THREE.Vector3() },
         uPlayerPos: { value: new THREE.Vector3() },
         uCtrlA: G.uCtrlA, uCtrlB: G.uCtrlB, uWorldHalf: G.uWorldHalf,

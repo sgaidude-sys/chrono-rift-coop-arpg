@@ -167,7 +167,8 @@
   @media (max-height: 640px) and (min-width: 901px) { .hs-sks, .hs-sk-h, .hs-blurb { display: none; } }
   body.hs-open #hud-top, body.hs-open #hud-bottom, body.hs-open #chat-panel, body.hs-open #minimap-wrap, body.hs-open #ui-quick, body.hs-open #ui-status, body.hs-open #ui-avatar,
   body.hs-open #touch-joystick, body.hs-open #ui-ident, body.hs-open #mmo-quick, body.hs-open #mmo-xpbar, body.hs-open #story-tracker, body.hs-open #coop-roster, body.hs-open #epic-combo,
-  body.hs-open #interact-prompt, body.hs-open #center-banner, body.hs-open #loot-feed, body.hs-open #boss-hud { visibility: hidden !important; }
+  body.hs-open #interact-prompt, body.hs-open #center-banner, body.hs-open #loot-feed, body.hs-open #boss-hud,
+  body.hs-open #cr-op-hints, body.hs-open #dir-moves, body.hs-open #cr-tal-nudge, body.hs-open #cr-obj-chip, body.hs-open #cr-equip-card { visibility: hidden !important; }
   body.hs-open canvas + div .npc-label, body.hs-open .nameplate-html { visibility: hidden !important; }
   `;
 

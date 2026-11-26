@@ -122,9 +122,9 @@
   // 6) Quality presets
   // ---------------------------------------------------------------------------
   const QUALITY = {
-    low:    { label: 'Low',    pr: 0.75, prCap: 1.15, shadow: 512,  grass: 0.45, motes: 0.45, bloom: 0,   post: false },
-    medium: { label: 'Medium', pr: 0.85, prCap: 1.65, shadow: 1024, grass: 0.75, motes: 0.75, bloom: 0.5, post: true  },
-    high:   { label: 'High',   pr: 1.0,  prCap: 2.0,  shadow: 2048, grass: 1.0,  motes: 1.0,  bloom: 1.0, post: true  }
+    low:    { label: 'Low',    pr: 0.75, prCap: 1.15, shadow: 512,  grass: 0.45, motes: 0.45, bloom: 0,    post: false },
+    medium: { label: 'Medium', pr: 0.9,  prCap: 2.0,  shadow: 1024, grass: 0.85, motes: 0.85, bloom: 0.65, post: true  },
+    high:   { label: 'High',   pr: 1.0,  prCap: 2.0,  shadow: 2048, grass: 1.0,  motes: 1.0,  bloom: 1.0,  post: true  }
   };
   const ORDER = ['low', 'medium', 'high'];
   function defaultQuality() {
@@ -317,6 +317,7 @@
         if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
       }
       if (this.applyEnvShadowQuality) this.applyEnvShadowQuality(level);
+      if (this.groundMesh) this.groundMesh.castShadow = level !== 'low';
       // grass density / ambient particles
       if (this.grassMesh && this.grassCount) this.grassMesh.geometry.instanceCount = Math.max(500, Math.round(this.grassCount * Q.grass));
       if (this.moteMesh && this.moteCount) this.moteMesh.geometry.setDrawRange(0, Math.round(this.moteCount * Q.motes));

@@ -188,7 +188,7 @@
       this.setupHDRPipeline();
       if (pt !== null && !isNaN(parseFloat(pt))) this.setTimeOfDay(parseFloat(pt));
       this.applyDayNight(0);
-      if (isTouch) this.renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1));
+      if (isTouch) this.renderer.setPixelRatio(Math.min(2.0, window.devicePixelRatio || 1));
     },
 
     addStarfield() { /* daytime sky: no stars */ },
@@ -232,7 +232,7 @@
       const size = isTouch ? 1024 : 2048; // capped at 2048x2048
       sun.shadow.mapSize.set(size, size);
       if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
-      const d = 38;
+      const d = isTouch ? 28 : 38;
       sun.shadow.camera.left = -d; sun.shadow.camera.right = d;
       sun.shadow.camera.top = d; sun.shadow.camera.bottom = -d;
       sun.shadow.camera.near = 1; sun.shadow.camera.far = 160;
@@ -262,10 +262,18 @@
         const pr = this.renderer.getPixelRatio();
         const gl = this.renderer.getContext();
         const hdr = !!(this.renderer.capabilities.isWebGL2 && (gl.getExtension('EXT_color_buffer_half_float') || gl.getExtension('EXT_color_buffer_float')));
-        const rt = new THREE.WebGLRenderTarget(w * pr, h * pr, {
+        const rtOpts = {
           minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat,
           type: hdr ? THREE.HalfFloatType : THREE.UnsignedByteType
-        });
+        };
+        let rt = null;
+        if (this.renderer.capabilities.isWebGL2 && THREE.WebGLMultisampleRenderTarget) {
+          try {
+            rt = new THREE.WebGLMultisampleRenderTarget(w * pr, h * pr, rtOpts);
+            rt.samples = Math.min(4, gl.getParameter(gl.MAX_SAMPLES) || 4);
+          } catch (e) { rt = null; }
+        }
+        if (!rt) rt = new THREE.WebGLRenderTarget(w * pr, h * pr, rtOpts);
         this.composer = new THREE.EffectComposer(this.renderer, rt);
         this.composer.addPass(new THREE.RenderPass(this.scene, this.camera));
         // HDR scene: threshold 1.0 means only true highlights (sun disk, spells, emissives) glow

@@ -331,7 +331,7 @@ gl_Position = projectionMatrix * mvPosition;`;
       this.groundMesh.material = mat;
       this.groundMesh.frustumCulled = false;
       this.groundMesh.receiveShadow = true;
-      this.groundMesh.castShadow = !isTouch; // hills cast shadows on desktop
+      this.groundMesh.castShadow = true; // hills cast golden-hour shadows across valleys
       this.groundMat = mat;
       this.updateTerrainGround(true);
     },

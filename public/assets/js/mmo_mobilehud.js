@@ -34,7 +34,7 @@
   const css = `
   #hud-sys { display: none; position: fixed; top: 6px; left: 158px; z-index: 14; gap: 4px; }
   body.touch-ui #hud-sys { display: flex; }
-  body.cr-title-on #hud-sys, body.cr-acct-on #hud-sys, body.epic-cine #hud-sys { display: none !important; }
+  body.cr-title-on #hud-sys, body.cr-acct-on #hud-sys, body.epic-cine #hud-sys, body.hs-open #hud-sys, body.cr-lyra-call #hud-sys { display: none !important; }
   #hud-sys button { all: unset; box-sizing: border-box; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
     background: rgba(12,16,28,.78); border: 1.5px solid rgba(243,200,107,.5); color: #f5f2eb; font: 700 14px/1 Inter, sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,.45); }
   #hud-sys button svg, #minimap-wrap.folded .hud-fold svg { width: 14px; height: 14px; fill: none; stroke: #f5f2eb; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; display: block; }
@@ -211,9 +211,25 @@
       const left = Math.round(rect.right + 5) + 'px';
       if (this._hudBar.style.left !== left) this._hudBar.style.left = left;
       const chip = document.getElementById('cr-obj-chip');
+      let nextTop = Math.round(rect.bottom + 5);
       if (chip) {
-        const top = Math.round(rect.bottom + 5) + 'px';
-        if (chip.style.top !== top) chip.style.top = top;
+        const chipTop = nextTop + 'px';
+        if (chip.style.top !== chipTop) chip.style.top = chipTop;
+        if (chip.classList.contains('on')) {
+          const cr = chip.getBoundingClientRect();
+          if (cr.height > 0) nextTop = Math.round(cr.bottom + 5);
+        }
+      }
+      const tal = document.getElementById('cr-tal-nudge');
+      if (tal) {
+        let talY = nextTop;
+        const ban = document.getElementById('cr-op-banner');
+        if (ban && ban.classList.contains('on')) {
+          const br = ban.getBoundingClientRect();
+          if (br.height > 0 && br.left < 196) talY = Math.max(talY, Math.round(br.bottom + 5));
+        }
+        const talTop = talY + 'px';
+        if (tal.style.top !== talTop) tal.style.top = talTop;
       }
     }
   });

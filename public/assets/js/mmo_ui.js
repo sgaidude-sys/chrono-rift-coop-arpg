@@ -297,6 +297,7 @@
   @media (max-width: 640px) { #settings-modal .net-actions { grid-template-columns: 1fr; } }
 
   /* phones: same tokens on the existing touch layout */
+  body.touch-ui #skill-bar { background: none !important; border: 0 !important; box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
   body.touch-ui #party-panel, body.touch-ui #story-tracker, body.touch-ui #minimap-wrap { background: rgba(14,17,23,.38) !important; border: 1px solid rgba(212,175,55,.22) !important; box-shadow: none !important; -webkit-backdrop-filter: blur(6px) !important; backdrop-filter: blur(6px) !important; }
   body.touch-ui #skill-bar .skill-slot { border-radius: 50% !important; background: radial-gradient(circle at 50% 38%, rgba(40, 44, 56, .62), rgba(10, 12, 18, .72)) !important; border: 1px solid rgba(245,242,235,.28) !important; box-shadow: 0 4px 14px rgba(0,0,0,.35) !important; }
   body.touch-ui #skill-bar .skill-icon { filter: grayscale(1) brightness(1.75) drop-shadow(0 1px 2px rgba(0,0,0,.85)); }

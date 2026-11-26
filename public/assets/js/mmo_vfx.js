@@ -92,7 +92,7 @@
           this.composer = null;
         }
       }
-      if (isTouch) this.renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1));
+      if (isTouch) this.renderer.setPixelRatio(Math.min(2.0, window.devicePixelRatio || 1));
       this._fpsWindow = [];
     },
 
@@ -110,19 +110,19 @@
       if (this._fpsWindow.length < 180) return;
       const avg = this._fpsWindow.reduce((a, b) => a + b, 0) / this._fpsWindow.length;
       this._fpsWindow.length = 0;
-      if (avg > 1 / 28) {
+      if (avg > 1 / 22) {
         if (this.bloomPass && this.bloomPass.enabled) {
           this.bloomPass.enabled = false;
           if (this.shaftPass) this.shaftPass.enabled = false;
           const r = this.renderer;
-          if (r && r.getPixelRatio && r.getPixelRatio() > 1.25) {
-            r.setPixelRatio(1.25);
+          if (r && r.getPixelRatio && r.getPixelRatio() > 1.4) {
+            r.setPixelRatio(1.4);
             r.setSize(window.innerWidth, window.innerHeight);
-            if (this.composer.setPixelRatio) this.composer.setPixelRatio(1.25);
+            if (this.composer.setPixelRatio) this.composer.setPixelRatio(1.4);
             this.composer.setSize(window.innerWidth, window.innerHeight);
           }
           console.info('[VFX] low frame rate — bloom & shafts stepped down (keeping color grade)');
-        } else if (avg > 1 / 24) {
+        } else if (avg > 1 / 18) {
           this.fxOn = false;
           console.info('[VFX] very low frame rate — post-processing disabled');
         }

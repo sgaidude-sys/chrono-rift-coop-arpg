@@ -23,7 +23,7 @@
   'use strict';
   const isTouch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
   const SET = {
-    oak: { file: 'oak.glb', fitFrom: 'tree0', fit: 'height', nodes: null, sway: 0.0042, tint: 0.35, shadow: true, cap: 1800, sizeMul: 1.08, simplify: 0.5, desktopOnly: true },
+    oak: { file: 'oak.glb', fitFrom: 'tree0', fit: 'height', nodes: null, sway: 0.0042, tint: 0.35, shadow: true, cap: 1800, sizeMul: 1.08, simplify: 0.5 },
     pine: { file: 'pines.glb', fitFrom: 'pine', fit: 'height', nodes: ['SM_FreeTree_05', 'SM_FreeTree_08', 'SM_FreeTree_06', 'SM_FreeTree_02', 'SM_FreeTree_07'], sway: 0.0035, tint: 0.3, shadow: true, cap: 900, sizeMul: 1.12 },
     rock: { file: 'rocks.glb', fitFrom: 'rock', fit: 'blend', nodes: ['SM_Rocks_01', 'SM_Rocks_02', 'SM_Rocks_04', 'SM_Rocks_06', 'SM_Rocks_07'], sway: 0, tint: 0.55, shadow: false, cap: 1200, sizeMul: 1.0 },
     boulder: { file: 'rocks.glb', fitFrom: 'boulder', fit: 'blend', nodes: ['SM_Rocks_03', 'SM_Rocks_05', 'SM_Rocks_04'], sway: 0, tint: 0.55, shadow: true, cap: 900, sizeMul: 1.0 },
@@ -123,7 +123,8 @@
       if (this._envm || !this.propInst || new URLSearchParams(location.search).get('envmodels') === 'off') return;
       this._envm = { loaded: 0 };
       this.propVariants = this.propVariants || {};
-      const base = ((document.querySelector('script[src*="mmo_envmodels.js"]') || {}).src || '').replace(/js\/mmo_envmodels\.js.*$/, '') + 'models/env/';
+      const src = (document.querySelector('script[src*="mmo_envmodels.js"]') || document.querySelector('script[src*="game.bundle.js"]') || {}).src || '';
+      const base = (src ? src.replace(/js\/[^/]+$/, '') : 'assets/') + 'models/env/';
       const loader = this.loader || new THREE.GLTFLoader();
       const files = {};
       Object.keys(SET).forEach((t) => { if (SET[t].desktopOnly && isTouch) return; (files[SET[t].file] = files[SET[t].file] || []).push(t); });

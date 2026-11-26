@@ -41,7 +41,7 @@
   body.touch-ui #story-tracker .mmo-trk:nth-child(n+3) { display: none; }
   body.touch-ui #story-tracker .story-obj-line { font-size: 10px !important; }
   body.touch-ui .zone-pill { display: none !important; }
-  body.touch-ui #center-banner { position: fixed !important; top: 56px; left: 50%; transform: translateX(-50%); width: min(84vw, 340px); }
+  body.touch-ui #center-banner { position: fixed !important; top: 82px; left: 50%; transform: translateX(-50%); width: min(84vw, 340px); }
   body.touch-ui #boss-hud { padding: 4px 8px !important; }
   body.touch-ui #boss-name-label { font-size: 12px !important; letter-spacing: 2px !important; }
   body.touch-ui #network-panel { display: none !important; }
@@ -90,6 +90,7 @@
   body.touch-ui #mmo-xp-text { display: none; }
   body.touch-ui #interact-prompt { bottom: 214px !important; left: 50% !important; transform: translateX(-50%) !important; font-size: 13px; padding: 8px 14px !important; }
   body.touch-ui #loot-toast-container { top: 104px !important; }
+  body.touch-ui #loot-toast-container .loot-toast:not(:last-child) { display: none !important; }
   body.touch-ui .loot-toast { font-size: 11px !important; padding: 5px 9px !important; }
   body.touch-ui #mmo-zone-banner .zb-title { font-size: 22px; }
   body.touch-ui #mmo-zone-banner .zb-sub { font-size: 11px; }
@@ -152,12 +153,12 @@
   body.touch-ui #hero-modal .modal-box > div:last-child { position: sticky; bottom: -12px; background: rgba(9,12,22,0.97); padding: 10px 0 4px !important; margin-top: 8px; }
   body.touch-ui #hero-modal .modal-box > div:last-child .cta-btn { width: 100%; padding: 14px !important; font-size: 15px !important; }
   /* Phase 2: One-tap Equip Upgrade Card */
-  #cr-equip-card { position: fixed; left: 10px; bottom: calc(166px + env(safe-area-inset-bottom)); z-index: 46; max-width: min(56vw, 228px);
+  #cr-equip-card { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(214px + env(safe-area-inset-bottom)); z-index: 46; max-width: min(88vw, 300px);
     display: none; align-items: center; gap: 8px; padding: 7px 8px 7px 11px; border-radius: 10px;
     background: rgba(14,17,24,.94); border: 1px solid rgba(212,175,55,.5); border-left: 3px solid var(--rc, #2ee68a);
     box-shadow: 0 8px 24px rgba(0,0,0,.55), 0 0 18px rgba(46,230,138,.18); color: #F5F2EB; font-family: 'Plus Jakarta Sans', Inter, sans-serif; }
   #cr-equip-card.on { display: flex; animation: crEqIn .24s cubic-bezier(.2,.8,.2,1); }
-  @keyframes crEqIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @keyframes crEqIn { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translateX(-50%); } }
   #cr-equip-card .eq-info { flex: 1; min-width: 0; }
   #cr-equip-card .eq-nm { font-size: 11px; font-weight: 800; color: var(--rc, #ffd56b); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #cr-equip-card .eq-sub { font-size: 9.5px; color: rgba(245,242,235,.72); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -167,7 +168,7 @@
   #cr-equip-card .eq-btn:active { transform: scale(.94); }
   #cr-equip-card .eq-x { all: unset; cursor: pointer; flex: none; padding: 2px 5px; font: 700 12px Inter, sans-serif; color: rgba(245,242,235,.55); }
   @media (max-height: 500px) {
-    #cr-equip-card { left: 50%; transform: translateX(-50%); bottom: calc(10px + env(safe-area-inset-bottom)); max-width: min(46vw, 270px); }
+    #cr-equip-card { left: 50%; transform: translateX(-50%); bottom: calc(10px + env(safe-area-inset-bottom)); max-width: min(42vw, 260px); }
     @keyframes crEqIn { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translateX(-50%); } }
   }
   body:not(.touch-ui) #cr-equip-card, body.cr-title-on #cr-equip-card, body.cr-acct-on #cr-equip-card, body.hs-open #cr-equip-card,
@@ -285,6 +286,7 @@
         ec.id = 'cr-equip-card';
         ec.innerHTML = '<div class="eq-info"><div class="eq-nm"></div><div class="eq-sub"></div></div><button type="button" class="eq-btn">EQUIP</button><button type="button" class="eq-x" aria-label="Dismiss">✕</button>';
         document.body.appendChild(ec);
+        ec.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
         ec.querySelector('.eq-btn').addEventListener('click', (e) => { e.stopPropagation(); this.equipCurrentCard(); });
         ec.querySelector('.eq-x').addEventListener('click', (e) => { e.stopPropagation(); this.dismissEquipCard(); });
       }
@@ -292,6 +294,7 @@
         const oc = document.createElement('button');
         oc.id = 'cr-obj-chip';
         oc.type = 'button';
+        oc.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
         oc.addEventListener('click', (e) => { e.stopPropagation(); if (this.audio) this.audio.init(); this.toggleAutoRun(); });
         document.body.appendChild(oc);
       }

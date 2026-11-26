@@ -72,7 +72,8 @@
       if (this._bossModelWait[key]) { this._bossModelWait[key].push(cb); return; }
       this._bossModelWait[key] = [cb];
       const done = (ok) => { const w = this._bossModelWait[key]; delete this._bossModelWait[key]; w.forEach(f => f(ok)); };
-      const base = ((document.querySelector('script[src*="mmo_bossmodels.js"]') || {}).src || '').replace(/js\/mmo_bossmodels\.js.*$/, '') + 'models/bosses/';
+      const src = (document.querySelector('script[src*="mmo_bossmodels.js"]') || document.querySelector('script[src*="game.bundle.js"]') || {}).src || '';
+      const base = (src ? src.replace(/js\/[^/]+$/, '') : 'assets/') + 'models/bosses/';
       (this.loader || new THREE.GLTFLoader()).load(base + d.file, (gltf) => {
         try {
           const scene = gltf.scene;

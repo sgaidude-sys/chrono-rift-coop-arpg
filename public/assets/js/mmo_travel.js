@@ -196,8 +196,8 @@
       if (this._mountWait[d.model]) { this._mountWait[d.model].push(cb); return; }
       this._mountWait[d.model] = [cb];
       const done = (ok) => { const w = this._mountWait[d.model]; delete this._mountWait[d.model]; w.forEach(f => f(ok)); };
-      const base = (document.querySelector('script[src*="mmo_travel.js"]') || {}).src || '';
-      const url = base.replace(/js\/mmo_travel\.js.*$/, '') + d.file;
+      const src = (document.querySelector('script[src*="mmo_travel.js"]') || document.querySelector('script[src*="game.bundle.js"]') || {}).src || '';
+      const url = (src ? src.replace(/js\/[^/]+$/, '') : 'assets/') + d.file;
       this.loader.load(url, (gltf) => {
         const box = new THREE.Box3().setFromObject(gltf.scene), size = new THREE.Vector3();
         box.getSize(size);

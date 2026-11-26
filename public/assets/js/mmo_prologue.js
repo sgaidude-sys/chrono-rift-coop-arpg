@@ -119,34 +119,39 @@
   /* playing Lyra's prologue: no quests, bounties or rift surges, just the fight */
   body.cr-prologue #story-tracker { visibility: hidden !important; }
   /* nothing but the champion choice while Lyra's call is on screen */
-  body.cr-lyra-call #combat-tip, body.cr-lyra-call #epic-call, body.cr-lyra-call #cr-op-tip, body.cr-lyra-call #hud-top, body.cr-lyra-call #hud-bottom,
+  body.cr-lyra-call #combat-tip, body.cr-lyra-call #epic-call, body.cr-lyra-call #cr-op-tip, body.cr-lyra-call #cr-op-hints, body.cr-lyra-call #dir-moves, body.cr-lyra-call #hud-top, body.cr-lyra-call #hud-bottom,
   body.cr-lyra-call #chat-panel, body.cr-lyra-call #minimap-wrap, body.cr-lyra-call #ui-quick, body.cr-lyra-call #ui-status, body.cr-lyra-call #ui-avatar,
   body.cr-lyra-call #mmo-quick, body.cr-lyra-call #mmo-xpbar, body.cr-lyra-call #story-tracker, body.cr-lyra-call #travel-bar, body.cr-lyra-call #party-frames,
   body.cr-lyra-call #touch-joystick, body.cr-lyra-call #tut-hint, body.cr-lyra-call #tut-pill, body.cr-lyra-call #floating-combat-text { visibility: hidden !important; }
   #cr-call { position: fixed; top: calc(18px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); z-index: 90; pointer-events: none; text-align: center;
-    color: #F5F2EB; text-shadow: 0 2px 14px rgba(0,0,0,.85); display: none; width: min(92vw, 640px); }
+    color: #F5F2EB; text-shadow: 0 2px 14px rgba(0,0,0,.85); display: none; width: min(36vw, 420px); }
   body.cr-lyra-call #cr-call { display: block; animation: crOpIn .5s ease; }
   #cr-call .t { font: 900 clamp(17px, 2.4vw, 26px) 'Cinzel', serif; letter-spacing: .16em; color: #ffd56b; }
   #cr-call .s { font: 600 clamp(12px, 1.4vw, 14px) 'Plus Jakarta Sans', Inter, sans-serif; letter-spacing: .08em; margin-top: 6px; color: rgba(245,242,235,.85); }
   /* compact mobile layout for opening banners, dialogue & hints */
   #cr-op-banner.runnable { pointer-events: auto; cursor: pointer; }
   #cr-op-banner.running { border-color: #2ee68a; box-shadow: 0 4px 18px rgba(0,0,0,.45), 0 0 18px rgba(46,230,138,.35); }
-  body.touch-ui #cr-op-banner { top: calc(56px + env(safe-area-inset-top)); min-width: 0; max-width: min(86vw, 270px); padding: 5px 12px 6px; border-radius: 10px; }
+  body.touch-ui #cr-op-banner { top: calc(82px + env(safe-area-inset-top)); min-width: 0; max-width: min(72vw, 264px); padding: 5px 12px 6px; border-radius: 10px; }
   body.touch-ui #cr-op-banner .t { font-size: 11.5px; letter-spacing: .09em; }
   body.touch-ui #cr-op-banner .c { font-size: 10px; margin-top: 2px; }
   body.touch-ui #cr-op-banner .bar { height: 3px; margin-top: 4px; }
-  body.touch-ui #cr-op-talk { left: 50%; transform: translateX(-50%); bottom: calc(174px + env(safe-area-inset-bottom)); max-width: min(88vw, 340px); padding: 7px 11px; gap: 8px; border-radius: 11px; animation: none; }
+  body.touch-ui #cr-op-talk { left: 50%; transform: translateX(-50%); bottom: calc(216px + env(safe-area-inset-bottom)); max-width: min(88vw, 340px); padding: 7px 11px; gap: 8px; border-radius: 11px; animation: none; }
   body.touch-ui #cr-op-talk .pf { width: 28px; height: 28px; font-size: 14px; border-width: 1.5px; }
   body.touch-ui #cr-op-talk .nm { font-size: 9.5px; }
   body.touch-ui #cr-op-talk .tx { font-size: 11.5px; line-height: 1.35; margin-top: 1px; min-height: 16px; }
   body.touch-ui #cr-op-hints { bottom: calc(146px + env(safe-area-inset-bottom)); gap: 6px; }
   body.touch-ui #cr-op-hints .h { padding: 5px 10px; font-size: 11px; }
   body.touch-ui #cr-op-tip { right: auto; left: 50%; transform: translateX(-50%); bottom: calc(142px + env(safe-area-inset-bottom)); padding: 6px 11px; font-size: 11px; max-width: 84vw; text-align: center; }
+  @media (max-width: 900px) and (orientation: portrait) {
+    #cr-call { top: calc(10px + env(safe-area-inset-top)); width: 92vw; }
+    #cr-call .t { font-size: 16px; letter-spacing: .12em; }
+    #cr-call .s { font-size: 11px; margin-top: 3px; line-height: 1.3; }
+  }
   @media (max-height: 500px) {
     body.touch-ui #cr-op-banner { top: calc(5px + env(safe-area-inset-top)); max-width: min(44vw, 250px); padding: 4px 11px 5px; }
     body.touch-ui #cr-op-banner .t { font-size: 10.5px; }
     body.touch-ui #cr-op-banner .c { font-size: 9.5px; }
-    body.touch-ui #cr-op-talk { bottom: calc(8px + env(safe-area-inset-bottom)); max-width: min(48vw, 310px); padding: 5px 9px; gap: 7px; }
+    body.touch-ui #cr-op-talk { bottom: calc(8px + env(safe-area-inset-bottom)); max-width: min(40vw, 300px); padding: 5px 9px; gap: 7px; }
     body.touch-ui #cr-op-talk .pf { width: 24px; height: 24px; font-size: 12px; }
     body.touch-ui #cr-op-talk .tx { font-size: 10.5px; line-height: 1.3; }
     body.touch-ui #cr-op-hints { bottom: calc(10px + env(safe-area-inset-bottom)); }
@@ -233,7 +238,7 @@
   }
   function clearHint(k) { const el = document.querySelector(`#cr-op-hints .h[data-k="${k}"]`); if (el && !el.classList.contains('gone')) { el.classList.add('gone'); setTimeout(() => el.remove(), 700); } }
   let tipTimer = 0;
-  function tip(text, secs) { ensureUi(); const t = document.getElementById('cr-op-tip'); t.textContent = text; t.classList.add('on'); clearTimeout(tipTimer); tipTimer = setTimeout(() => t.classList.remove('on'), (secs || 6) * 1000); }
+  function tip(text, secs) { if (isTouch()) return; ensureUi(); const t = document.getElementById('cr-op-tip'); t.textContent = text; t.classList.add('on'); clearTimeout(tipTimer); tipTimer = setTimeout(() => t.classList.remove('on'), (secs || 6) * 1000); }
 
   // ?perf in the URL: time each start-up step of the game build (window.CR_PERF.steps)
   if (/[?&]perf\b/.test(location.search)) {
@@ -248,6 +253,16 @@
   // First run & mobile load diet: download just what the opening scene needs immediately.
   // Remaining heroes, weapons, NPCs, props and later-zone monsters stream smoothly in the background.
   const loadAll0 = GP.loadAllAssets;
+  const mmoLoadProp0 = GP.mmoLoadProp;
+  if (mmoLoadProp0) {
+    GP.mmoLoadProp = function (file, cb) {
+      if (!window.CR_FIRST_RUN || this._mmoPropsReleased || !this.loader) return mmoLoadProp0.apply(this, arguments);
+      const L = this.loader, real = L.load.bind(L);
+      const q = this._deferredLoads || (this._deferredLoads = []);
+      L.load = function () { q.push(Array.prototype.slice.call(arguments)); return undefined; };
+      try { return mmoLoadProp0.apply(this, arguments); } finally { L.load = real; }
+    };
+  }
   GP.loadAllAssets = function () {
     const isCoarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
     if ((!window.CR_FIRST_RUN && !isCoarse) || !this.loader) return loadAll0.apply(this, arguments);
@@ -256,7 +271,7 @@
     if (window.CR_FIRST_RUN && this.player && this.player.classId !== cls) this.player.classId = cls;
     const hc = typeof HERO_CLASSES !== 'undefined' ? HERO_CLASSES[cls] : null;
     const keepW = new Set(['Arrow', (this.player && this.player.weaponId) || (hc && hc.defaultWeapon) || '', (this.player && this.player.offhandId) || (hc && hc.defaultOffhand) || ''].filter(Boolean));
-    const q = this._deferredLoads = [];
+    const q = this._deferredLoads || (this._deferredLoads = []);
     L.load = function (url) {
       const u = String(url);
       if (window.CR_FIRST_RUN) {
@@ -278,6 +293,7 @@
     try { return loadAll0.apply(this, arguments); } finally { L.load = real; }
   };
   GP.releaseDeferredLoads = function (immediate) {
+    this._mmoPropsReleased = true;
     if (this._startDeferredEnvModels) this._startDeferredEnvModels();
     const q = this._deferredLoads || [];
     this._deferredLoads = null;
@@ -407,11 +423,11 @@
       // wave 1: three right in front of the hero
       this.prologueWave([['meadow_slime', 1], ['field_rat', 1], ['meadow_slime', 1]], 2.4);
       banner('HOLD THE RIFT BREACH', `0 / ${KILLS} defeated`, 0);
-      hints(isTouch()
-        ? [{ k: 'move', html: 'Drag the joystick to move' }, { k: 'attack', html: 'Tap ⚔ to attack' }]
-        : [{ k: 'move', html: '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move' }, { k: 'attack', html: '<kbd>Click</kbd> / <kbd>1</kbd> Attack · <kbd>2</kbd> Skill' }]);
-      setTimeout(() => clearHint('move'), 12000);
-      setTimeout(() => clearHint('attack'), 16000);
+      if (!isTouch()) {
+        hints([{ k: 'move', html: '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move' }, { k: 'attack', html: '<kbd>Click</kbd> / <kbd>1</kbd> Attack · <kbd>2</kbd> Skill' }]);
+        setTimeout(() => clearHint('move'), 12000);
+        setTimeout(() => clearHint('attack'), 16000);
+      }
       if (this.spawnVFXFlipbook) this.spawnVFXFlipbook('vortex', C, 5, 0.8, 0x9a6bff);
       if (this.audio && this.audio.playSpell) this.audio.playSpell('warp');
       // played as Lyra: set the scene in her voice

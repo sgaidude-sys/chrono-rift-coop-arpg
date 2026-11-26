@@ -68,7 +68,7 @@
   #rift-banner .t.low { color: #ff6a6a; }
   body.touch-ui #rift-banner { top: 8px; font-size: 10.5px; padding: 4px 10px; }
   body.touch-ui #rift-banner .t { font-size: 14px; }
-  #cr-tal-nudge { position: fixed; right: 20px; bottom: 108px; z-index: 44; display: none; align-items: center; gap: 10px;
+  #cr-tal-nudge { position: fixed; right: 20px; bottom: 108px; z-index: 48; display: none; align-items: center; gap: 10px; pointer-events: auto; touch-action: manipulation;
     padding: 9px 12px 9px 14px; border-radius: 999px; cursor: pointer; color: #F5F2EB; font: 700 12.5px 'Plus Jakarta Sans', Inter, sans-serif;
     background: linear-gradient(180deg, rgba(24,20,38,.94), rgba(12,14,24,.94)); border: 1px solid rgba(255,213,107,.65);
     box-shadow: 0 8px 26px rgba(0,0,0,.5), 0 0 22px rgba(255,213,107,.24); }
@@ -76,13 +76,10 @@
   @keyframes crTalNudge { 0%,100% { box-shadow: 0 8px 26px rgba(0,0,0,.5), 0 0 14px rgba(255,213,107,.22); } 50% { box-shadow: 0 8px 26px rgba(0,0,0,.5), 0 0 28px rgba(255,213,107,.55); } }
   #cr-tal-nudge b { color: #ffd56b; }
   #cr-tal-nudge kbd { padding: 1px 6px; border-radius: 4px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3); font: 700 10.5px 'JetBrains Mono', monospace; color: #F5F2EB; }
-  #cr-tal-nudge .x { all: unset; cursor: pointer; padding: 2px 5px; font: 700 14px Inter, sans-serif; color: rgba(245,242,235,.6); }
-  #cr-tal-nudge .x:hover { color: #fff; }
-  body.touch-ui #cr-tal-nudge { right: auto; bottom: auto; top: 108px; left: 50%; transform: translateX(-50%); max-width: 90vw; padding: 6px 11px; font-size: 11.5px; }
+  #cr-tal-nudge .x { all: unset; cursor: pointer; padding: 4px 8px; margin-left: 2px; font: 700 14px/1 Inter, sans-serif; color: rgba(245,242,235,.65); border-radius: 999px; }
+  #cr-tal-nudge .x:hover { color: #fff; background: rgba(255,255,255,.1); }
+  body.touch-ui #cr-tal-nudge { left: 6px; right: auto; bottom: auto; top: 88px; transform: none; max-width: 196px; padding: 5px 8px 5px 10px; gap: 6px; font-size: 10.5px; white-space: nowrap; }
   body.touch-ui #cr-tal-nudge kbd { display: none; }
-  @media (max-height: 500px) {
-    body.touch-ui #cr-tal-nudge { top: auto; bottom: 10px; padding: 5px 10px; font-size: 11px; }
-  }
   body.cr-title-on #cr-tal-nudge, body.cr-acct-on #cr-tal-nudge, body.cr-prologue #cr-tal-nudge, body.cr-lyra-call #cr-tal-nudge, body.epic-cine #cr-tal-nudge { display: none !important; }
   `;
 
@@ -543,25 +540,51 @@
     // ---- early talent point nudge -----------------------------------------------------------------------
     rwCheckTalentNudge() {
       const asLyra = !!(window.CR_ACCOUNT && CR_ACCOUNT.playing && CR_ACCOUNT.playing.prologue);
-      const canShow = !!(this.isInWorld && !this.isAnyModalOpen && !this.cutsceneActive && !this._op && !asLyra && !this._rwTalDismissed
-        && this.talentPointsTotal && this.talentPointsSpent && this.talentPointsSpent() === 0 && this.talentPointsTotal() > 0
-        && ((this._rwKills || 0) >= 5 || (this.player && this.player.level >= 2)));
-      if (canShow === this._rwNudgeOn) return;
-      this._rwNudgeOn = canShow;
+      const avail = (this.talentPointsTotal && this.talentPointsSpent) ? Math.max(0, this.talentPointsTotal() - this.talentPointsSpent()) : 0;
+      if (avail > (this._rwLastAvail || 0)) this._rwTalDismissed = false;
+      this._rwLastAvail = avail;
+      const baseOk = !!(this.isInWorld && !this.isAnyModalOpen && !this.cutsceneActive && !this._op && !asLyra && !this._rwTalDismissed && avail > 0);
+      const canShow = this.touchUI
+        ? baseOk
+        : (baseOk && this.talentPointsSpent() === 0 && ((this._rwKills || 0) >= 5 || (this.player && this.player.level >= 2)));
       let el = document.getElementById('cr-tal-nudge');
-      if (!canShow) { if (el) el.classList.remove('on'); return; }
+      if (!canShow) {
+        this._rwNudgeOn = false;
+        if (el) el.classList.remove('on');
+        return;
+      }
       if (!el) {
         el = document.createElement('div'); el.id = 'cr-tal-nudge';
-        el.innerHTML = '<span>✦ <b>1 Talent Point Ready</b> — Unlock Now</span><kbd>K</kbd><button class="x" aria-label="Dismiss">×</button>';
+        el.innerHTML = '<span class="lbl"></span><kbd>K</kbd><button type="button" class="x" aria-label="Dismiss">×</button>';
         document.body.appendChild(el);
+        el.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
         el.addEventListener('click', (e) => {
-          if (e.target.closest('.x')) { e.stopPropagation(); this._rwTalDismissed = true; this._rwNudgeOn = false; el.classList.remove('on'); return; }
-          this._rwNudgeOn = false; el.classList.remove('on');
+          e.stopPropagation();
+          if (e.target.closest('.x')) {
+            this._rwTalDismissed = true;
+            this._rwNudgeOn = false;
+            el.classList.remove('on');
+            return;
+          }
+          this._rwNudgeOn = false;
+          el.classList.remove('on');
+          if (this.audio) this.audio.init();
           this.toggleTalents && this.toggleTalents();
         });
       }
-      el.classList.add('on');
-      this.teachTip && this.teachTip('talent');
+      const lbl = el.querySelector('.lbl');
+      if (lbl) {
+        const nextLbl = this.touchUI
+          ? `✦ <b>Talent +${avail}</b> ▸`
+          : `✦ <b>${avail} Talent Point${avail > 1 ? 's' : ''} Ready</b> — Unlock Now`;
+        if (lbl.innerHTML !== nextLbl) lbl.innerHTML = nextLbl;
+      }
+      if (!this._rwNudgeOn) {
+        this._rwNudgeOn = true;
+        el.classList.add('on');
+        if (this.hudSysPlace) this.hudSysPlace();
+        if (!this.touchUI && this.teachTip) this.teachTip('talent');
+      }
     },
 
     // ---- per frame --------------------------------------------------------------------------------------

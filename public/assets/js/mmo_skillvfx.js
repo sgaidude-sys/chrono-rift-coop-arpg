@@ -398,7 +398,7 @@
         S.add(m); V.ribbons.push({ m, N, hist: [], ent: null, follow: 0, fade: 0, active: false });
       }
       // sparks: one instanced draw
-      const MAX = this.gfxQuality === 'low' || isTouch ? 900 : 2200;
+      const MAX = this.gfxQuality === 'low' ? 900 : (isTouch ? 1500 : 2200);
       const sq = new THREE.InstancedBufferGeometry();
       sq.setAttribute('position', new THREE.Float32BufferAttribute([0, -1, 0, 1, -1, 0, 1, 1, 0, 0, 1, 0], 3));
       sq.setIndex([0, 1, 2, 0, 2, 3]);
@@ -520,7 +520,7 @@
     vfxSparks(pos, n, o = {}) {
       const V = this._svx; if (!V) return;
       const S = V.sp;
-      n = Math.round(n * (this.gfxQuality === 'low' ? 0.45 : (isTouch ? 0.6 : 1)));
+      n = Math.round(n * (this.gfxQuality === 'low' ? 0.45 : (isTouch ? 0.85 : 1)));
       const cols = (o.cols || [0xffffff]).map(h => col3(h));
       const sp = o.speed || [6, 14], lf = o.life || [0.25, 0.55];
       const cone = o.cone === undefined ? -1 : o.cone;

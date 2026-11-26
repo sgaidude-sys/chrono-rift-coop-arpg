@@ -34,19 +34,14 @@
   const TIP_GAP = 20;           // s between tips
 
   const css = `
-  #combat-tip { position: fixed; left: 50%; bottom: 150px; transform: translate(-50%, 10px); z-index: 45; pointer-events: auto; opacity: 0; transition: opacity .3s, transform .3s;
+  #combat-tip { position: fixed; left: 50%; bottom: 150px; transform: translate(-50%, 10px); z-index: 45; pointer-events: none; opacity: 0; transition: opacity .3s, transform .3s;
     max-width: min(92vw, 460px); background: rgba(10,14,24,.9); border: 1px solid rgba(243,200,107,.55); border-radius: 12px; padding: 10px 34px 10px 14px;
     color: #f5f2eb; font: 500 13px/1.45 'Plus Jakarta Sans', Inter, sans-serif; box-shadow: 0 8px 26px rgba(0,0,0,.45); }
-  #combat-tip.on { opacity: 1; transform: translate(-50%, 0); }
+  #combat-tip.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
   #combat-tip .ct-h { font: 800 10px 'Plus Jakarta Sans', Inter, sans-serif; letter-spacing: 2.5px; color: #D4AF37; text-transform: uppercase; margin-bottom: 3px; }
   #combat-tip b { color: #ffd56b; }
   #combat-tip .ct-x { all: unset; position: absolute; top: 6px; right: 8px; cursor: pointer; color: rgba(245,242,235,.6); font: 700 14px Inter, sans-serif; padding: 2px 6px; }
-  body.touch-ui #combat-tip { bottom: auto; top: 118px; left: 8px; right: 56px; max-width: none; transform: none; font-size: 12px; }
-  body.touch-ui #combat-tip.on { transform: none; }
-  @media (max-height: 500px) {
-    body.touch-ui #combat-tip { top: auto; bottom: 10px; left: 50%; right: auto; max-width: min(44vw, 370px); transform: translate(-50%, 10px); }
-    body.touch-ui #combat-tip.on { transform: translate(-50%, 0); }
-  }
+  body.touch-ui #combat-tip { display: none !important; pointer-events: none !important; }
   body.cr-title-on #combat-tip, body.epic-cine #combat-tip { display: none; }
   /* touch combo-move buttons (inside the skill cluster so they scale with it) */
   #touch-moves { display: none; }
@@ -117,6 +112,7 @@
     },
 
     teachTip(id) {
+      if (this.touchUI) return false;
       const T = this._tips;
       if (!T || T.seen[id] || T.showing > 0 || T.gap > 0 || !TIPS[id]) return false;
       if (this.cutsceneActive || this.isAnyModalOpen || !this.isInWorld) return false;

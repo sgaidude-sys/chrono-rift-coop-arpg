@@ -252,7 +252,7 @@
       const A = this.atmoU;
 
       // ---- water ----
-      const SIZE = LOW ? 700 : 900, SEG = LOW ? 120 : 180;
+      const SIZE = LOW ? 760 : 900, SEG = LOW ? 150 : 180;
       this._waterStep = SIZE / SEG;
       const wGeo = new THREE.PlaneGeometry(SIZE, SIZE, SEG, SEG);
       wGeo.rotateX(-Math.PI / 2);
@@ -290,7 +290,7 @@
       this.waterMesh = water;
 
       // ---- ambient motes + dandelion seeds ----
-      const COUNT = LOW ? 260 : 500;
+      const COUNT = LOW ? 380 : 500;
       const BOX = LOW ? 60 : 80;
       const rnd = new Float32Array(COUNT * 4);
       const rng = (window.ChronoWorld && window.ChronoWorld.mulberry32) ? window.ChronoWorld.mulberry32(777) : Math.random;
