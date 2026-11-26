@@ -7,7 +7,7 @@
  },
  "cs_ch1_1": {
   "file": "assets/audio/voice/cs_ch1_1.mp3",
-  "dur": 6.744,
+  "dur": 7.08,
   "speaker": "Rift Gatekeeper Lyra",
   "text": "Abyssal Imps and Puglin Marauders are breaching the northern gate! Clear the Outskirts Raiders, and rally your party!"
  },
@@ -31,7 +31,7 @@
  },
  "cs_ch3_1": {
   "file": "assets/audio/voice/cs_ch3_1.mp3",
-  "dur": 4.176,
+  "dur": 4.56,
   "speaker": "Rift Gatekeeper Lyra",
   "text": "Press Space to vault over the shockwaves, and focus fire on the Juggernaut!"
  },
@@ -55,7 +55,7 @@
  },
  "cs_ch5_1": {
   "file": "assets/audio/voice/cs_ch5_1.mp3",
-  "dur": 5.712,
+  "dur": 5.952,
   "speaker": "Rift Gatekeeper Lyra",
   "text": "Victory belongs to your party! Prepare yourselves. The Endless Rift escalates to the next tier!"
  },
@@ -67,31 +67,31 @@
  },
  "pro_lyra_0": {
   "file": "assets/audio/voice/pro_lyra_0.mp3",
-  "dur": 5.472,
+  "dur": 5.688,
   "speaker": "Rift Gatekeeper Lyra",
   "text": "I'm Lyra, keeper of the Rift Gate. The breach is right outside the walls. I have to hold it!"
  },
  "pro_lyra_1": {
   "file": "assets/audio/voice/pro_lyra_1.mp3",
-  "dur": 1.728,
+  "dur": 2.496,
   "speaker": "Rift Gatekeeper Lyra",
   "text": "More of them! They're pouring through!"
  },
  "pro_lyra_surge": {
   "file": "assets/audio/voice/pro_lyra_surge.mp3",
-  "dur": 2.016,
+  "dur": 2.352,
   "speaker": "Rift Gatekeeper Lyra",
   "text": "No... the breach is tearing wider!"
  },
  "call_0": {
   "file": "assets/audio/voice/call_0.mp3",
-  "dur": 2.328,
+  "dur": 2.664,
   "speaker": "Rift Gatekeeper Lyra",
   "text": "There are too many... I can't seal it alone."
  },
  "call_1": {
   "file": "assets/audio/voice/call_1.mp3",
-  "dur": 3.048,
+  "dur": 3.168,
   "speaker": "Rift Gatekeeper Lyra",
   "text": "Across every timeline... hear me. Answer my call!"
  },
@@ -109,7 +109,7 @@
  },
  "town_lyra_0": {
   "file": "assets/audio/voice/town_lyra_0.mp3",
-  "dur": 6.0,
+  "dur": 6.024,
   "speaker": "Rift Gatekeeper Lyra",
   "text": "You came... Then the rift chose well. Take my reserve weapon, and clear the Meadows before more break through."
  },
@@ -175,7 +175,7 @@
  },
  "lyra_wave": {
   "file": "assets/audio/voice/lyra_wave.mp3",
-  "dur": 2.952,
+  "dur": 3.36,
   "speaker": "Rift Gatekeeper Lyra",
   "text": "A new Rift Wave has awakened. Steel yourselves!"
  },
@@ -1081,37 +1081,37 @@
  },
  "wb_ember_wyrm": {
   "file": "assets/audio/voice/wb_ember_wyrm.mp3",
-  "dur": 4.896,
+  "dur": 5.136,
   "speaker": "Rift Gatekeeper Lyra",
   "text": "Ignaroth, the Ember Wyrm, has awakened in the Scorched Badlands! Gather your party!"
  },
  "wb_storm_sovereign": {
   "file": "assets/audio/voice/wb_storm_sovereign.mp3",
-  "dur": 4.416,
+  "dur": 4.56,
   "speaker": "Rift Gatekeeper Lyra",
   "text": "Hywirl, the Storm Sovereign, stirs above Frostpeak! Heroes, to arms!"
  },
  "wb_leviathan": {
   "file": "assets/audio/voice/wb_leviathan.mp3",
-  "dur": 5.208,
+  "dur": 5.4,
   "speaker": "Rift Gatekeeper Lyra",
   "text": "The Abyssal Leviathan rises in the Infernal Rift! All heroes, answer the call!"
  },
  "ann_boss_slain": {
   "file": "assets/audio/voice/ann_boss_slain.mp3",
-  "dur": 2.688,
+  "dur": 2.976,
   "speaker": "Rift Gatekeeper Lyra",
   "text": "A great foe has fallen! Glory to the party!"
  },
  "ann_quest_done": {
   "file": "assets/audio/voice/ann_quest_done.mp3",
-  "dur": 1.056,
+  "dur": 1.656,
   "speaker": "Rift Gatekeeper Lyra",
   "text": "Quest complete!"
  },
  "ann_new_zone": {
   "file": "assets/audio/voice/ann_new_zone.mp3",
-  "dur": 1.368,
+  "dur": 1.944,
   "speaker": "Rift Gatekeeper Lyra",
   "text": "New lands discovered."
  },

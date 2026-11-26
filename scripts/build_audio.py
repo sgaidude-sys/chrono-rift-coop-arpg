@@ -29,6 +29,8 @@ FORCE = "--force" in sys.argv
 ONLY = [a for a in sys.argv[1:] if not a.startswith("--")]
 # --redo=hero_,grunt_  -> force-rebuild only lines whose id starts with one of these prefixes
 REDO = tuple(x for a in sys.argv[1:] if a.startswith("--redo=") for x in a[7:].split(",") if x)
+# --redo-speaker=lyra,aldous -> force-rebuild every line spoken by these characters
+REDO_SPK = tuple(x for a in sys.argv[1:] if a.startswith("--redo-speaker=") for x in a[15:].split(",") if x)
 
 # ---------------------------------------------------------------------------
 # VOICE CAST — Kokoro voice, speed, language and an ffmpeg FX chain per character
@@ -36,7 +38,10 @@ REDO = tuple(x for a in sys.argv[1:] if a.startswith("--redo=") for x in a[7:].s
 ROOM = "aecho=0.8:0.4:22:0.10"
 CAST = {
     "aldous":    dict(voice="bm_george",   speed=0.92, lang="en-gb", fx=ROOM),
-    "lyra":      dict(voice="af_heart",    speed=1.02, lang="en-us", fx="aecho=0.8:0.5:35|70:0.14|0.07"),
+    # Lyra: British blend, clean natural chain (no short comb echo), higher bitrate
+    "lyra":      dict(voice="bf_alice", blend=[("bf_alice", 0.6), ("bf_lily", 0.4)], speed=0.95, lang="en-gb", kbps="128k",
+                      fx="highpass=f=75,equalizer=f=220:t=q:w=1.0:g=1.5,equalizer=f=3200:t=q:w=1.2:g=1.5,equalizer=f=7000:t=q:w=1.5:g=-2.5,"
+                         "acompressor=threshold=-22dB:ratio=2.5:attack=6:release=90:makeup=1.5,aecho=0.85:0.9:120|190:0.06|0.035"),
     "gronk":     dict(voice="am_puck",     speed=0.98, lang="en-us", pitch=0.80,
                       fx="acrusher=bits=9:mix=0.18,bass=g=5,aecho=0.8:0.55:55|110:0.25|0.12"),
     "kaelen":    dict(voice="am_onyx",     speed=0.97, lang="en-us", fx=ROOM),
@@ -389,7 +394,7 @@ def build_voices():
     for line_id, (speaker, text) in LINES.items():
         out_path = os.path.join(vdir, f"{line_id}.mp3")
         prev = manifest.get(line_id)
-        redo = bool(REDO) and line_id.startswith(REDO)
+        redo = (bool(REDO) and line_id.startswith(REDO)) or speaker in REDO_SPK
         if not redo and not need(out_path) and prev and prev.get("text") == text:
             continue
         c = CAST[speaker]
@@ -418,7 +423,7 @@ def build_voices():
                 "-c:a", "libmp3lame", "-b:a", "64k", out_path])
         else:
             ff(["-i", raw, "-af", ",".join(chain), "-ac", "1", "-ar", "24000",
-                "-c:a", "libmp3lame", "-b:a", "64k", out_path])
+                "-c:a", "libmp3lame", "-b:a", c.get("kbps", "64k"), out_path])
         manifest[line_id] = {
             "file": f"assets/audio/voice/{line_id}.mp3",
             "dur": probe_dur(out_path),
