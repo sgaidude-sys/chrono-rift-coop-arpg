@@ -48,4 +48,20 @@
       onLoad(gltf);
     }, onError);
   };
+
+  // Models the page <head> already started downloading (window.CR_PREFETCH: absolute URL ->
+  // Promise<ArrayBuffer>) are parsed from memory instead of being requested a second time.
+  const load = THREE.GLTFLoader.prototype.load;
+  THREE.GLTFLoader.prototype.load = function (url, onLoad, onProgress, onError) {
+    const P = window.CR_PREFETCH;
+    let abs = null; try { abs = new URL(url, location.href).href; } catch (e) { /* odd url */ }
+    const pending = P && abs && P[abs];
+    if (!pending) return load.apply(this, arguments);
+    delete P[abs];
+    const dir = abs.slice(0, abs.lastIndexOf('/') + 1);
+    pending.then((buf) => {
+      if (!buf) throw new Error('prefetch failed');
+      this.parse(buf, dir, onLoad, onError);
+    }).catch(() => load.call(this, url, onLoad, onProgress, onError));
+  };
 })();

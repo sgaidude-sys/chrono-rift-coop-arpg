@@ -118,6 +118,43 @@
   let tipTimer = 0;
   function tip(text, secs) { ensureUi(); const t = document.getElementById('cr-op-tip'); t.textContent = text; t.classList.add('on'); clearTimeout(tipTimer); tipTimer = setTimeout(() => t.classList.remove('on'), (secs || 6) * 1000); }
 
+  // ?perf in the URL: time each start-up step of the game build (window.CR_PERF.steps)
+  if (/[?&]perf\b/.test(location.search)) {
+    window.CR_PERF && (CR_PERF.steps = {});
+    ['initThreeScene', 'initSkyDomeAndHorizonScenery', 'initEnvironmentAndZones', 'spawnTownNPCs', 'initMMOWorld', 'initMMORpg', 'initInputHandlers',
+      'loadAllAssets', 'initSupabaseCoOp', 'spawnAICompanions', 'spawnZoneMonsters', 'renderForgeModal', 'initMMOTerrain', 'initFoliage', 'buildWorldGround', 'initTerrain'].forEach((k) => {
+      const f = GP[k]; if (typeof f !== 'function') return;
+      GP[k] = function () { const t = performance.now(); try { return f.apply(this, arguments); } finally { const d = performance.now() - t; CR_PERF.steps[k] = Math.round((CR_PERF.steps[k] || 0) + d); } };
+    });
+  }
+
+  // First run only: download just what the first fight needs. The other heroes, the town NPCs and the
+  // later-zone monsters (incl. MALAKOR) are queued and fetched a few seconds into the prologue,
+  // long before the player reaches town (placeholders upgrade when each model arrives).
+  const loadAll0 = GP.loadAllAssets;
+  GP.loadAllAssets = function () {
+    if (!window.CR_FIRST_RUN || !this.loader) return loadAll0.apply(this, arguments);
+    const L = this.loader, real = L.load.bind(L);
+    const cls = (window.CR_ACCOUNT && CR_ACCOUNT.playing && CR_ACCOUNT.playing.cls) || 'vanguard';
+    const q = this._deferredLoads = [];
+    L.load = function (url) {
+      const u = String(url), m = /heroes\/hero_(\w+)\.glb/.exec(u);
+      if (/models\/npcs\//.test(u) || /models\/monsters\/(monster_|boss_)/.test(u) || (m && m[1] !== cls)) { q.push(Array.prototype.slice.call(arguments)); return undefined; }
+      return real.apply(null, arguments);
+    };
+    try { return loadAll0.apply(this, arguments); } finally { L.load = real; }
+  };
+  GP.releaseDeferredLoads = function () {
+    const q = this._deferredLoads; if (!q) return;
+    this._deferredLoads = null;
+    if (window.crMark) crMark('deferred_released');
+    q.forEach((a) => this.loader.load.apply(this.loader, a));
+  };
+
+  // first rendered frame (start-up timing)
+  const animate0 = GP.animate;
+  GP.animate = function () { if (window.crMark && !this._crFirstFrame) { this._crFirstFrame = true; crMark('first_frame'); } return animate0.apply(this, arguments); };
+
   const orig = {
     triggerStoryChapter: GP.triggerStoryChapter, updateMMOWorld: GP.updateMMOWorld, onMobDied: GP.onMobDied,
     damagePlayer: GP.damagePlayer, updateTutorial: GP.updateTutorial, gainXP: GP.gainXP, initMMOWorld: GP.initMMOWorld
@@ -151,6 +188,7 @@
       if (chapterId === 'ch1' && O && O.stage <= 1 && !this._op && this.storyState && !this.storyState.seen.has('ch1') && (this.player.level || 1) <= 1) {
         O.stage = 1;
         this._opResumed = true;
+        window.crMark && crMark('world_enter');
         this.saveMMOState && this.saveMMOState();
         setTimeout(() => this.startPrologue(), 250);
         return;
@@ -162,6 +200,7 @@
     // 2. Prologue skirmish
     // ---------------------------------------------------------------------------------------------
     startPrologue() {
+      window.crMark && crMark('prologue');
       const p = this.player;
       // a clear spot just outside the town wall, on the road toward the Meadows
       const toward = V(40, 0, 330).normalize();
@@ -178,8 +217,12 @@
       ring.rotation.x = -Math.PI / 2; g.add(ring);
       const core = new THREE.Mesh(new THREE.CircleGeometry(2.2, 40), new THREE.MeshBasicMaterial({ color: 0x3a1a7a, transparent: true, opacity: 0.55, depthWrite: false }));
       core.rotation.x = -Math.PI / 2; g.add(core);
-      const light = new THREE.PointLight(0x9a6bff, 2.2, 22); light.position.y = 2.5; g.add(light);
+      // no extra light: adding one would recompile every material's shader (a visible hitch)
+      const glow = new THREE.Mesh(new THREE.CircleGeometry(4.2, 40), new THREE.MeshBasicMaterial({ color: 0x8a5cff, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false }));
+      glow.rotation.x = -Math.PI / 2; glow.position.y = 0.03; g.add(glow);
+      const light = glow;
       this.scene.add(g);
+      setTimeout(() => this.releaseDeferredLoads && this.releaseDeferredLoads(), 6000);
 
       this._op = { t: 0, kills: 0, wave: 1, mobs: [], g, ring, light, C, P, vfxT: 0, done: false };
       // wave 1: three right in front of the hero
@@ -359,12 +402,14 @@
       if (O) {
         O.t += dt; O.vfxT -= dt;
         O.ring.rotation.z += dt * 0.8; O.ring.material.opacity = 0.55 + Math.sin(O.t * 4) * 0.2;
-        O.light.intensity = 2 + Math.sin(O.t * 3) * 0.6;
+        O.light.material.opacity = 0.14 + Math.sin(O.t * 3) * 0.06;
         if (O.vfxT <= 0 && this.spawnVFXFlipbook) { O.vfxT = 1.6; this.spawnVFXFlipbook('vortex', O.C, 4, 0.6, 0x9a6bff); }
         O.mobs.forEach((m) => { if (!m.dead) m.aggroTimer = Math.max(m.aggroTimer || 0, 5); });
         // safety net: never get stuck in the prologue
         if (O.t > 75 && !O.done) this.finishPrologue();
       }
+      // safety net for the deferred downloads (e.g. the prologue was skipped on a resume)
+      if (this._deferredLoads && this.isInWorld) { this._deferT = (this._deferT || 0) + dt; if (this._deferT > 10) this.releaseDeferredLoads(); }
       if (this._opAfterIntro && !this.cutsceneActive && !this._op) {
         this._opAfterIntro = false;
         this.startFirstMission();

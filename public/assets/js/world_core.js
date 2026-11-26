@@ -499,11 +499,75 @@
     return this.heightFromParts(x, z, zr, this.roadDist(x, z));
   };
 
+  // Bake the whole world's ground once: splat control maps (tint + road, 4 ground weights),
+  // the minimap colours and the height grid. ~1.3 M samples, so the page runs it in a worker
+  // (ground_worker.js) and caches the result; buildWorldGround() falls back to calling it inline.
+  const GROUND_BASE = [[0.36, 0.58, 0.27], [0.5, 0.52, 0.52], [0.36, 0.42, 0.62], [0.84, 0.72, 0.52]];
+  function groundRes() { return Math.round(768 * W.half / 1600 / 16) * 16; }   // ~4.2 m per texel
+  // bakes rows j0..j1-1 (default: all); several workers can each take a band, then mergeGround()
+  function bakeGround(wg, j0, j1) {
+    const N = groundRes(), half = W.half;
+    j0 = j0 || 0; j1 = j1 === undefined ? N : j1;
+    const R = j1 - j0;
+    const ctrlA = new Uint8Array(R * N * 4), ctrlB = new Uint8Array(R * N * 4);
+    const map = new Uint8ClampedArray(R * N * 4), heights = new Float32Array(R * N);
+    const zr = {}, BASE = GROUND_BASE;
+    for (let j = j0; j < j1; j++) {
+      const z = ((j + 0.5) / N) * 2 * half - half;
+      for (let i = 0; i < N; i++) {
+        const x = ((i + 0.5) / N) * 2 * half - half;
+        wg.zoneAt(x, z, zr);
+        const zA = wg.zones[zr.i], zB = wg.zones[zr.j];
+        const blend = 0.5 * (1 - smooth(0, 40, zr.f));
+        const mN = fbm(x * 0.012, z * 0.012, 5, 2);
+        const tA = [0, 1, 2].map(k => zA.tint[k] + (zA.tint2[k] - zA.tint[k]) * mN);
+        const tB = [0, 1, 2].map(k => zB.tint[k] + (zB.tint2[k] - zB.tint[k]) * mN);
+        let tint = [0, 1, 2].map(k => tA[k] * (1 - blend) + tB[k] * blend);
+        let wts = [0, 1, 2, 3].map(k => zA.ground[k] * (1 - blend) + zB.ground[k] * blend);
+        const rd = wg.roadDist(x, z);
+        heights[(j - j0) * N + i] = wg.heightFromParts(x, z, zr, rd);
+        const edge = half - Math.max(Math.abs(x), Math.abs(z));
+        const ridge = (Math.hypot(x, z) > 300 && rd > W.gateWidth) ? 1 - smooth(W.borderBand * 0.3, W.borderBand * 1.1, Math.min(zr.f, edge)) : 1 - smooth(10, 40, edge);
+        if (ridge > 0) {
+          wts = wts.map((w, k) => w * (1 - ridge) + (k === 1 ? ridge : 0));
+          tint = tint.map(t => t * (1 - ridge * 0.45));
+        }
+        const road = 1 - smooth(4.5, 8.5, rd);
+        const o = ((j - j0) * N + i) * 4;
+        ctrlA[o] = Math.min(255, tint[0] / 1.6 * 255);
+        ctrlA[o + 1] = Math.min(255, tint[1] / 1.6 * 255);
+        ctrlA[o + 2] = Math.min(255, tint[2] / 1.6 * 255);
+        ctrlA[o + 3] = road * 255;
+        const ws = wts[0] + wts[1] + wts[2] + wts[3] || 1;
+        for (let k = 0; k < 4; k++) ctrlB[o + k] = (wts[k] / ws) * 255;
+        let r = 0, g = 0, b = 0;
+        for (let k = 0; k < 4; k++) { const w = wts[k] / ws; r += BASE[k][0] * w; g += BASE[k][1] * w; b += BASE[k][2] * w; }
+        r *= tint[0]; g *= tint[1]; b *= tint[2];
+        if (ridge > 0.5) { r *= 0.55; g *= 0.5; b *= 0.5; }
+        if (road > 0.4) { r = r * 0.4 + 0.72 * 0.6; g = g * 0.4 + 0.62 * 0.6; b = b * 0.4 + 0.46 * 0.6; }
+        if (zr.f < 2.5 && ridge < 0.5) { r *= 0.75; g *= 0.75; b *= 0.75; }
+        map[o] = r * 255; map[o + 1] = g * 255; map[o + 2] = b * 255; map[o + 3] = 255;   // flipped in mergeGround
+      }
+    }
+    return { N, seed: W.seed, half, j0, j1, ctrlA, ctrlB, map, heights };
+  }
+  // joins row bands into the full textures; the map is flipped so north (−z) is at the top
+  function mergeGround(parts) {
+    const N = parts[0].N;
+    const ctrlA = new Uint8Array(N * N * 4), ctrlB = new Uint8Array(N * N * 4);
+    const map = new Uint8ClampedArray(N * N * 4), heights = new Float32Array(N * N);
+    parts.forEach((p) => {
+      ctrlA.set(p.ctrlA, p.j0 * N * 4); ctrlB.set(p.ctrlB, p.j0 * N * 4); heights.set(p.heights, p.j0 * N);
+      for (let j = p.j0; j < p.j1; j++) map.set(p.map.subarray((j - p.j0) * N * 4, (j - p.j0 + 1) * N * 4), (N - 1 - j) * N * 4);
+    });
+    return { N, seed: parts[0].seed, half: parts[0].half, ctrlA, ctrlB, map, heights };
+  }
+
   // Shared, lazily built world for code that only needs heights (e.g. a server)
   let shared = null;
   function sharedWorld() { return shared || (shared = new WorldGen()); }
   function getTerrainHeight(x, z) { return sharedWorld().terrainHeight(x, z); }
   function getWaterDepth(x, z) { return sharedWorld().waterDepth(x, z); }
 
-  return { mulberry32, hash2, vnoise, fbm, smooth, dist2, WorldGen, PROP_SCALE, PROP_COLLIDE, buildPerm, simplex2, getTerrainHeight, getWaterDepth, WATER_LEVEL: W.waterLevel, sharedWorld };
+  return { mulberry32, hash2, vnoise, fbm, smooth, dist2, WorldGen, PROP_SCALE, PROP_COLLIDE, buildPerm, simplex2, getTerrainHeight, getWaterDepth, WATER_LEVEL: W.waterLevel, sharedWorld, bakeGround, mergeGround, groundRes };
 });

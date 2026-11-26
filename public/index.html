@@ -2,6 +2,43 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <!-- start-up timing: window.CR_PERF.marks (ms since page start) and main-thread stalls over 50 ms -->
+  <script>(function () { var P = window.CR_PERF = { marks: {}, lt: [] }; window.crMark = function (n) { if (!(n in P.marks)) P.marks[n] = Math.round(performance.now()); };
+    try { new PerformanceObserver(function (l) { l.getEntries().forEach(function (e) { P.lt.push([Math.round(e.startTime), Math.round(e.duration)]); }); }).observe({ type: 'longtask', buffered: true }); } catch (e) {} })();</script>
+  <!-- Start-up head start, before the ~60 game scripts download:
+       1. bake the world ground in a worker (ground_worker.js), or take it from this device's cache
+          (IndexedDB 'cr-cache'; bump GROUND_KEY whenever ChronoWorld.bakeGround changes)
+       2. start downloading the models the first fight needs, so they overlap the bake -->
+  <script>(function () {
+    var GROUND_KEY = 'ground-v1', A = 'assets/';
+    function db() { return new Promise(function (res, rej) { var r = indexedDB.open('cr-cache', 1); r.onupgradeneeded = function () { r.result.createObjectStore('kv'); }; r.onsuccess = function () { res(r.result); }; r.onerror = function () { rej(r.error); }; }); }
+    function get(d) { return new Promise(function (res) { try { var q = d.transaction('kv', 'readonly').objectStore('kv').get(GROUND_KEY); q.onsuccess = function () { res(q.result || null); }; q.onerror = function () { res(null); }; } catch (e) { res(null); } }); }
+    function band(j0, j1) { return new Promise(function (res, rej) { var w = new Worker(A + 'js/ground_worker.js?v=2'); w.onmessage = function (e) { w.terminate(); if (e.data && e.data.error) rej(e.data.error); else res(e.data); }; w.onerror = function (e) { w.terminate(); rej(e); }; w.postMessage({ j0: j0, j1: j1 }); }); }
+    // N must match ChronoWorld.groundRes() (1152 for the current world); one band per core, up to 4
+    function bake() { var N = 1152, k = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 2) - 1)), parts = [];
+      for (var i = 0; i < k; i++) parts.push(band(Math.floor(N * i / k), Math.floor(N * (i + 1) / k)));
+      return Promise.all(parts).then(function (p) { return { parts: p }; }); }
+    window.CR_GROUND_P = (async function () {
+      var d = null;
+      try { d = await db(); var c = await get(d); if (c && c.N && c.heights) { window.crMark && crMark('ground_cache_hit'); return c; } } catch (e) { /* no IndexedDB */ }
+      var b = await bake();
+      window.crMark && crMark('ground_worker_done');
+      // the page merges the bands once world_core.js has loaded, then saves the result here
+      window.CR_GROUND_SAVE = function (full) { if (d) { try { d.transaction('kv', 'readwrite').objectStore('kv').put(full, GROUND_KEY); } catch (e) { /* storage full */ } } };
+      return b;
+    })();
+    window.CR_GROUND_P.catch(function () {});
+    // models for the first fight (the browser keeps them for the game's own requests)
+    var first = false; try { first = !sessionStorage.getItem('cr_char') && !(JSON.parse(localStorage.getItem('cr_guest_chars') || '[]').length); } catch (e) { /* storage blocked */ }
+    // exact URLs the loaders request (monster models carry ?v=2, the others don't)
+    var list = ['models/animations_arpg.glb', 'models/env/oak.glb', 'models/env/pines.glb', 'models/env/rocks.glb', 'models/env/bush.glb',
+      'models/monsters/qm/blob_greenblob.glb?v=2', 'models/monsters/qm/basic_rat.glb?v=2', 'models/monsters/qm/blob_chicken.glb?v=2'];
+    if (first) list.push('models/heroes/hero_vanguard.glb');
+    // kept in memory and handed to the model loader (gltf_dequant.js), so nothing downloads twice
+    var P = window.CR_PREFETCH = {};
+    list.forEach(function (u) { try { var abs = new URL(A + u, location.href).href;
+      P[abs] = fetch(abs, { credentials: 'same-origin' }).then(function (r) { if (!r.ok) throw r.status; return r.arrayBuffer(); }).catch(function () { return null; }); } catch (e) { /* old browser */ } });
+  })();</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>CHRONO-RIFT: Chronicles of Ashenvale — 3D Co-Op ARPG</title>
   <!-- launched from the Home Screen the game runs full screen (iPhone Safari has no fullscreen API) -->
@@ -18,7 +55,7 @@
   <!-- Three.js, GLTFLoader & Supabase JS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-  <script src="assets/js/gltf_dequant.js?v=1"></script>
+  <script src="assets/js/gltf_dequant.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
@@ -9881,14 +9918,28 @@
     }
 
     window.addEventListener('DOMContentLoaded', async () => {
+      window.crMark && crMark('dom_ready');
       if (window.CR_BOOT) { try { await window.CR_BOOT; } catch (e) { /* play without the portal SDK */ } }
       if (window.CR_PRESTART) { try { window.CR_PRESTART(); } catch (e) { /* normal start */ } }
+      if (window.CR_GROUND_P) {
+        try {
+          let gb = await Promise.race([window.CR_GROUND_P, new Promise(r => setTimeout(() => r(null), 20000))]);
+          if (gb && gb.parts) {                              // bands from the workers: merge (only if they cover the whole map)
+            const rows = gb.parts.reduce((n, p) => n + (p.j1 - p.j0), 0);
+            gb = rows === gb.parts[0].N ? window.ChronoWorld.mergeGround(gb.parts) : null;
+            if (gb && window.CR_GROUND_SAVE) setTimeout(() => window.CR_GROUND_SAVE(gb), 4000);   // cache after start-up settles
+          }
+          window.CR_GROUND_BAKE = gb;
+        } catch (e) { /* bake inline */ }
+      }
+      window.crMark && crMark('build_start');
       window.game = new ChronoRiftCoOpGame();
+      window.crMark && crMark('build_end');
     });
   </script>
   <script src="assets/js/mmo_data.js?v=16"></script>
-  <script src="assets/js/world_core.js?v=20"></script>
-  <script src="assets/js/mmo_world.js?v=25"></script>
+  <script src="assets/js/world_core.js?v=22"></script>
+  <script src="assets/js/mmo_world.js?v=27"></script>
   <script src="assets/js/mmo_rpg.js?v=14"></script>
   <script src="assets/js/mmo_audio.js?v=14"></script>
   <script src="assets/js/mmo_vfx.js?v=10"></script>
