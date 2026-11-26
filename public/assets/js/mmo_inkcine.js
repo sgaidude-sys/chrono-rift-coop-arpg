@@ -256,10 +256,15 @@
     el.appendChild(c);
     if (blocking) {
       const b = document.createElement('button');
-      b.textContent = 'Skip ⏭'; b.setAttribute('aria-label', 'Skip cinematic');
-      b.style.cssText = 'all:unset;position:absolute;right:18px;bottom:16px;padding:8px 16px;border-radius:999px;cursor:pointer;background:rgba(246,239,226,.92);color:#22201E;font:700 13px Georgia,serif;letter-spacing:1px;border:2px solid #22201E;';
+      // visible from the first frame, top-right, high contrast; SPACE or ESC also skip
+      b.textContent = 'SKIP ⏭  [SPACE / ESC]'; b.setAttribute('aria-label', 'Skip cinematic');
+      b.style.cssText = 'all:unset;position:absolute;right:max(14px, env(safe-area-inset-right));top:max(14px, env(safe-area-inset-top));padding:10px 18px;border-radius:999px;cursor:pointer;z-index:2;background:#22201E;color:#F6EFE2;font:800 13px Georgia,serif;letter-spacing:1.5px;border:2px solid #F6EFE2;box-shadow:0 2px 12px rgba(0,0,0,.45);';
       b.onclick = (e) => { e.stopPropagation(); window.game && window.game.skipCutscene(); };
       el.appendChild(b);
+      const h = document.createElement('div');
+      h.textContent = document.body.classList.contains('touch-ui') ? 'Tap SKIP to jump into the game' : 'Press SPACE to skip';
+      h.style.cssText = 'position:absolute;right:max(18px, env(safe-area-inset-right));top:calc(max(14px, env(safe-area-inset-top)) + 46px);color:rgba(246,239,226,.75);font:600 11px Georgia,serif;letter-spacing:1px;text-shadow:0 1px 4px #000;pointer-events:none;';
+      el.appendChild(h);
     }
     document.body.appendChild(el);
     return el;

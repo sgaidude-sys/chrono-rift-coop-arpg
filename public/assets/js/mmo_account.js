@@ -55,9 +55,14 @@
   const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'x' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
 
   // the character this page load is playing (set right before the reload)
-  let PLAY = null;
-  try { PLAY = JSON.parse(ss.get('cr_char') || 'null'); } catch (e) { PLAY = null; }
-  const GOTO_CHARS = !PLAY && ss.get('cr_goto') === 'charselect';
+  // Read again when the game is created: the portal build restores saves (CrazyGames Data
+  // module) and may pick a brand-new player's first hero (mmo_prologue.js) after this file loads.
+  let PLAY = null, GOTO_CHARS = false;
+  const readPlay = () => {
+    try { PLAY = JSON.parse(ss.get('cr_char') || 'null'); } catch (e) { PLAY = null; }
+    GOTO_CHARS = !PLAY && ss.get('cr_goto') === 'charselect';
+  };
+  readPlay();
 
   const CSS = `
   body.cr-acct-on #hero-modal { visibility: hidden !important; }
@@ -135,6 +140,7 @@
 
   Object.assign(GP, {
     initMMOWorld() {
+      readPlay();
       orig.initMMOWorld.call(this);
       try { this.initAccount(); } catch (e) { console.warn('[Account] init failed', e); document.body.classList.add('cr-booted'); }
     },
@@ -630,5 +636,5 @@
     }
   });
 
-  window.CR_ACCOUNT = { MAX_CHARS, playing: PLAY };
+  window.CR_ACCOUNT = { MAX_CHARS, get playing() { return PLAY; } };
 })();

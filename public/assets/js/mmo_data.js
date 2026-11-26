@@ -473,7 +473,9 @@
     mobHp: (L) => Math.round(150 * Math.pow(1.09, L - 1)),
     mobDmg: (L) => Math.round(19 * Math.pow(1.085, L - 1)),
     mobXp: (L) => Math.round(12 + 6 * L),
-    xpToNext: (L) => Math.round((12 + 6 * L) * (8 + 1.2 * L) * 1.05 * (1.8 + 0.05 * Math.max(0, L - 5))),   // economy pass: ~8-9 h of active play to 50
+    // economy pass: ~8-9 h of active play to 50. Levels 1 and 2 are front-loaded so a new hero
+    // levels up within the first minute or two (the prologue skirmish nearly fills level 1).
+    xpToNext: (L) => L === 1 ? 110 : L === 2 ? 250 : Math.round((12 + 6 * L) * (8 + 1.2 * L) * 1.05 * (1.8 + 0.05 * Math.max(0, L - 5))),
     weaponDmg: (ilvl) => 42 * Math.pow(1.085, ilvl - 1),
     armorBudget: (ilvl) => (40 + 22 * ilvl) * 0.45,
     heroHp: (base, L) => Math.round(base * Math.pow(1.08, L - 1))
