@@ -243,6 +243,57 @@
       } }] }
   };
 
+  // ---- one-off story beats (not chapters: no story progress, no voice clips; lines are typed) ------
+  // The bridge from the Lyra prologue to choosing your own champion (mmo_prologue.js).
+  const CLASS_ROW = [['VANGUARD', 'shield'], ['RANGER', 'bow'], ['ARCANIST', 'staff'], ['BERSERKER', 'axes']];
+  function sigil(kind, cx, cy, p, c) {
+    if (kind === 'shield') path([[cx, cy - 16], [cx + 13, cy - 10], [cx + 11, cy + 6], [cx, cy + 16], [cx - 11, cy + 6], [cx - 13, cy - 10], [cx, cy - 16]], p, 2.5, c);
+    else if (kind === 'bow') { arc(cx - 4, cy, 16, -Math.PI / 2, Math.PI / 2, p, 2.5, c); path([[cx - 4, cy - 16], [cx - 4, cy + 16]], p, 1.5, c); path([[cx - 14, cy], [cx + 16, cy]], p, 2, c); }
+    else if (kind === 'staff') { path([[cx - 8, cy + 16], [cx + 6, cy - 10]], p, 2.5, c); arc(cx + 8, cy - 12, 6, 0, Math.PI * 2, p, 2, c); }
+    else { path([[cx - 10, cy + 14], [cx + 6, cy - 12]], p, 2.5, c); path([[cx + 10, cy + 14], [cx - 6, cy - 12]], p, 2.5, c); arc(cx + 6, cy - 12, 6, -Math.PI, 0.3, p, 2, c); arc(cx - 6, cy - 12, 6, Math.PI - 0.3, 0, p, 2, c); }
+  }
+  function riftLine(cx) { return [[cx + 40, 0], [cx, 70], [cx + 55, 120], [cx - 20, 190], [cx + 28, 232], [cx - 50, 300], [cx - 15, 340], [cx - 80, 400]]; }
+  const BEATS = {
+    call: { mood: 'dread', shots: [
+      { dur: 3.8, line: ['Rift Gatekeeper Lyra', 'There are too many… I can\'t seal it alone.'], draw(t, P, tick) {
+        path([[0, 400], [W, 398]], ph(t, 0, 0.5), 3, P.ink);
+        hatch(0, 0, W, 450, ph(t, 0, 1) * 0.45, P.a, 12, 1);
+        const c = riftLine(650); path(c, ph(t, 0.1, 1.0), 12, P.ink); path(c, ph(t, 0.3, 1.2), 4, P.rift);
+        hero(300, 400, P, ph(t, 0, 0.8), tick, 0.35);
+        const n = Math.min(10, Math.floor(t * 3.2));
+        for (let i = 0; i < n; i++) { const ix = 640 - ((tick * 5 + i * 44) % 300); imp(ix, 400, 0.9 + (i % 3) * 0.15, P); }
+      } },
+      { dur: 3.8, line: ['Rift Gatekeeper Lyra', 'Across every timeline… hear me. Answer my call!'], draw(t, P, tick) {
+        path([[0, 400], [W, 398]], ph(t, 0, 0.4), 3, P.ink);
+        const c = riftLine(560); path(c, 1, 10, P.ink); path(c, 1, 4, P.rift);
+        rays(480, 236, 50, 330, 16, ph(t, 0.7, 2.0), GOLD, tick);
+        hero(480, 400, P, 1, tick, ph(t, 0.3, 1.2));
+        if (t > 1.2) arc(520, 236, 22 + (tick % 3) * 4, 0, Math.PI * 2, 1, 3, GOLD);
+      } },
+      { dur: 6.4, draw(t, P, tick) {
+        path([[0, 420], [W, 418]], ph(t, 0, 0.4), 3, P.ink);
+        CLASS_ROW.forEach(([name, kind], i) => {
+          const cx = 150 + i * 220, p0 = 0.2 + i * 0.25;
+          path([[cx - 70, 420], [cx - 70, 200]], ph(t, p0, p0 + 0.5), 3.5, P.ink); arc(cx, 200, 70, Math.PI, Math.PI * 2, ph(t, p0 + 0.3, p0 + 0.8), 3.5, P.ink); path([[cx + 70, 200], [cx + 70, 420]], ph(t, p0 + 0.5, p0 + 0.9), 3.5, P.ink);
+          if (t > p0 + 0.9) { path([[W / 2, -10], [cx, 150]], ph(t, p0 + 0.9, p0 + 1.4), 2, GOLD); hero(cx, 415, P, ph(t, p0 + 1.1, p0 + 1.9), tick, 0.25 + 0.5 * ((tick + i) % 2)); }
+          sigil(kind, cx, 448, ph(t, p0 + 1.3, p0 + 1.8), P.b);
+          txt(name, cx, 486, 16, ph(t, p0 + 1.5, p0 + 2.1), P.ink, '600 16px Arial, sans-serif');
+        });
+        if (t > 3.2) { x.fillStyle = P.paper; x.globalAlpha = 0.9 * ph(t, 3.2, 3.6); x.fillRect(0, 150, W, 170); x.globalAlpha = 1; title(P, t, 3.3, 'HER CALL ECHOES THROUGH FOUR TIMELINES', 'Who answers?'); }
+      } }] },
+    answer: { mood: 'hope', shots: [
+      { dur: 5.2, draw(t, P, tick, S, D) {
+        path([[0, 400], [W, 398]], ph(t, 0, 0.4), 3, P.ink);
+        const c = riftLine(420); path(c, 1, 10, P.ink); path(c, 1, 4, P.rift);
+        rays(400, 230, 40, 260, 12, ph(t, 0, 1.2), GOLD, tick);
+        const k = ph(t, 0.4, 2.2);
+        hero(400 - 80 * k, 400, P, ph(t, 0.3, 1.0), tick, 0.6);                         // the champion steps out of the rift
+        hero(700, 400, P, ph(t, 0.0, 0.6), tick, 0.3, true);                             // Lyra, waiting
+        txt('LYRA', 700, 425, 13, ph(t, 0.5, 0.9), P.b, '600 13px Arial, sans-serif');
+        if (t > 2.0) { x.fillStyle = P.paper; x.globalAlpha = 0.9 * ph(t, 2.0, 2.4); x.fillRect(0, 150, W, 170); x.globalAlpha = 1; title(P, t, 2.1, 'THE CALL IS ANSWERED', (D && D.title) || 'A champion arrives'); }
+      } }] }
+  };
+
   const orig = { playCutscene: GP.playCutscene, skipCutscene: GP.skipCutscene, pickupItem: GP.pickupItem, epicCallout: GP.epicCallout, initMMOWorld: GP.initMMOWorld };
   const UNLOCK = { ch1: 'plays on your first adventure', ch2: 'enter the Bestiary Catacombs (Lv 12–18)', ch3: 'enter The Astral Breach (Lv 32–39)', ch4: 'enter the Chrono Citadel (Lv 46–50)', ch5: 'defeat Archon Malakor' };
 
@@ -326,7 +377,8 @@
       const P = PAL[I.S.mood];
       R = mul(Math.floor(tick / 2) * 9973 + i * 101);
       x.fillStyle = P.paper; x.fillRect(0, 0, W, H); grain(tick);
-      s.draw(lt, P, lTick, I.S, { noFlash: document.body.classList.contains('cr-noflash') });
+      s.draw(lt, P, lTick, I.S, I.data || { noFlash: document.body.classList.contains('cr-noflash') });
+      if (s.line) say(P, lt, s.line[0], s.line[1], 0.3);
       if (s.voice !== undefined) {
         const line = I.chap.shots[s.voice];
         if (line) say(P, lt, String(line.speaker || '').replace(/^[^A-Za-z]+/, ''), line.text, 0.4);
@@ -347,6 +399,30 @@
       if (this.audio && this.audio.stopVoice) this.audio.stopVoice(3);
       const ov = document.getElementById('cutscene-overlay'); if (ov) ov.classList.remove('active');
       this.updateStoryTrackerUI && this.updateStoryTrackerUI();
+      if (I.onEnd) { try { I.onEnd(); } catch (e) { console.warn('[ink] onEnd', e); } }
+    },
+
+    // a one-off story beat from BEATS (same look, skip button and SPACE/ESC as the chapters);
+    // onEnd runs when it finishes or is skipped
+    inkPlayBeat(key, data, onEnd) {
+      const S = BEATS[key]; if (!S) { if (onEnd) onEnd(); return; }
+      if (this._ink) { const prev = this._ink; prev.onEnd = null; this.inkEnd(); }
+      this.audio && this.audio.init && this.audio.init();
+      this.cutsceneActive = true;
+      this.mouseDownLeft = false;
+      const el = overlay('ink-cine', 5000, true);
+      el.style.display = 'flex';
+      const ctx = el.querySelector('canvas').getContext('2d');
+      const shots = S.shots, total = shots.reduce((a, s) => a + s.dur, 0);
+      const I = this._ink = { id: key, S, shots, total, chap: { shots: [] }, data: data || {}, onEnd, t0: performance.now(), ctx, el, voiced: {}, raf: 0 };
+      const step = (now) => {
+        if (this._ink !== I) return;
+        const t = (now - I.t0) / 1000;
+        if (t >= I.total + 0.3) { this.inkEnd(); return; }
+        this.inkFrame(I, t);
+        I.raf = requestAnimationFrame(step);
+      };
+      I.raf = requestAnimationFrame(step);
     },
 
     skipCutscene() {

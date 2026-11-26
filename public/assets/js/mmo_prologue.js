@@ -134,7 +134,7 @@
     const h = document.createElement('div'); h.id = 'cr-op-hints';
     const t = document.createElement('div'); t.id = 'cr-op-tip';
     const k = document.createElement('div'); k.id = 'cr-op-talk'; k.innerHTML = '<div class="pf"></div><div><div class="nm"></div><div class="tx"></div></div>';
-    const c = document.createElement('div'); c.id = 'cr-call'; c.innerHTML = '<div class="t">LYRA\'S CALL ECHOES ACROSS TIME</div><div class="s">Choose the champion who answers it</div>';
+    const c = document.createElement('div'); c.id = 'cr-call'; c.innerHTML = '<div class="t">WHO ANSWERS LYRA\'S CALL?</div><div class="s">Choose your champion. You\'ll play as them from now on, while Lyra guards the Rift Gate.</div>';
     document.body.append(b, h, t, k, c);
   }
   // typed dialogue line in the corner; hides itself after `secs`
@@ -330,15 +330,16 @@
       this.prologueWave([['meadow_slime', 1], ['field_rat', 1], ['cluckbeast', 2], ['field_rat', 1], ['meadow_slime', 1]], 4);
       this.screenShake = Math.max(this.screenShake || 0, 0.6);
       if (this.spawnVFXFlipbook) this.spawnVFXFlipbook('vortex', O.C, 9, 1.2, 0xb070ff);
-      talk(LYRA[0], LYRA[1], 'There are too many… I can\'t seal it alone!', 3.2);
+      // a moment of the surge in-world, then the story takes over in ink: Lyra calls across time and
+      // four champions turn toward the light ("Who answers?"); the choice screen follows
       setTimeout(() => {
         if (this._op !== O) return;
-        talk(LYRA[0], LYRA[1], 'Across every timeline, hear me… ANSWER MY CALL!', 3.4);
-        if (this.spawnVFXFlipbook) { this.spawnVFXFlipbook('eldenring', p.pos, 6, 1.0, 0xffd56b); this.spawnVFXFlipbook('eldenring', O.C, 8, 1.2, 0xffd56b); }
+        if (this.spawnVFXFlipbook) this.spawnVFXFlipbook('eldenring', p.pos, 6, 1.0, 0xffd56b);
         if (this.audio && this.audio.playSpell) this.audio.playSpell('ult');
-        this.screenShake = Math.max(this.screenShake || 0, 0.8);
-      }, 3000);
-      setTimeout(() => { if (this._op === O) this.openChampionCall(); }, 6200);
+        hideBanner(); hideTalk();
+        const go = () => { if (this._op === O) this.openChampionCall(); };
+        if (this.inkPlayBeat) this.inkPlayBeat('call', {}, go); else go();
+      }, 1900);
     },
 
     // the hero-select screen, framed as the champions Lyra's call reaches; picks a class + name
@@ -368,7 +369,15 @@
         } catch (e) { /* storage blocked */ }
         if (this._acct) this._acct.chars = (this._acct.chars || []).filter(x => !x.prologue);
         ss.set('cr_after_lyra', '1');
-        document.body.classList.remove('cr-lyra-call');
+        // the champion steps out of the rift beside Lyra, then the game continues as them
+        this._lyraPick = false;
+        document.body.classList.remove('cr-lyra-call', 'cr-create');
+        const hm = document.getElementById('hero-modal'); if (hm) hm.classList.remove('active');
+        const args = arguments, cls = String(c.cls || '');
+        const title = `${c.name}, the ${cls.charAt(0).toUpperCase() + cls.slice(1)}`;
+        const go = () => orig.acctPlay.apply(this, args);
+        if (this.inkPlayBeat) { this.inkPlayBeat('answer', { title }, go); return undefined; }
+        return go();
       }
       return orig.acctPlay.apply(this, arguments);
     },
