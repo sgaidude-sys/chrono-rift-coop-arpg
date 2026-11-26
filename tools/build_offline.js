@@ -248,7 +248,7 @@ async function cached(url, name, binary) {
   for (const [url, name] of Object.entries(SCRIPTS)) html = html.split(`src="${url}"`).join(`src="vendor/${name}"`);
   html = html.replace(/<link rel="preconnect" href="https:\/\/fonts\.(googleapis|gstatic)\.com"[^>]*>\s*/g, '');
   html = html.split(`href="${FONT_CSS.replace(/&/g, '&amp;')}"`).join('href="vendor/fonts.css"').split(`href="${FONT_CSS}"`).join('href="vendor/fonts.css"');
-  html = html.replace('<head>', '<head>\n  <script>window.CR_OFFLINE = true;</script>' + (CRAZY ? `\n  <script src="${CG_SDK}"></script>` : ''));
+  html = html.replace('<head>', '<head>\n  <script>window.CR_OFFLINE = true; window.CR_VENDOR_FONTS = true;</script>' + (CRAZY ? `\n  <script src="${CG_SDK}"></script>` : ''));
   // the offline edition never talks to Supabase: don't ship the project address or key
   html = html.replace(/const SUPABASE_URL = "[^"]*";/, 'const SUPABASE_URL = "";').replace(/const SUPABASE_KEY = "[^"]*";/, 'const SUPABASE_KEY = "";');
 

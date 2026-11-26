@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <script>(function () { try { var q = new URLSearchParams(location.search); if (q.get('portal') === '1' || q.get('offline') === '1') window.CR_OFFLINE = true; if (q.get('fresh') === '1') { ['cr_char', 'cr_goto', 'cr_after_lyra'].forEach(function (k) { sessionStorage.removeItem(k); }); ['cr_guest_chars', 'arpg_player_token', 'cr_hud_mode', 'cr_tips_seen'].forEach(function (k) { localStorage.removeItem(k); }); q.delete('fresh'); var qs = q.toString(); history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + location.hash); } } catch (e) {} })();</script>
   <!-- start-up timing: window.CR_PERF.marks (ms since page start) and main-thread stalls over 50 ms -->
   <script>(function () { var P = window.CR_PERF = { marks: {}, lt: [] }; window.crMark = function (n) { if (!(n in P.marks)) P.marks[n] = Math.round(performance.now()); };
     try { new PerformanceObserver(function (l) { l.getEntries().forEach(function (e) { P.lt.push([Math.round(e.startTime), Math.round(e.duration)]); }); }).observe({ type: 'longtask', buffered: true }); } catch (e) {} })();</script>
@@ -6078,7 +6079,7 @@
       // -----------------------------------------------------------------------
       async initSupabaseCoOp() {
         try {
-          if (!window.supabase) return;
+          if (window.CR_OFFLINE || !window.supabase) return;
           this.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
           await this.loadOrInitHeroFromSupabase();
           await this.joinRealtimeRoom(this.roomCode);
@@ -9972,7 +9973,7 @@
   <script src="assets/js/mmo_combat.js?v=7"></script>
   <script src="assets/js/mmo_skillvfx.js?v=1"></script>
   <script src="assets/js/mmo_talents.js?v=4"></script>
-  <script src="assets/js/mmo_ui.js?v=5"></script>
+  <script src="assets/js/mmo_ui.js?v=6"></script>
   <script src="assets/js/mmo_tutorial.js?v=3"></script>
   <script src="assets/js/mmo_social.js?v=2"></script>
   <script src="assets/js/mmo_epic.js?v=3"></script>

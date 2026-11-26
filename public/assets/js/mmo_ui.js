@@ -322,7 +322,7 @@
       if (!document.getElementById('ui-font')) {
         const l = document.createElement('link');
         l.id = 'ui-font'; l.rel = 'stylesheet';
-        l.href = window.CR_OFFLINE ? 'vendor/fonts-ui.css' : 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap';   // offline edition bundles the font
+        l.href = window.CR_VENDOR_FONTS ? 'vendor/fonts-ui.css' : 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap';   // offline edition bundles the font
         document.head.appendChild(l);
       }
       const st = document.createElement('style'); st.id = 'ui-aaa-css'; st.textContent = CSS; document.head.appendChild(st);
