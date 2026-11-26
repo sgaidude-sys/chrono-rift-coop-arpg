@@ -19,46 +19,80 @@
   const isTouch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
 
   // ---------------------------------------------------------------------------
+  // Bespoke engraved SVG sigils (matches mmo_heroselect.js / mmo_ui.js)
+  // ---------------------------------------------------------------------------
+  const sig = (d) => '<svg class="tal-svg" viewBox="0 0 32 32" aria-hidden="true">' + d + '</svg>';
+  const SIGIL = {
+    // Parry Mastery
+    guard: '<path d="M16 3.5l10 3.6v7.4c0 6.5-4.3 11.3-10 14-5.7-2.7-10-7.5-10-14V7.1z"/><path d="M16 7.5v17M10 13.5h12"/><polygon points="16,10.5 19,13.5 16,16.5 13,13.5" fill="currentColor" fill-opacity="0.22"/>',
+    g_steady: '<path d="M8 5h16v11c0 5.5-3.4 9.6-8 12-4.6-2.4-8-6.5-8-12z"/><path d="M11.5 11.5L16 15l4.5-3.5M11.5 16.5L16 20l4.5-3.5"/>',
+    g_timing: '<circle cx="16" cy="17" r="9.5"/><circle cx="16" cy="17" r="6" stroke-dasharray="2 2.8"/><path d="M16 17v-5M16 17l3.8 2.4"/><path d="M16 3.5l1.1 2.4 2.4 1.1-2.4 1.1L16 10.5l-1.1-2.4-2.4-1.1 2.4-1.1z" fill="currentColor" fill-opacity="0.2"/>',
+    g_posture: '<path d="M16 12v16M13.5 28h5"/><path d="M7.5 6.5h17l-1.5 5.5H9z" fill="currentColor" fill-opacity="0.16"/><path d="M5.5 22.5l3.5-2-2.5-2.5M26.5 22.5l-3.5-2 2.5-2.5"/>',
+    g_bulwark: '<path d="M6 9V5.5h4V8h4V5.5h4V8h4V5.5h4V9l-1.5 2v16.5h-17V11z"/><path d="M12.5 27.5v-7.5a3.5 3.5 0 0 1 7 0v7.5" fill="currentColor" fill-opacity="0.16"/><path d="M16 12v3"/>',
+    g_exec: '<path d="M7 25L24.5 7.5M25 25L7.5 7.5"/><path d="M6.5 19.5l6 6M25.5 19.5l-6 6"/><polygon points="16,4.5 19.5,8.5 16,12.5 12.5,8.5" fill="currentColor" fill-opacity="0.22"/>',
+    gk_wave: '<circle cx="16" cy="16" r="12" stroke-dasharray="2.2 3.2"/><path d="M16 4v5M16 23v5M4 16h5M23 16h5M7.5 7.5l3.5 3.5M21 21l3.5 3.5M24.5 7.5L21 11M11 21l-3.5 3.5"/><polygon points="16,10.5 19.5,16 16,21.5 12.5,16" fill="currentColor" fill-opacity="0.28"/>',
+    gk_counter: '<path d="M16 4.5v23M12 21.5h8M14 27.5h4"/><path d="M10.5 8.5A9 9 0 0 0 9.5 22"/><path d="M7.5 9l3.2-.6-.4 3.2"/><path d="M21.5 23.5A9 9 0 0 0 22.5 10"/><path d="M24.5 23l-3.2.6.4-3.2"/>',
+    // Elemental Arts
+    arts: '<polygon points="16,4.5 22.5,15.5 16,27.5 9.5,15.5" fill="currentColor" fill-opacity="0.18"/><path d="M16 4.5v23M9.5 15.5h13"/><ellipse cx="16" cy="16" rx="12.5" ry="4.5" transform="rotate(-24 16 16)"/>',
+    e_focus: '<circle cx="16" cy="16" r="9.5"/><path d="M16 3.5v4.5M16 24v4.5M3.5 16H8M24 16h4.5"/><polygon points="16,11.5 20.5,16 16,20.5 11.5,16" fill="currentColor" fill-opacity="0.24"/>',
+    e_edge: '<path d="M7.5 24.5l4-4M9 17.5l5.5 5.5"/><path d="M11.8 20.2L25 7l-1.5 6.5-6.2 6.2z" fill="currentColor" fill-opacity="0.16"/><path d="M9.5 7.5l1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1z"/>',
+    e_attune: '<path d="M16 5l2.6 8.4L27 16l-8.4 2.6L16 27l-2.6-8.4L5 16l8.4-2.6z" fill="currentColor" fill-opacity="0.2"/><circle cx="7.5" cy="7.5" r="1.4"/><circle cx="24.5" cy="24.5" r="1.4"/>',
+    e_mastery: '<path d="M16 3.5l3 4.5v12.5h-6V8z" fill="currentColor" fill-opacity="0.16"/><path d="M16 7v11M9.5 18.5c2 2.5 4.2 3 6.5 3s4.5-.5 6.5-3M16 20.5V28M13.5 28h5"/>',
+    e_swift: '<path d="M9 5.5h14M9 26.5h14M10.5 5.5c0 5 5.5 7.5 5.5 10.5s-5.5 5.5-5.5 10.5M21.5 5.5c0 5-5.5 7.5-5.5 10.5s5.5 5.5 5.5 10.5"/><path d="M12.5 24h7L16 19.5z" fill="currentColor" fill-opacity="0.24"/><path d="M4.5 13l2.5 3-2.5 3M27.5 13L25 16l2.5 3"/>',
+    ek_chain: '<path d="M18.5 3.5L9.5 16h6.5l-2.5 12.5L23.5 14h-6.5z" fill="currentColor" fill-opacity="0.22"/><circle cx="6.5" cy="10" r="2"/><circle cx="25.5" cy="22" r="2"/><path d="M8.5 11.2l3.5 2M19.5 18.8l4 2" stroke-dasharray="2 2"/>',
+    ek_reso: '<circle cx="16" cy="16" r="12" stroke-dasharray="2.4 3.2"/><path d="M16 16c0-5 3.5-8.5 7.5-8.5-1 4-3.5 7-7.5 8.5zM16 16c-4.5 2.5-8.5 1-10.5-2.5 4-1 7.5 0 10.5 2.5zM16 16c4.5 2.5 4.5 7 2 10.5-2-3.5-2.5-6.8-2-10.5z" fill="currentColor" fill-opacity="0.22"/><circle cx="16" cy="16" r="2.2"/>',
+    // Agility & Stamina
+    agile: '<path d="M4.5 12.5h15a3.5 3.5 0 1 0-3.5-3.5M4.5 17.5h19a3 3 0 1 1-3 3M7 22.5h9.5"/><path d="M21 9.5l3.5 3-3.5 3"/>',
+    a_wind: '<path d="M6.5 20.5c3-6 9.5-9.5 15.5-8.5a4 4 0 0 1-1 7.8c-2.5 0-4.2-1.8-4.2-4"/><path d="M5 13.5c4-4 9-5.5 14-5M9 24.5h13.5"/>',
+    a_light: '<path d="M8 23.5C9.5 13 15.5 6.5 25 5c-1.5 8.5-7 13.5-15.5 14.5" fill="currentColor" fill-opacity="0.16"/><path d="M7 25L21.5 9.5M12.5 13l2 3.5M16.5 9.5l1.5 3"/><path d="M6 27h20" stroke-dasharray="2.2 3"/>',
+    a_fleet: '<path d="M12.5 7v11l-4 4.5v3h14v-3.5l-5-3.5V7z" fill="currentColor" fill-opacity="0.14"/><path d="M17.5 12c4-1 7-3.5 8.5-6.5-1.5 3.5-3 6-6.5 7.5M17.5 15.5c3.5-.5 6-2 7.5-4.5"/>',
+    a_ghost: '<path d="M16 4.5c5.2 0 8.5 4.2 8.5 10.5v10.5l-3-2.5-2.8 2.5-2.7-2.5-2.7 2.5-2.8-2.5-3 2.5V15c0-6.3 3.3-10.5 8.5-10.5z" fill="currentColor" fill-opacity="0.16"/><path d="M12.5 14l1.8 1.2M19.5 14l-1.8 1.2"/>',
+    a_moment: '<path d="M6.5 8.5l6.5 7.5-6.5 7.5M13.5 8.5L20 16l-6.5 7.5M20.5 8.5L27 16l-6.5 7.5"/><path d="M4.5 16h11" stroke-dasharray="2 2.5"/>',
+    ak_mirage: '<polygon points="12.5,5.5 19.5,16 12.5,26.5 5.5,16" stroke-dasharray="2.4 2.4"/><polygon points="19.5,5.5 26.5,16 19.5,26.5 12.5,16" fill="currentColor" fill-opacity="0.22"/><circle cx="19.5" cy="14" r="1.4"/>',
+    ak_evade: '<path d="M20.5 6.5a10 10 0 1 0 3.5 17 8 8 0 0 1-3.5-17z" fill="currentColor" fill-opacity="0.22"/><path d="M23 9l1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1z"/><path d="M5 23.5A12 12 0 0 1 11.5 6" stroke-dasharray="2.2 3"/>'
+  };
+
+  // ---------------------------------------------------------------------------
   // Tree configuration (positions are % inside each branch field; y=100 bottom)
   // ---------------------------------------------------------------------------
   const BRANCHES = [
     {
-      id: 'guard', name: 'Parry Mastery', icon: '🛡️', color: '#ffd56b', glow: 'rgba(255,213,107,0.55)',
+      id: 'guard', name: 'Parry Mastery', icon: sig(SIGIL.guard), color: '#ffd56b', glow: 'rgba(255,213,107,0.55)',
       blurb: 'Hold the line. Turn every blow back on its owner.',
       nodes: [
-        { id: 'g_steady', name: 'Steady Guard', icon: '🛡️', max: 3, x: 50, y: 88, mods: { blockCost: 0.12 }, desc: (r) => `Blocking costs <b>${pct(0.12 * r)}</b> less stamina.` },
-        { id: 'g_timing', name: 'Keen Timing', icon: '⏱️', max: 2, x: 24, y: 66, req: ['g_steady'], mods: { parryWindow: 0.03 }, desc: (r) => `Perfect Parry window <b>+${(30 * r)} ms</b> (base 180 ms).` },
-        { id: 'g_posture', name: 'Iron Posture', icon: '🔨', max: 3, x: 76, y: 66, req: ['g_steady'], mods: { postureDmg: 0.15 }, desc: (r) => `Hits, blocks and parries deal <b>${pct(0.15 * r)}</b> more posture damage.` },
-        { id: 'g_bulwark', name: 'Bulwark', icon: '🏰', max: 2, x: 18, y: 42, req: ['g_timing'], mods: { blockDmg: 0.2 }, desc: (r) => `Damage taken while blocking <b>−${pct(0.2 * r)}</b>.` },
-        { id: 'g_exec', name: 'Executioner', icon: '⚔️', max: 2, x: 82, y: 42, req: ['g_posture'], mods: { riposte: 0.25 }, desc: (r) => `Critical Riposte damage <b>+${pct(0.25 * r)}</b>.` },
-        { id: 'gk_wave', name: 'Retribution Wave', icon: '🌟', max: 1, ks: true, x: 32, y: 14, req: ['g_bulwark'], need: 5, desc: () => `<b>Keystone.</b> A Perfect Parry unleashes an <b>elemental shockwave</b> (5.5 m, 150% weapon damage, heavy).` },
-        { id: 'gk_counter', name: 'Counter Stance', icon: '♻️', max: 1, ks: true, x: 68, y: 14, req: ['g_exec'], need: 5, desc: () => `<b>Keystone.</b> A Perfect Parry <b>resets your Heavy Skill</b> and empowers it: +30% damage for 3 s.` }
+        { id: 'g_steady', name: 'Steady Guard', icon: sig(SIGIL.g_steady), max: 3, x: 50, y: 88, mods: { blockCost: 0.12 }, desc: (r) => `Blocking costs <b>${pct(0.12 * r)}</b> less stamina.` },
+        { id: 'g_timing', name: 'Keen Timing', icon: sig(SIGIL.g_timing), max: 2, x: 24, y: 66, req: ['g_steady'], mods: { parryWindow: 0.03 }, desc: (r) => `Perfect Parry window <b>+${(30 * r)} ms</b> (base 180 ms).` },
+        { id: 'g_posture', name: 'Iron Posture', icon: sig(SIGIL.g_posture), max: 3, x: 76, y: 66, req: ['g_steady'], mods: { postureDmg: 0.15 }, desc: (r) => `Hits, blocks and parries deal <b>${pct(0.15 * r)}</b> more posture damage.` },
+        { id: 'g_bulwark', name: 'Bulwark', icon: sig(SIGIL.g_bulwark), max: 2, x: 18, y: 42, req: ['g_timing'], mods: { blockDmg: 0.2 }, desc: (r) => `Damage taken while blocking <b>−${pct(0.2 * r)}</b>.` },
+        { id: 'g_exec', name: 'Executioner', icon: sig(SIGIL.g_exec), max: 2, x: 82, y: 42, req: ['g_posture'], mods: { riposte: 0.25 }, desc: (r) => `Critical Riposte damage <b>+${pct(0.25 * r)}</b>.` },
+        { id: 'gk_wave', name: 'Retribution Wave', icon: sig(SIGIL.gk_wave), max: 1, ks: true, x: 32, y: 14, req: ['g_bulwark'], need: 5, desc: () => `<b>Keystone.</b> A Perfect Parry unleashes an <b>elemental shockwave</b> (5.5 m, 150% weapon damage, heavy).` },
+        { id: 'gk_counter', name: 'Counter Stance', icon: sig(SIGIL.gk_counter), max: 1, ks: true, x: 68, y: 14, req: ['g_exec'], need: 5, desc: () => `<b>Keystone.</b> A Perfect Parry <b>resets your Heavy Skill</b> and empowers it: +30% damage for 3 s.` }
       ]
     },
     {
-      id: 'arts', name: 'Elemental Arts', icon: '🔮', color: '#7fe3ff', glow: 'rgba(127,227,255,0.55)',
+      id: 'arts', name: 'Elemental Arts', icon: sig(SIGIL.arts), color: '#7fe3ff', glow: 'rgba(127,227,255,0.55)',
       blurb: 'Bend the elements. Every skill a storm.',
       nodes: [
-        { id: 'e_focus', name: 'Sharpened Focus', icon: '🎯', max: 3, x: 50, y: 88, mods: { critRate: 0.03 }, desc: (r) => `Crit rate <b>+${pct(0.03 * r)}</b>.` },
-        { id: 'e_edge', name: 'Ruinous Edge', icon: '🗡️', max: 3, x: 24, y: 66, req: ['e_focus'], mods: { critDmg: 0.15 }, desc: (r) => `Crit damage <b>+${pct(0.15 * r)}</b> (base 165%).` },
-        { id: 'e_attune', name: 'Attunement', icon: '✨', max: 3, x: 76, y: 66, req: ['e_focus'], mods: { skillDmg: 0.08 }, desc: (r) => `Skill damage <b>+${pct(0.08 * r)}</b>.` },
-        { id: 'e_mastery', name: 'Weapon Mastery', icon: '🗡', max: 2, x: 18, y: 42, req: ['e_edge'], mods: { basicDmg: 0.07 }, desc: (r) => `Basic attack damage <b>+${pct(0.07 * r)}</b>.` },
-        { id: 'e_swift', name: 'Swift Incantation', icon: '⌛', max: 3, x: 82, y: 42, req: ['e_attune'], mods: { cdr: 0.05 }, desc: (r) => `Skill cooldowns <b>−${pct(0.05 * r)}</b>.` },
-        { id: 'ek_chain', name: 'Chain Arcana', icon: '⚡', max: 1, ks: true, x: 32, y: 14, req: ['e_mastery'], need: 5, desc: () => `<b>Keystone.</b> Critical skill hits <b>arc lightning</b> to 2 nearby enemies for 35% of the damage.` },
-        { id: 'ek_reso', name: 'Elemental Resonance', icon: '🌀', max: 1, ks: true, x: 68, y: 14, req: ['e_swift'], need: 5, desc: () => `<b>Keystone.</b> Every <b>3rd skill</b> cast releases an elemental nova (6 m, 120% weapon damage).` }
+        { id: 'e_focus', name: 'Sharpened Focus', icon: sig(SIGIL.e_focus), max: 3, x: 50, y: 88, mods: { critRate: 0.03 }, desc: (r) => `Crit rate <b>+${pct(0.03 * r)}</b>.` },
+        { id: 'e_edge', name: 'Ruinous Edge', icon: sig(SIGIL.e_edge), max: 3, x: 24, y: 66, req: ['e_focus'], mods: { critDmg: 0.15 }, desc: (r) => `Crit damage <b>+${pct(0.15 * r)}</b> (base 165%).` },
+        { id: 'e_attune', name: 'Attunement', icon: sig(SIGIL.e_attune), max: 3, x: 76, y: 66, req: ['e_focus'], mods: { skillDmg: 0.08 }, desc: (r) => `Skill damage <b>+${pct(0.08 * r)}</b>.` },
+        { id: 'e_mastery', name: 'Weapon Mastery', icon: sig(SIGIL.e_mastery), max: 2, x: 18, y: 42, req: ['e_edge'], mods: { basicDmg: 0.07 }, desc: (r) => `Basic attack damage <b>+${pct(0.07 * r)}</b>.` },
+        { id: 'e_swift', name: 'Swift Incantation', icon: sig(SIGIL.e_swift), max: 3, x: 82, y: 42, req: ['e_attune'], mods: { cdr: 0.05 }, desc: (r) => `Skill cooldowns <b>−${pct(0.05 * r)}</b>.` },
+        { id: 'ek_chain', name: 'Chain Arcana', icon: sig(SIGIL.ek_chain), max: 1, ks: true, x: 32, y: 14, req: ['e_mastery'], need: 5, desc: () => `<b>Keystone.</b> Critical skill hits <b>arc lightning</b> to 2 nearby enemies for 35% of the damage.` },
+        { id: 'ek_reso', name: 'Elemental Resonance', icon: sig(SIGIL.ek_reso), max: 1, ks: true, x: 68, y: 14, req: ['e_swift'], need: 5, desc: () => `<b>Keystone.</b> Every <b>3rd skill</b> cast releases an elemental nova (6 m, 120% weapon damage).` }
       ]
     },
     {
-      id: 'agile', name: 'Agility & Stamina', icon: '💨', color: '#6dffb0', glow: 'rgba(109,255,176,0.5)',
+      id: 'agile', name: 'Agility & Stamina', icon: sig(SIGIL.agile), color: '#6dffb0', glow: 'rgba(109,255,176,0.5)',
       blurb: 'Never be where the blade lands.',
       nodes: [
-        { id: 'a_wind', name: 'Second Wind', icon: '🌬️', max: 3, x: 50, y: 88, mods: { stamRegen: 0.15 }, desc: (r) => `Stamina regeneration <b>+${pct(0.15 * r)}</b>.` },
-        { id: 'a_light', name: 'Light Feet', icon: '🍃', max: 2, x: 24, y: 66, req: ['a_wind'], mods: { rollCost: 0.15 }, desc: (r) => `Dodge rolls cost <b>${pct(0.15 * r)}</b> less stamina.` },
-        { id: 'a_fleet', name: 'Fleet', icon: '👟', max: 2, x: 76, y: 66, req: ['a_wind'], mods: { moveSpeed: 0.04 }, desc: (r) => `Movement speed <b>+${pct(0.04 * r)}</b>.` },
-        { id: 'a_ghost', name: 'Ghost Step', icon: '👻', max: 2, x: 18, y: 42, req: ['a_light'], mods: { iframes: 0.04 }, desc: (r) => `Dodge invulnerability <b>+${40 * r} ms</b> (base 250 ms).` },
-        { id: 'a_moment', name: 'Momentum', icon: '🏃', max: 2, x: 82, y: 42, req: ['a_fleet'], mods: { momentum: 0.12 }, desc: (r) => `For 1.5 s after a dodge, your attacks deal <b>+${pct(0.12 * r)}</b> damage.` },
-        { id: 'ak_mirage', name: 'Mirage Step', icon: '👥', max: 1, ks: true, x: 32, y: 14, req: ['a_ghost'], need: 5, desc: () => `<b>Keystone.</b> Dodging leaves a <b>mirage clone</b> that detonates after 0.6 s (3.5 m, 120% weapon damage).` },
-        { id: 'ak_evade', name: 'Perfect Evasion', icon: '🌙', max: 1, ks: true, x: 68, y: 14, req: ['a_moment'], need: 5, desc: () => `<b>Keystone.</b> Dodging <i>through</i> an attack refunds <b>20 stamina</b>; your next hit within 3 s is a guaranteed crit with +30% damage.` }
+        { id: 'a_wind', name: 'Second Wind', icon: sig(SIGIL.a_wind), max: 3, x: 50, y: 88, mods: { stamRegen: 0.15 }, desc: (r) => `Stamina regeneration <b>+${pct(0.15 * r)}</b>.` },
+        { id: 'a_light', name: 'Light Feet', icon: sig(SIGIL.a_light), max: 2, x: 24, y: 66, req: ['a_wind'], mods: { rollCost: 0.15 }, desc: (r) => `Dodge rolls cost <b>${pct(0.15 * r)}</b> less stamina.` },
+        { id: 'a_fleet', name: 'Fleet', icon: sig(SIGIL.a_fleet), max: 2, x: 76, y: 66, req: ['a_wind'], mods: { moveSpeed: 0.04 }, desc: (r) => `Movement speed <b>+${pct(0.04 * r)}</b>.` },
+        { id: 'a_ghost', name: 'Ghost Step', icon: sig(SIGIL.a_ghost), max: 2, x: 18, y: 42, req: ['a_light'], mods: { iframes: 0.04 }, desc: (r) => `Dodge invulnerability <b>+${40 * r} ms</b> (base 250 ms).` },
+        { id: 'a_moment', name: 'Momentum', icon: sig(SIGIL.a_moment), max: 2, x: 82, y: 42, req: ['a_fleet'], mods: { momentum: 0.12 }, desc: (r) => `For 1.5 s after a dodge, your attacks deal <b>+${pct(0.12 * r)}</b> damage.` },
+        { id: 'ak_mirage', name: 'Mirage Step', icon: sig(SIGIL.ak_mirage), max: 1, ks: true, x: 32, y: 14, req: ['a_ghost'], need: 5, desc: () => `<b>Keystone.</b> Dodging leaves a <b>mirage clone</b> that detonates after 0.6 s (3.5 m, 120% weapon damage).` },
+        { id: 'ak_evade', name: 'Perfect Evasion', icon: sig(SIGIL.ak_evade), max: 1, ks: true, x: 68, y: 14, req: ['a_moment'], need: 5, desc: () => `<b>Keystone.</b> Dodging <i>through</i> an attack refunds <b>20 stamina</b>; your next hit within 3 s is a guaranteed crit with +30% damage.` }
       ]
     }
   ];
@@ -92,8 +126,12 @@
     background: linear-gradient(180deg, rgba(16, 22, 44, 0.55), rgba(8, 11, 24, 0.55)); border: 1px solid rgba(255, 255, 255, 0.07);
     box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 18px 40px rgba(0,0,0,.35); backdrop-filter: blur(6px); }
   #talent-modal .tal-bhead { display: flex; align-items: center; gap: 12px; padding: 14px 16px 6px; }
-  #talent-modal .tal-bicon { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 20px;
-    background: radial-gradient(circle, rgba(255,255,255,.12), rgba(0,0,0,.2)); border: 1px solid var(--bc); box-shadow: 0 0 16px var(--bg); }
+  #talent-modal .tal-svg { display: block; width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.65; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; transition: filter .25s, transform .25s; }
+  #talent-modal .tal-bicon { position: relative; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; flex: none;
+    background: radial-gradient(circle at 38% 30%, color-mix(in srgb, var(--bc) 18%, #1a2138), rgba(8, 11, 22, 0.96) 75%);
+    border: 1.5px solid color-mix(in srgb, var(--bc) 75%, #fff); box-shadow: 0 0 16px var(--bg), inset 0 0 10px rgba(0,0,0,.6); }
+  #talent-modal .tal-bicon::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; border: 1px solid rgba(245, 242, 235, 0.16); pointer-events: none; }
+  #talent-modal .tal-bicon .tal-svg { width: 22px; height: 22px; color: var(--bc); filter: drop-shadow(0 0 6px var(--bg)); }
   #talent-modal .tal-bhead h3 { margin: 0; font-family: 'Cinzel', Georgia, serif; font-size: 16px; letter-spacing: 1.5px; color: var(--bc); }
   #talent-modal .tal-bhead p { margin: 2px 0 0; font-size: 11.5px; color: #93a4c8; }
   #talent-modal .tal-bspent { margin-left: auto; font-size: 13px; color: var(--bc); background: rgba(0,0,0,.3); border-radius: 999px; padding: 3px 10px; border: 1px solid rgba(255,255,255,.08); }
@@ -105,26 +143,66 @@
   #talent-modal .tal-edge.draw { stroke-dasharray: 400; stroke-dashoffset: 400; animation: talDraw .7s ease-out forwards; }
   @keyframes talDash { to { stroke-dashoffset: -22; } }
   @keyframes talDraw { to { stroke-dashoffset: 0; } }
-  #talent-modal .tal-node { position: absolute; transform: translate(-50%, -50%); width: 54px; height: 54px; border-radius: 50%; padding: 0; cursor: pointer;
-    display: grid; place-items: center; color: #fff; font-size: 22px; border: 2px solid rgba(150, 170, 220, 0.25);
-    background: radial-gradient(circle at 50% 35%, rgba(60, 72, 110, 0.9), rgba(12, 16, 30, 0.95)); transition: transform .15s, box-shadow .3s, border-color .3s, filter .3s;
-    filter: grayscale(.85) brightness(.6); outline: none; }
-  #talent-modal .tal-node .tal-ico { pointer-events: none; }
-  #talent-modal .tal-node .tal-rank { position: absolute; bottom: -9px; left: 50%; transform: translateX(-50%); font-size: 10.5px; font-weight: 700;
-    padding: 1px 6px; border-radius: 999px; background: rgba(5, 8, 18, .92); border: 1px solid rgba(255,255,255,.15); color: #b8c4e4; white-space: nowrap; pointer-events: none; }
-  #talent-modal .tal-node.ks { width: 68px; height: 68px; border-radius: 16px; font-size: 28px; }
-  #talent-modal .tal-node.ks::before { content: ''; position: absolute; inset: -7px; border-radius: 20px; border: 1px dashed rgba(255,255,255,.18); transform: rotate(45deg); pointer-events: none; }
-  #talent-modal .tal-node.avail { filter: none; border-color: rgba(120, 230, 255, 0.85); box-shadow: 0 0 0 4px rgba(120, 230, 255, 0.08), 0 0 18px rgba(120, 230, 255, 0.45); animation: talBreath 1.8s ease-in-out infinite; }
-  @keyframes talBreath { 50% { box-shadow: 0 0 0 7px rgba(120, 230, 255, 0.05), 0 0 26px rgba(120, 230, 255, 0.7); } }
-  #talent-modal .tal-node.owned { filter: none; border-color: var(--bc); background: radial-gradient(circle at 50% 35%, rgba(255, 238, 190, 0.35), rgba(30, 24, 10, 0.95));
-    box-shadow: 0 0 14px var(--bg), 0 0 34px var(--bg), inset 0 0 14px rgba(255, 230, 160, 0.35); }
+  /* Faceted brass / slate medallion sockets */
+  #talent-modal .tal-node { position: absolute; transform: translate(-50%, -50%); width: 56px; height: 56px; border-radius: 50%; padding: 0; cursor: pointer;
+    display: grid; place-items: center; color: rgba(180, 194, 224, 0.52); opacity: 0.78;
+    border: 1.5px solid rgba(212, 175, 55, 0.28);
+    background: radial-gradient(circle at 38% 28%, rgba(42, 50, 74, 0.96), rgba(11, 14, 24, 0.98) 74%);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.14), inset 0 -3px 8px rgba(0, 0, 0, 0.75);
+    transition: transform .15s, box-shadow .3s, border-color .3s, color .25s, opacity .25s, background .3s; outline: none; }
+  #talent-modal .tal-node:not(.ks)::after { content: ''; position: absolute; inset: 4px; border-radius: 50%; border: 1px solid rgba(245, 242, 235, 0.14); pointer-events: none; transition: border-color .3s; }
+  #talent-modal .tal-node .tal-ico { position: relative; z-index: 2; display: grid; place-items: center; pointer-events: none; }
+  #talent-modal .tal-node .tal-rank { position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); z-index: 3; font-size: 10.5px; font-weight: 700;
+    padding: 1px 6px; border-radius: 999px; background: rgba(5, 8, 18, .94); border: 1px solid rgba(212, 175, 55, 0.28); color: #b8c4e4; white-space: nowrap; pointer-events: none; }
+  #talent-modal .tal-node.avail { opacity: 1; color: #F5F2EB; border-color: rgba(245, 230, 184, 0.85);
+    box-shadow: 0 0 0 4px rgba(120, 230, 255, 0.08), 0 0 18px rgba(120, 230, 255, 0.45), inset 0 1px 2px rgba(255, 255, 255, 0.22);
+    animation: talBreath 1.8s ease-in-out infinite; }
+  #talent-modal .tal-node.avail:not(.ks)::after { border-color: rgba(160, 238, 255, 0.42); }
+  @keyframes talBreath { 50% { box-shadow: 0 0 0 7px rgba(120, 230, 255, 0.05), 0 0 26px rgba(120, 230, 255, 0.7), inset 0 1px 2px rgba(255, 255, 255, 0.25); } }
+  #talent-modal .tal-node.owned { opacity: 1; color: #FFF8E6; border-color: var(--bc);
+    background: radial-gradient(circle at 40% 30%, color-mix(in srgb, var(--bc) 34%, #1a1e2e), rgba(11, 14, 24, 0.97) 78%);
+    box-shadow: 0 0 14px var(--bg), 0 0 28px var(--bg), inset 0 1px 2px rgba(255, 240, 195, 0.32), inset 0 0 14px color-mix(in srgb, var(--bc) 24%, transparent); }
+  #talent-modal .tal-node.owned:not(.ks)::after { border-color: color-mix(in srgb, var(--bc) 55%, transparent); }
+  #talent-modal .tal-node.owned .tal-svg { filter: drop-shadow(0 0 6px var(--bg)); }
   #talent-modal .tal-node.owned .tal-rank { color: var(--bc); border-color: var(--bc); }
   #talent-modal .tal-node.owned.avail { animation: none; }
-  #talent-modal .tal-node.maxed .tal-rank { background: var(--bc); color: #1a1406; }
+  #talent-modal .tal-node.maxed:not(.ks) { box-shadow: 0 0 16px var(--bg), 0 0 34px var(--bg), inset 0 0 16px color-mix(in srgb, var(--bc) 36%, transparent); }
+  #talent-modal .tal-node.maxed .tal-rank { background: var(--bc); color: #161107; }
+  /* Keystones: octagonal / starburst relic frames (children not clipped so rank & burst render cleanly) */
+  #talent-modal .tal-node.ks { width: 72px; height: 72px; border-radius: 0; border: 0; background: none; box-shadow: none; animation: none; }
+  #talent-modal .tal-node.ks .tal-svg { width: 32px; height: 32px; }
+  #talent-modal .tal-ks-plate { position: absolute; inset: 7px; z-index: 0; pointer-events: none; overflow: hidden;
+    clip-path: polygon(29% 0%, 71% 0%, 100% 29%, 100% 71%, 71% 100%, 29% 100%, 0% 71%, 0% 29%);
+    background: linear-gradient(155deg, rgba(46, 54, 80, 0.96), rgba(10, 13, 24, 0.98) 72%);
+    box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.85); transition: background .3s; }
+  #talent-modal .tal-ks-plate::after { content: ''; position: absolute; inset: -30% -60%; opacity: 0; pointer-events: none;
+    background: linear-gradient(115deg, transparent 42%, rgba(255, 250, 232, 0.28) 50%, transparent 58%);
+    transform: translateX(-80%); }
+  #talent-modal .tal-node.ks.avail .tal-ks-plate {
+    background: linear-gradient(155deg, color-mix(in srgb, var(--bc) 24%, #242b44), rgba(10, 13, 24, 0.97) 75%); }
+  #talent-modal .tal-node.ks.avail .tal-ks-plate::after,
+  #talent-modal .tal-node.ks.owned .tal-ks-plate::after { opacity: 1; animation: talShimmer 4.2s ease-in-out infinite; }
+  @keyframes talShimmer { 0%, 55% { transform: translateX(-85%); } 100% { transform: translateX(85%); } }
+  #talent-modal .tal-node.ks.owned .tal-ks-plate {
+    background: radial-gradient(circle at 38% 30%, color-mix(in srgb, var(--bc) 45%, #23273b), rgba(14, 12, 22, 0.98) 78%); }
+  #talent-modal .tal-ks-rim { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; overflow: visible; transition: filter .3s; }
+  #talent-modal .tal-ks-rim .ks-star { fill: none; stroke: rgba(212, 175, 55, 0.25); stroke-width: 1; }
+  #talent-modal .tal-ks-rim .ks-oct { fill: none; stroke: rgba(212, 175, 55, 0.42); stroke-width: 1.6; stroke-linejoin: round; }
+  #talent-modal .tal-ks-rim .ks-in { fill: none; stroke: rgba(245, 242, 235, 0.16); stroke-width: 0.9; }
+  #talent-modal .tal-ks-rim .ks-stud { fill: rgba(212, 175, 55, 0.48); }
+  #talent-modal .tal-node.ks.avail .tal-ks-rim { filter: drop-shadow(0 0 8px rgba(120, 230, 255, 0.55)); }
+  #talent-modal .tal-node.ks.avail .tal-ks-rim .ks-oct { stroke: rgba(170, 242, 255, 0.9); }
+  #talent-modal .tal-node.ks.avail .tal-ks-rim .ks-star { stroke: rgba(170, 242, 255, 0.45); }
+  #talent-modal .tal-node.ks.avail .tal-ks-rim .ks-stud { fill: #bdf3ff; }
+  #talent-modal .tal-node.ks.owned .tal-ks-rim { filter: drop-shadow(0 0 8px var(--bc)) drop-shadow(0 0 18px var(--bg)); }
+  #talent-modal .tal-node.ks.owned .tal-ks-rim .ks-oct { stroke: var(--bc); stroke-width: 1.9; }
+  #talent-modal .tal-node.ks.owned .tal-ks-rim .ks-star { stroke: color-mix(in srgb, var(--bc) 72%, #fff); }
+  #talent-modal .tal-node.ks.owned .tal-ks-rim .ks-in { stroke: color-mix(in srgb, var(--bc) 60%, transparent); }
+  #talent-modal .tal-node.ks.owned .tal-ks-rim .ks-stud { fill: #fff6d6; }
   #talent-modal .tal-node:hover, #talent-modal .tal-node.sel { transform: translate(-50%, -50%) scale(1.1); }
   #talent-modal .tal-node.deny { animation: talShake .3s; }
   @keyframes talShake { 25% { margin-left: -4px; } 75% { margin-left: 4px; } }
-  #talent-modal .tal-burst { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
+  #talent-modal .tal-burst { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; z-index: 4; }
   #talent-modal .tal-burst i { position: absolute; left: 0; top: 0; border-radius: 50%; transform: translate(-50%, -50%); }
   #talent-modal .tal-burst .ring { width: 54px; height: 54px; border: 3px solid var(--bc); box-shadow: 0 0 22px var(--bc); animation: talRing .8s ease-out forwards; }
   #talent-modal .tal-burst .ring.r2 { animation-delay: .1s; border-width: 2px; opacity: 0; }
@@ -136,7 +214,8 @@
   #talent-modal .tal-tip { position: absolute; z-index: 5; width: 270px; padding: 12px 14px; border-radius: 12px; pointer-events: none; opacity: 0; transition: opacity .12s;
     background: rgba(8, 11, 24, 0.94); border: 1px solid rgba(232, 196, 118, 0.4); box-shadow: 0 12px 30px rgba(0,0,0,.5), 0 0 24px rgba(255, 213, 107, 0.12); font-size: 12.5px; line-height: 1.45; }
   #talent-modal .tal-tip.show { opacity: 1; }
-  #talent-modal .tal-tip h4 { margin: 0 0 2px; font-family: 'Cinzel', Georgia, serif; font-size: 15px; color: #ffd56b; }
+  #talent-modal .tal-tip h4 { display: flex; align-items: center; gap: 8px; margin: 0 0 3px; font-family: 'Cinzel', Georgia, serif; font-size: 15px; color: #ffd56b; }
+  #talent-modal .tal-tip h4 .tal-svg { width: 18px; height: 18px; flex: none; color: var(--tip-bc, #ffd56b); }
   #talent-modal .tal-tip .tt-sub { font-size: 11px; color: #8fa0c4; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
   #talent-modal .tal-tip .tt-next { margin-top: 6px; color: #9ff0ff; }
   #talent-modal .tal-tip .tt-req { margin-top: 6px; color: #ff9a8a; font-size: 11.5px; }
@@ -150,8 +229,10 @@
     #talent-modal .tal-points { margin-left: 0; }
     #talent-modal .tal-branches { overflow-x: auto; scroll-snap-type: x mandatory; padding: 10px; gap: 10px; }
     #talent-modal .tal-branch { flex: 0 0 86vw; scroll-snap-align: center; }
-    #talent-modal .tal-node { width: 48px; height: 48px; font-size: 19px; }
-    #talent-modal .tal-node.ks { width: 58px; height: 58px; }
+    #talent-modal .tal-node { width: 48px; height: 48px; }
+    #talent-modal .tal-svg { width: 22px; height: 22px; }
+    #talent-modal .tal-node.ks { width: 62px; height: 62px; }
+    #talent-modal .tal-node.ks .tal-svg { width: 26px; height: 26px; }
     #talent-modal .tal-tip { width: 230px; }
   }`;
 
@@ -525,8 +606,16 @@
           const a = NODE[rid];
           lines.push(`<line class="tal-edge" data-from="${rid}" data-to="${n.id}" x1="${a.x}" y1="${a.y}" x2="${n.x}" y2="${n.y}"/>`);
         }));
+        const ksRim = `<span class="tal-ks-plate" aria-hidden="true"></span><svg class="tal-ks-rim" viewBox="0 0 72 72" aria-hidden="true">`
+          + `<polygon class="ks-star" points="36,1.5 70.5,36 36,70.5 1.5,36"/>`
+          + `<path class="ks-star" d="M36 0v7M36 65v7M0 36h7M65 36h7M10 10l5.5 5.5M62 10l-5.5 5.5M62 62l-5.5-5.5M10 62l5.5-5.5"/>`
+          + `<polygon class="ks-oct" points="23.8,7 48.2,7 65,23.8 65,48.2 48.2,65 23.8,65 7,48.2 7,23.8"/>`
+          + `<polygon class="ks-in" points="25.5,11 46.5,11 61,25.5 61,46.5 46.5,61 25.5,61 11,46.5 11,25.5"/>`
+          + `<polygon class="ks-stud" points="36,4.5 38.5,7 36,9.5 33.5,7"/><polygon class="ks-stud" points="65,33.5 67.5,36 65,38.5 62.5,36"/>`
+          + `<polygon class="ks-stud" points="36,62.5 38.5,65 36,67.5 33.5,65"/><polygon class="ks-stud" points="7,33.5 9.5,36 7,38.5 4.5,36"/>`
+          + `</svg>`;
         const nodes = b.nodes.map(n => `<button class="tal-node${n.ks ? ' ks' : ''}" data-id="${n.id}" style="left:${n.x}%;top:${n.y}%" aria-label="${n.name}">
-            <span class="tal-ico">${n.icon}</span><span class="tal-rank">0/${n.max}</span></button>`).join('');
+            ${n.ks ? ksRim : ''}<span class="tal-ico">${n.icon}</span><span class="tal-rank">0/${n.max}</span></button>`).join('');
         return `<section class="tal-branch" data-b="${b.id}" style="--bc:${b.color};--bg:${b.glow}">
           <div class="tal-bhead"><span class="tal-bicon">${b.icon}</span><div><h3>${b.name}</h3><p>${b.blurb}</p></div><b class="tal-bspent">0</b></div>
           <div class="tal-field"><svg class="tal-lines" viewBox="0 0 100 100" preserveAspectRatio="none">${lines.join('')}</svg>${nodes}</div>
@@ -583,7 +672,8 @@
       const r = this.talentRank(id);
       const block = this.talentBlocker(n);
       const b = BRANCHES.find(x => x.id === n.branch);
-      let html = `<h4>${n.icon} ${n.name}</h4><div class="tt-sub">${n.ks ? 'Keystone' : 'Passive'} · ${b.name} · Rank ${r}/${n.max}</div>`;
+      tip.style.setProperty('--tip-bc', b.color);
+      let html = `<h4>${n.icon}<span>${n.name}</span></h4><div class="tt-sub">${n.ks ? 'Keystone' : 'Passive'} · ${b.name} · Rank ${r}/${n.max}</div>`;
       html += r > 0 ? `<div>${n.desc(r)}</div>` : `<div>${n.desc(1)}</div>`;
       if (r > 0 && r < n.max) html += `<div class="tt-next">Next rank: ${n.desc(r + 1)}</div>`;
       if (block && r < n.max) html += `<div class="tt-req">${block}</div>`;

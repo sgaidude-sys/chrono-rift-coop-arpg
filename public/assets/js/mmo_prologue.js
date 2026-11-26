@@ -542,15 +542,17 @@
     finishFirstMission() {
       const st = this.openingState(); st.stage = 4; this.saveMMOState && this.saveMMOState();
       const p = this.player;
-      banner('FIRST HUNT COMPLETE!', 'Reward: an Epic item', 1, 'gold done pop');
+      banner('FIRST HUNT COMPLETE!', 'Reward: Epic gear + 1 Free Rift Cache Pull!', 1, 'gold done pop');
       try {
         const it = this.generateItem({ ilvl: Math.max(3, p.level || 1), rarity: 'epic', cls: p.classId });
         it.req = 1;
         if (this.spawnVFXFlipbook) this.spawnVFXFlipbook('eldenring', p.pos, 4.5, 0.7, 0xc07bff);
         this.pickupItem(it);
       } catch (e) { /* bag full */ }
+      if (this.grantFreeRiftPull) this.grantFreeRiftPull('First Hunt');
+      else if (this.sigilAdd) this.sigilAdd(1, 'First Hunt');
       if (this._opBeacon) { this.scene.remove(this._opBeacon.g); this._opBeacon = null; }
-      setTimeout(() => { hideBanner(); tip('Open your bag [I] to equip your new gear', 6); }, 3500);
+      setTimeout(() => { hideBanner(); tip(isTouch() ? 'Equip your Epic in ☰ → Gear · Claim your free Rift Cache pull in ☰!' : 'Equip your Epic [I] · Press [U] for your free Rift Cache pull!', 8); }, 3500);
     },
 
     // ---------------------------------------------------------------------------------------------

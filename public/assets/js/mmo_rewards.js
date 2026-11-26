@@ -27,6 +27,7 @@
   const JACKPOT = 100, FRENZY_S = 45, RESTED_MS = 15 * 60 * 1000;
   const RIFT_TIME = 180, RIFT_R = 12;
   const FILL = { kill: 1.6, role: 2.6, elite: 10, boss: 30, world: 60 };   // economy pass: a jackpot every ~5 min of fighting
+  const FIRST_JACKPOT_MULT = 3.5;                                          // first Fortune Jackpot hits in ~18 kills (~90s)
 
   const BOUNTY_KINDS = {
     kill: { make: (L) => ({ n: 18 + Math.floor(Math.random() * 9) }), text: (b) => `Slay ${b.n} monsters` },
@@ -67,6 +68,19 @@
   #rift-banner .t.low { color: #ff6a6a; }
   body.touch-ui #rift-banner { top: 8px; font-size: 10.5px; padding: 4px 10px; }
   body.touch-ui #rift-banner .t { font-size: 14px; }
+  #cr-tal-nudge { position: fixed; right: 20px; bottom: 108px; z-index: 44; display: none; align-items: center; gap: 10px;
+    padding: 9px 12px 9px 14px; border-radius: 999px; cursor: pointer; color: #F5F2EB; font: 700 12.5px 'Plus Jakarta Sans', Inter, sans-serif;
+    background: linear-gradient(180deg, rgba(24,20,38,.94), rgba(12,14,24,.94)); border: 1px solid rgba(255,213,107,.65);
+    box-shadow: 0 8px 26px rgba(0,0,0,.5), 0 0 22px rgba(255,213,107,.24); }
+  #cr-tal-nudge.on { display: inline-flex; animation: crTalNudge 1.8s ease-in-out infinite; }
+  @keyframes crTalNudge { 0%,100% { box-shadow: 0 8px 26px rgba(0,0,0,.5), 0 0 14px rgba(255,213,107,.22); } 50% { box-shadow: 0 8px 26px rgba(0,0,0,.5), 0 0 28px rgba(255,213,107,.55); } }
+  #cr-tal-nudge b { color: #ffd56b; }
+  #cr-tal-nudge kbd { padding: 1px 6px; border-radius: 4px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3); font: 700 10.5px 'JetBrains Mono', monospace; color: #F5F2EB; }
+  #cr-tal-nudge .x { all: unset; cursor: pointer; padding: 2px 5px; font: 700 14px Inter, sans-serif; color: rgba(245,242,235,.6); }
+  #cr-tal-nudge .x:hover { color: #fff; }
+  body.touch-ui #cr-tal-nudge { right: auto; bottom: auto; top: 66px; left: 50%; transform: translateX(-50%); max-width: 92vw; }
+  body.touch-ui #cr-tal-nudge kbd { display: none; }
+  body.cr-title-on #cr-tal-nudge, body.cr-acct-on #cr-tal-nudge, body.cr-prologue #cr-tal-nudge, body.cr-lyra-call #cr-tal-nudge, body.epic-cine #cr-tal-nudge { display: none !important; }
   `;
 
   const orig = {
@@ -80,8 +94,9 @@
     // ---- state ------------------------------------------------------------------------------------
     rw() {
       const st = this.mmoState; if (!st) return null;
-      if (!st.rw) st.rw = { fortune: 0, bounties: [], boards: 0, daily: '', riftTier: 1, riftBest: 0, restedUntil: 0 };
+      if (!st.rw) st.rw = { fortune: 0, bounties: [], boards: 0, daily: '', riftTier: 1, riftBest: 0, restedUntil: 0, jackpotsTotal: 0 };
       const R = st.rw;
+      if (R.jackpotsTotal === undefined) R.jackpotsTotal = (R.boards > 0 || R.riftBest > 0) ? 1 : 0;
       if (!R.bounties || !R.bounties.length) this.rwNewBoard();
       return R;
     },
@@ -135,7 +150,8 @@
     },
 
     jackpot() {
-      const p = this.player, S = this.rwSess();
+      const p = this.player, S = this.rwSess(), R = this.rw();
+      if (R) R.jackpotsTotal = (R.jackpotsTotal || 0) + 1;
       const n = ++S.jackpots;
       const L = p.level || 1;
       // escalating payout
@@ -227,7 +243,10 @@
         if (mob.isAdd && !mob.isRift) pts *= 0.4;
         if (this.styleRank && this.styleRank() >= 4) pts *= 1.5;
         if (((mob.level || 1) - (p.level || 1)) < -5) pts *= 0.25;     // grey mobs barely count
+        const R = this.rw();
+        if (R && !R.jackpotsTotal && !mob._prologue) pts *= FIRST_JACKPOT_MULT;
         this.fortuneAdd(pts);
+        if (!mob._prologue) { this._rwKills = (this._rwKills || 0) + 1; this.rwCheckTalentNudge(); }
         this.bountyAdd('kill');
         if (mob.isElite || mob.isBoss) {
           this.bountyAdd('elite');
@@ -517,6 +536,30 @@
       });
     },
 
+    // ---- early talent point nudge -----------------------------------------------------------------------
+    rwCheckTalentNudge() {
+      const asLyra = !!(window.CR_ACCOUNT && CR_ACCOUNT.playing && CR_ACCOUNT.playing.prologue);
+      const canShow = !!(this.isInWorld && !this.isAnyModalOpen && !this.cutsceneActive && !this._op && !asLyra && !this._rwTalDismissed
+        && this.talentPointsTotal && this.talentPointsSpent && this.talentPointsSpent() === 0 && this.talentPointsTotal() > 0
+        && ((this._rwKills || 0) >= 5 || (this.player && this.player.level >= 2)));
+      if (canShow === this._rwNudgeOn) return;
+      this._rwNudgeOn = canShow;
+      let el = document.getElementById('cr-tal-nudge');
+      if (!canShow) { if (el) el.classList.remove('on'); return; }
+      if (!el) {
+        el = document.createElement('div'); el.id = 'cr-tal-nudge';
+        el.innerHTML = '<span>✦ <b>1 Talent Point Ready</b> — Unlock Now</span><kbd>K</kbd><button class="x" aria-label="Dismiss">×</button>';
+        document.body.appendChild(el);
+        el.addEventListener('click', (e) => {
+          if (e.target.closest('.x')) { e.stopPropagation(); this._rwTalDismissed = true; this._rwNudgeOn = false; el.classList.remove('on'); return; }
+          this._rwNudgeOn = false; el.classList.remove('on');
+          this.toggleTalents && this.toggleTalents();
+        });
+      }
+      el.classList.add('on');
+      this.teachTip && this.teachTip('talent');
+    },
+
     // ---- per frame --------------------------------------------------------------------------------------
     updateMMOWorld(dt) {
       orig.updateMMOWorld.call(this, dt);
@@ -537,7 +580,9 @@
           H.v.innerHTML = this._rwFrenzy > 0 ? `<span class="frz">FRENZY 2× XP ${Math.ceil(this._rwFrenzy)}s</span>` : `${pct}%`;
         }
       }
-      // tracker refresh (throttled)
+      // tracker refresh + early talent point nudge (throttled)
+      this._rwNudgeT = (this._rwNudgeT === undefined ? 0.5 : this._rwNudgeT) - dt;
+      if (this._rwNudgeT <= 0) { this._rwNudgeT = 0.5; this.rwCheckTalentNudge(); }
       this._rwTrk = (this._rwTrk === undefined ? 1 : this._rwTrk) - dt;
       if (this._rwTrk <= 0) { this._rwTrk = 1; this.updateStoryTrackerUI && this.updateStoryTrackerUI(); }
     }
@@ -545,7 +590,8 @@
 
   if (GP.teachAddTips) {
     GP.teachAddTips({
-      fortune: { desk: 'Every kill fills the gold <b>FORTUNE</b> bar under your HP. At 100% a <b>JACKPOT</b> bursts open, and each jackpot this session pays more. Press <b>Y</b> to open a <b>Rift Surge</b>.', touch: 'Every kill fills the gold <b>FORTUNE</b> bar under your HP. At 100% a <b>JACKPOT</b> bursts open, and each jackpot this session pays more. Open a <b>Rift Surge</b> from the quest tracker.' }
+      fortune: { desk: 'Every kill fills the gold <b>FORTUNE</b> bar under your HP. At 100% a <b>JACKPOT</b> bursts open, and each jackpot this session pays more. Press <b>Y</b> to open a <b>Rift Surge</b>.', touch: 'Every kill fills the gold <b>FORTUNE</b> bar under your HP. At 100% a <b>JACKPOT</b> bursts open, and each jackpot this session pays more. Open a <b>Rift Surge</b> from the quest tracker.' },
+      talent: { desk: 'You have an unspent <b>Talent Point</b>! Press <b>K</b> to unlock your first Constellation node.', touch: 'You have an unspent <b>Talent Point</b>! Tap <b>1 Talent Point Ready</b> or open <b>☰ → Talents</b>.' }
     });
   }
 

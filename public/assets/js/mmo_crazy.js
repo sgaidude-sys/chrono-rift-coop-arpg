@@ -40,14 +40,17 @@
   // ---------------------------------------------------------------------------------------------
   // Saves: localStorage <-> Data module
   // ---------------------------------------------------------------------------------------------
-  const LS = window.localStorage;
-  const rawSet = Storage.prototype.setItem, rawRemove = Storage.prototype.removeItem;
-  const lsGet = (k) => { try { return LS.getItem(k); } catch (e) { return null; } };
-  const lsSet = (k, v) => { try { rawSet.call(LS, k, v); } catch (e) { /* storage blocked */ } };
+  let LS = null;
+  try { LS = window.localStorage; } catch (e) { LS = null; }
+  const SP = typeof Storage !== 'undefined' && Storage.prototype;
+  const rawSet = SP && SP.setItem, rawRemove = SP && SP.removeItem;
+  const lsGet = (k) => { if (!LS) return null; try { return LS.getItem(k); } catch (e) { return null; } };
+  const lsSet = (k, v) => { if (!LS || !rawSet) return; try { rawSet.call(LS, k, v); } catch (e) { /* storage blocked */ } };
   let keys = new Set(), rev = 0, mirror = false;
 
   function gameKeys() {
     const out = [];
+    if (!LS) return out;
     try { for (let i = 0; i < LS.length; i++) { const k = LS.key(i); if (k && KEY_RE.test(k) && !SKIP.has(k) && k !== IDX && k !== REV) out.push(k); } } catch (e) { /* blocked */ }
     return out;
   }
@@ -58,6 +61,7 @@
     CG.data.setItem(REV, String(rev));
   }
   function restore() {
+    if (!LS) { mirror = false; return; }
     const dRev = +(CG.data.getItem(REV) || 0), lRev = +(lsGet(REV) || 0);
     let dKeys = []; try { dKeys = JSON.parse(CG.data.getItem(IDX) || '[]'); } catch (e) { dKeys = []; }
     if (dKeys.length && dRev > lRev) {
@@ -82,22 +86,26 @@
     safe(() => CG.data.setItem(REV, String(rev)));
     if (idxDirty) { idxDirty = false; safe(() => CG.data.setItem(IDX, JSON.stringify([...keys]))); }
   }
-  Storage.prototype.setItem = function (k, v) {
-    rawSet.call(this, k, v);
-    if (mirror && this === LS && KEY_RE.test(k) && !SKIP.has(k) && k !== IDX && k !== REV) {
-      if (!keys.has(k)) { keys.add(k); idxDirty = true; }
-      safe(() => CG.data.setItem(k, String(v)));
-      bump();
-    }
-  };
-  Storage.prototype.removeItem = function (k) {
-    rawRemove.call(this, k);
-    if (mirror && this === LS && keys.has(k)) {
-      keys.delete(k); idxDirty = true;
-      safe(() => CG.data.removeItem(k));
-      bump();
-    }
-  };
+  if (LS && rawSet && rawRemove) {
+    try {
+      Storage.prototype.setItem = function (k, v) {
+        rawSet.call(this, k, v);
+        if (mirror && this === LS && KEY_RE.test(k) && !SKIP.has(k) && k !== IDX && k !== REV) {
+          if (!keys.has(k)) { keys.add(k); idxDirty = true; }
+          safe(() => CG.data.setItem(k, String(v)));
+          bump();
+        }
+      };
+      Storage.prototype.removeItem = function (k) {
+        rawRemove.call(this, k);
+        if (mirror && this === LS && keys.has(k)) {
+          keys.delete(k); idxDirty = true;
+          safe(() => CG.data.removeItem(k));
+          bump();
+        }
+      };
+    } catch (e) { /* storage prototype immutable */ }
+  }
 
   // ---------------------------------------------------------------------------------------------
   // Boot gate: the page's DOMContentLoaded handler awaits window.CR_BOOT before creating the game
@@ -114,6 +122,7 @@
     safe(() => { S.muted = !!(CG.game.settings && CG.game.settings.muteAudio); });
     safe(() => CG.game.addSettingsChangeListener((st) => { S.muted = !!(st && st.muteAudio); applyMute(); }));
     CG.ad.hasAdblock().then((b) => { S.adblock = !!b; }).catch(() => {});
+    watchBootReady();
     log('ready, env', S.env);
   })();
 
@@ -184,17 +193,38 @@
   // ---------------------------------------------------------------------------------------------
   // Gameplay start / stop (polled, so every menu, cutscene and screen is covered)
   // ---------------------------------------------------------------------------------------------
-  let loadingDone = false;
+  let loadingDone = false, bootObs = null;
+  function stopLoading() {
+    if (loadingDone || !S.ready) return;
+    loadingDone = true;
+    if (bootObs) { bootObs.disconnect(); bootObs = null; }
+    safe(() => CG.game.loadingStop());
+    log('loadingStop');
+  }
+  function isBootReady() {
+    const b = document.body && document.body.classList;
+    const g = window.game;
+    return !!(b && (b.contains('cr-booted') || b.contains('cr-title-on') || b.contains('cr-acct-on'))) || !!(g && g.isInWorld);
+  }
+  function watchBootReady() {
+    if (loadingDone || !S.ready) return;
+    if (isBootReady()) { stopLoading(); return; }
+    if (document.body && typeof MutationObserver !== 'undefined' && !bootObs) {
+      bootObs = new MutationObserver(() => { if (isBootReady()) stopLoading(); });
+      bootObs.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    }
+  }
   function setPlaying(v) {
     if (!S.ready || v === S.playing) return;
     S.playing = v;
-    if (v && !loadingDone) { loadingDone = true; safe(() => CG.game.loadingStop()); }
+    if (v && !loadingDone) stopLoading();
     safe(() => v ? CG.game.gameplayStart() : CG.game.gameplayStop());
     log(v ? 'gameplayStart' : 'gameplayStop');
   }
   function tick() {
     const g = window.game;
     if (!g || !S.ready) return;
+    if (!loadingDone && isBootReady()) stopLoading();
     const b = document.body.classList;
     setPlaying(!!(g.isInWorld && !g.isAnyModalOpen && !g.cutsceneActive && !S.adOn && !b.contains('cr-acct-on') && !b.contains('cr-create')
       && !document.querySelector('#gacha-stage.on')));
@@ -219,6 +249,7 @@
   Object.assign(GP, {
     initMMOWorld() {
       const r = orig.initMMOWorld.apply(this, arguments);
+      watchBootReady();
       // keep the player's own mute toggle working alongside the SDK's mute setting
       const A = this.audio;
       if (A && !A._cgWrapped) {

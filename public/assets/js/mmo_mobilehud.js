@@ -24,12 +24,20 @@
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* storage blocked */ } }
   };
 
+  const ICON_SYS = {
+    fsEnter: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
+    fsExit: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>',
+    hud: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.8"/></svg>',
+    map: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><polygon points="15.5,8.5 13.4,13.4 8.5,15.5 10.6,10.6"/></svg>'
+  };
+
   const css = `
   #hud-sys { display: none; position: fixed; top: 6px; left: 186px; z-index: 14; gap: 5px; }
   body.touch-ui #hud-sys { display: flex; }
   body.cr-title-on #hud-sys, body.cr-acct-on #hud-sys, body.epic-cine #hud-sys { display: none !important; }
   #hud-sys button { all: unset; box-sizing: border-box; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
     background: rgba(12,16,28,.78); border: 1.5px solid rgba(243,200,107,.5); color: #f5f2eb; font: 700 16px/1 Inter, sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,.45); }
+  #hud-sys button svg, #minimap-wrap.folded .hud-fold svg { width: 17px; height: 17px; fill: none; stroke: #f5f2eb; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; display: block; }
   #hud-sys button:active { transform: scale(.92); }
   #hud-sys button.pulse { animation: hudPulse 1.6s ease-in-out 4; }
   @keyframes hudPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(243,200,107,.0); } 50% { box-shadow: 0 0 0 7px rgba(243,200,107,.35); } }
@@ -86,7 +94,7 @@
       if (document.getElementById('hud-sys')) return;
       const st = document.createElement('style'); st.id = 'hud-sys-css'; st.textContent = css; document.head.appendChild(st);
       const bar = document.createElement('div'); bar.id = 'hud-sys';
-      bar.innerHTML = '<button data-a="fs" aria-label="Full screen">⛶</button><button data-a="hud" aria-label="HUD layout">👁</button>';
+      bar.innerHTML = `<button data-a="fs" aria-label="Full screen">${ICON_SYS.fsEnter}</button><button data-a="hud" aria-label="HUD layout">${ICON_SYS.hud}</button>`;
       document.body.appendChild(bar);
       const toast = document.createElement('div'); toast.id = 'hud-toast'; document.body.appendChild(toast);
       bar.addEventListener('click', (e) => {
@@ -99,7 +107,8 @@
       // first visit on a touch device: draw the eye to the full-screen button
       if (!standalone() && !ls.get('cr_fs_hinted')) { ls.set('cr_fs_hinted', '1'); bar.firstChild.classList.add('pulse'); }
       ['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, () => this.refreshFsButton()));
-      this.setHudMode(ls.get('cr_hud_mode') || 'full', true);
+      const isCoarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+      this.setHudMode(ls.get('cr_hud_mode') || (isCoarse ? 'clean' : 'full'), true);
       this.addHudFolds();
       this.refreshFsButton();
       window.addEventListener('resize', () => setTimeout(() => this.hudSysPlace(), 60));
@@ -136,7 +145,7 @@
     refreshFsButton() {
       const b = this._hudBar && this._hudBar.querySelector('[data-a="fs"]'); if (!b) return;
       const on = !!fsElement();
-      b.textContent = on ? '✕' : '⛶';
+      b.innerHTML = on ? ICON_SYS.fsExit : ICON_SYS.fsEnter;
       b.setAttribute('aria-label', on ? 'Exit full screen' : 'Full screen');
       if (on) b.classList.remove('pulse');
       setTimeout(() => window.dispatchEvent(new Event('resize')), 120);
@@ -155,7 +164,7 @@
       requestAnimationFrame(() => this.hudSysPlace());
       if (m !== 'full') document.body.classList.remove('chat-open');
       ls.set('cr_hud_mode', m);
-      if (!silent) this.hudToast(`👁 ${LABEL[m]}${m === 'full' ? '' : ' — tap 👁 again to change'}`);
+      if (!silent) this.hudToast(`✦ ${LABEL[m]}${m === 'full' ? '' : ' — tap layout button again to change'}`);
     },
 
     // ---- fold buttons on the quest tracker and the minimap ---------------------------------
@@ -175,7 +184,7 @@
         const b = document.createElement('button'); b.className = 'hud-fold'; b.setAttribute('aria-label', 'Fold minimap');
         if (getComputedStyle(mm).position === 'static') mm.style.position = 'relative';
         mm.appendChild(b);
-        const set = (f) => { mm.classList.toggle('folded', f); b.textContent = f ? '🧭' : '–'; ls.set('cr_fold_map', f ? '1' : ''); };
+        const set = (f) => { mm.classList.toggle('folded', f); b.innerHTML = f ? ICON_SYS.map : '–'; ls.set('cr_fold_map', f ? '1' : ''); };
         b.addEventListener('click', (e) => { e.stopPropagation(); set(!mm.classList.contains('folded')); });
         set(ls.get('cr_fold_map') === '1');
       }

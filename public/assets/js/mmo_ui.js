@@ -31,6 +31,37 @@
     mute: '<svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>',
     gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8"/></svg>'
   };
+  const skSvg = (d) => '<svg class="ui-sk-svg" viewBox="0 0 24 24" aria-hidden="true">' + d + '</svg>';
+  const SKILL_SVG = {
+    vanguard: [
+      '<path d="M5 19L19 5M14.5 5H19v4.5"/><path d="M7 13l4 4M5 9.5a8.5 8.5 0 0 1 9.5-4.5"/>',
+      '<path d="M12 3l6.5 2.5v4.8c0 4.2-2.8 7-6.5 8.7-3.7-1.7-6.5-4.5-6.5-8.7V5.5z"/><path d="M4 21h16M8.5 18.5L6.5 21M15.5 18.5l2 2.5"/>',
+      '<path d="M11.5 5l6.5 2.5v4.5c0 4-2.5 6.5-6.5 8v-15z"/><path d="M3 9h5M2 12.5h6M4 16h4M18 12h4"/>',
+      '<path d="M6.5 3.5v17.5M6.5 5h11.5l-2.5 4 2.5 4H6.5"/><path d="M11 7.5v3M9.5 9h3"/>'
+    ],
+    ranger: [
+      '<path d="M7 4c6 2.5 8.5 5.5 8.5 8S13 17.5 7 20V4z"/><path d="M4 12h16.5M17 9l3.5 3-3.5 3"/>',
+      '<path d="M12 19V4M12 4l-1.5 3.5h3z"/><path d="M12 19L5.5 7.5M5.5 7.5l.5 3.5 2.5-1.5z"/><path d="M12 19l6.5-11.5M18.5 7.5l-.5 3.5-2.5-1.5z"/>',
+      '<path d="M4 17c2.5-7 8-9.5 14.5-7"/><path d="M15 7.5l3.5 2.5-2.5 3.5"/><polygon points="7,17 9.5,20 7,23 4.5,20"/>',
+      '<path d="M12 3l1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1z"/><path d="M6.5 11v9M12 13v8M17.5 11v9M4.5 18l2 2 2-2M10 19l2 2 2-2M15.5 18l2 2 2-2"/>'
+    ],
+    arcanist: [
+      '<path d="M7.5 20.5L17 4.5"/><path d="M17 4.5C11.5 4 7.5 6.8 5.5 11.5c3.5-2 7.2-2.2 10.5-.8"/>',
+      '<circle cx="12" cy="12" r="2.2"/><path d="M12 4.5a7.5 7.5 0 0 1 7.2 5.4M19.5 12a7.5 7.5 0 0 1-5.4 7.2M12 19.5a7.5 7.5 0 0 1-7.2-5.4M4.5 12A7.5 7.5 0 0 1 9.9 4.8"/>',
+      '<polygon points="12,3.5 19,12 12,20.5 5,12" stroke-dasharray="2.2 2.2"/><path d="M13 7l-3.5 5h4L11 17"/>',
+      '<circle cx="12" cy="12" r="9.5" stroke-dasharray="2 2.5"/><path d="M8.5 7h7M8.5 17h7M9.5 7c0 3 2.5 3.8 2.5 5s-2.5 2-2.5 5M14.5 7c0 3-2.5 3.8-2.5 5s2.5 2 2.5 5"/>'
+    ],
+    berserker: [
+      '<path d="M6 19L17.5 5.5M18 19L6.5 5.5"/><path d="M13.5 5.5c3-.8 5.2 1 5.5 4M10.5 5.5c-3-.8-5.2 1-5.5 4"/>',
+      '<path d="M5 7h14M6.5 11h11M8.5 15h7M10.5 19h3"/><path d="M4.5 10c-.5-2 1.5-3.5 3.5-3.5M19.5 12.5c.5 2-1.5 3.5-3.5 3.5"/>',
+      '<path d="M4 15C7 6.5 14 5 18 12"/><path d="M14.5 12l3.5.5.5-3.5"/><path d="M7 20.5h14M10.5 18.5l2-3 2 3 2-2.5 2 2.5"/>',
+      '<path d="M12 3.5c2 3 5.5 5.5 5.5 10a5.5 5.5 0 0 1-11 0c0-2.5 1.3-4.6 2.5-6-.2 2 .8 3.2 2 3.5-.3-2.8 0-5.2 1-7.5z"/>'
+    ],
+    jump: '<path d="M4 9h10a2.5 2.5 0 1 0-2.5-2.5M3 13.5h14.5M6 18h8"/><path d="M15.5 10.5l3 3-3 3"/>',
+    parry: '<path d="M12 3.5l7 2.6v5.2c0 4.5-3 7.8-7 9.7-4-1.9-7-5.2-7-9.7V6.1z"/><path d="M9.5 11.5l2 2 3.5-3.5"/>',
+    potion: '<path d="M9.5 4h5M10.5 4v4l-4.5 7.5A3 3 0 0 0 8.5 20h7a3 3 0 0 0 2.5-4.5L13.5 8V4"/><path d="M8.5 15h7"/>',
+    ult: '<circle cx="12" cy="12" r="9" stroke-dasharray="2.2 2.6"/><path d="M12 4.5l2 5.5 5.5 2-5.5 2-2 5.5-2-5.5-5.5-2 5.5-2z"/>'
+  };
 
   const CSS = `
   :root {
@@ -188,6 +219,11 @@
   body:not(.touch-ui) #skill-bar .skill-slot:hover { transform: translateY(-3px) scale(1.05) !important; box-shadow: 0 0 0 1px var(--ui-gold), 0 0 18px rgba(212,175,55,.35), 0 8px 20px rgba(0,0,0,.35) !important; }
   body:not(.touch-ui) #skill-bar .skill-slot.triggered { transform: scale(.9) !important; box-shadow: 0 0 0 1.5px var(--ui-ivory), 0 0 22px rgba(245,242,235,.45) !important; }
   body:not(.touch-ui) #skill-bar .skill-icon { font-size: 22px !important; margin: 0 !important; filter: grayscale(1) brightness(1.75) contrast(1.15) drop-shadow(0 1px 2px rgba(0,0,0,.85)); }
+  #skill-bar .skill-icon.has-svg { filter: none !important; display: grid; place-items: center; line-height: 0; }
+  #skill-bar .skill-icon .ui-sk-svg { width: 24px; height: 24px; fill: none; stroke: var(--ui-ivory); stroke-width: 1.65; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px 2px rgba(0,0,0,.9)); }
+  body:not(.touch-ui) #slot-5 .skill-icon .ui-sk-svg { width: 28px; height: 28px; stroke: #dff6ff; }
+  body:not(.touch-ui) #slot-potion .skill-icon .ui-sk-svg { width: 20px; height: 20px; }
+  body.touch-ui #slot-1 .skill-icon .ui-sk-svg { width: 34px; height: 34px; }
   body:not(.touch-ui) #skill-bar .skill-name { display: none !important; }
   body:not(.touch-ui) #skill-bar .skill-key { top: auto !important; left: 50% !important; bottom: -9px; transform: translateX(-50%); z-index: 3; padding: 0 5px !important; min-width: 17px; height: 15px; line-height: 13px !important; text-align: center;
     font: 800 9px var(--ui-num) !important; color: var(--ui-ivory) !important; letter-spacing: .4px; border-radius: 3px !important;
@@ -270,7 +306,7 @@
   const RING_R = 29, RING_C = 2 * Math.PI * RING_R;
 
   const GP = ChronoRiftCoOpGame.prototype;
-  const orig = { initMMOWorld: GP.initMMOWorld, updateMMOWorld: GP.updateMMOWorld, closeModals: GP.closeModals, toggleAudio: GP.toggleAudio };
+  const orig = { initMMOWorld: GP.initMMOWorld, updateMMOWorld: GP.updateMMOWorld, closeModals: GP.closeModals, toggleAudio: GP.toggleAudio, selectClassCard: GP.selectClassCard };
 
   Object.assign(GP, {
     initMMOWorld() {
@@ -406,6 +442,23 @@
         this.closeModals();
       });
       this.refreshAudioIcon();
+      this.refreshSkillIcons(this.player && this.player.classId);
+    },
+
+    refreshSkillIcons(classId) {
+      const cls = SKILL_SVG[classId] ? classId : 'vanguard';
+      const setSvg = (el, d) => { if (!el) return; el.innerHTML = skSvg(d); el.classList.add('has-svg'); };
+      SKILL_SVG[cls].forEach((d, idx) => setSvg(document.getElementById(`icon-${idx + 1}`), d));
+      setSvg(document.querySelector('#slot-jump .skill-icon'), SKILL_SVG.jump);
+      setSvg(document.querySelector('#slot-parry .skill-icon'), SKILL_SVG.parry);
+      setSvg(document.querySelector('#slot-potion .skill-icon'), SKILL_SVG.potion);
+      setSvg(document.querySelector('#slot-5 .skill-icon'), SKILL_SVG.ult);
+    },
+
+    selectClassCard(classId, silent) {
+      const r = orig.selectClassCard ? orig.selectClassCard.apply(this, arguments) : undefined;
+      if (this._aaa) this.refreshSkillIcons(this.player && this.player.classId);
+      return r;
     },
 
     openSettings() {

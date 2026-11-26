@@ -44,7 +44,8 @@
   #mmo-quick { display: none; }
   body.touch-ui #mmo-quick { display: flex; position: fixed; right: 8px; top: 128px; flex-direction: column; gap: 7px; z-index: 12; }
   #mmo-quick button { width: 42px; height: 42px; border-radius: 50%; font-size: 19px; padding: 0; display: flex; align-items: center; justify-content: center;
-    background: rgba(12,16,28,0.82); border: 1.5px solid rgba(243,200,107,0.55); color: #fff; box-shadow: 0 3px 10px rgba(0,0,0,0.5); }
+    background: rgba(12,16,28,0.82); border: 1.5px solid rgba(243,200,107,0.55); color: #F5F2EB; box-shadow: 0 3px 10px rgba(0,0,0,0.5); }
+  #mmo-quick button svg { width: 19px; height: 19px; fill: none; stroke: #F5F2EB; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; display: block; }
   #mmo-quick button:active { transform: scale(0.92); }
   body.touch-ui #chat-panel { display: none !important; }
   body.touch-ui.chat-open #chat-panel { display: flex !important; position: fixed; left: 8px; right: 8px; top: 120px; bottom: auto; width: auto; max-height: 45vh; z-index: 55; }
@@ -79,7 +80,7 @@
   body.touch-ui #inv-backpack-grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)) !important; }
   body.touch-ui #mmo-item-tip { left: 8px !important; right: 8px; max-width: none; top: auto !important; bottom: 12px; }
   /* landscape phones: shrink the cluster and the cards */
-  @media (max-height: 500px) {
+    @media (max-height: 500px) {
     body.touch-ui #skill-bar { transform: scale(0.8); transform-origin: bottom right; }
     body.touch-ui #touch-joystick { width: 110px; height: 110px; bottom: 18px; }
     body.touch-ui #touch-knob { top: 29px; left: 29px; }
@@ -87,6 +88,7 @@
     body.touch-ui #center-banner { top: 8px; width: min(40vw, 360px); }
     body.touch-ui #mmo-quick { top: 112px; flex-direction: row; right: 6px; top: auto; bottom: 186px; }
     body.touch-ui #mmo-quick button { width: 38px; height: 38px; font-size: 17px; }
+    body.touch-ui #mmo-quick button svg { width: 17px; height: 17px; }
     body.touch-ui #interact-prompt { bottom: 150px !important; }
   }
   /* tablets: bigger targets */
@@ -133,14 +135,15 @@
       window.addEventListener('resize', apply);
 
       // quick buttons
+      const qSvg = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
       const quick = document.createElement('div');
       quick.id = 'mmo-quick';
       quick.innerHTML = `
-        <button aria-label="Menu" data-a="menu">☰</button>
-        <button aria-label="World map" data-a="map">🗺️</button>
-        <button aria-label="Gear" data-a="gear">🎒</button>
-        <button aria-label="Quests" data-a="quests">📜</button>
-        <button aria-label="Chat" data-a="chat">💬</button>`;
+        <button aria-label="Menu" data-a="menu">${qSvg('<path d="M4 7h16M4 12h16M4 17h16"/>')}</button>
+        <button aria-label="World map" data-a="map">${qSvg('<path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/>')}</button>
+        <button aria-label="Gear" data-a="gear">${qSvg('<path d="M6 8h12l-1 12H7z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>')}</button>
+        <button aria-label="Quests" data-a="quests">${qSvg('<path d="M6 4h11a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M8 9h7M8 13h7M8 17h4"/>')}</button>
+        <button aria-label="Chat" data-a="chat">${qSvg('<path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 3z"/>')}</button>`;
       document.body.appendChild(quick);
       quick.addEventListener('click', (e) => {
         const b = e.target.closest('button');

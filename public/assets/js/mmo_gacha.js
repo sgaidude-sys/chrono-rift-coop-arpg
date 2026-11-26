@@ -126,6 +126,8 @@
   #gacha-stage .acts button.ghost { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.25); }
   @media (max-width: 640px) { #gacha-stage .cards { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; } #gacha-stage .card { height: 116px; } #gacha-stage .card .b .ic { font-size: 22px; } #gacha-stage .card .b .nm { font-size: 9.5px; } #gacha-stage .card .b .sub { display: none; } }
   #ui-ident .ttl { font: 700 10px 'Plus Jakarta Sans', Inter, sans-serif; color: #ffcf5a; letter-spacing: 1px; margin-top: 1px; text-shadow: 0 0 8px rgba(255,207,90,.5); }
+  #btn-gacha .gc-badge { display: inline-block; min-width: 16px; padding: 0 5px; margin-left: 4px; border-radius: 999px; background: #5be39b; color: #0c1812; font-weight: 800; font-size: 10.5px; line-height: 16px; }
+  #btn-gacha.has { border-color: #5be39b; box-shadow: 0 0 12px rgba(91,227,155,.45); }
   `;
 
   const orig = {
@@ -137,8 +139,16 @@
   Object.assign(GP, {
     gc() {
       const st = this.mmoState; if (!st) return null;
-      if (!st.gacha) st.gacha = { sigils: START_SIGILS, p5: 0, p4: 0, guar: false, free: '', pulls: 0, own: [], trail: '', aura: '', title: '', log: [] };
+      if (!st.gacha) st.gacha = { sigils: START_SIGILS, bonusFree: 0, p5: 0, p4: 0, guar: false, free: '', pulls: 0, own: [], trail: '', aura: '', title: '', log: [] };
       return st.gacha;
+    },
+
+    grantFreeRiftPull(why) {
+      const G = this.gc(); if (!G) return;
+      G.bonusFree = (G.bonusFree || 0) + 1;
+      this.saveMMOState && this.saveMMOState();
+      if (this.showLootToast && why) this.showLootToast(`✦ +1 Free Rift Cache Pull (${why}) — press U to claim!`);
+      this.gcBadge();
     },
 
     sigilAdd(n, why) {
@@ -184,6 +194,16 @@
         const s = document.createElement('div'); s.id = 'gacha-stage';
         document.body.appendChild(s);
       }
+      if (!document.getElementById('btn-gacha')) {
+        const b = document.createElement('button');
+        b.id = 'btn-gacha'; b.className = 'mini-btn';
+        b.innerHTML = '✦ Rift Cache [U]<span class="gc-badge" style="display:none"></span>';
+        b.onclick = () => this.openGacha();
+        const tal = document.getElementById('btn-talents');
+        const inv = Array.from(document.querySelectorAll('.net-actions .mini-btn')).find(x => /Inventory/.test(x.textContent));
+        const anchor = tal || inv;
+        if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(b, anchor.nextSibling);
+      }
       if (!this._gcKeys) {
         this._gcKeys = true;
         window.addEventListener('keydown', (e) => {
@@ -211,7 +231,15 @@
 
     gcBadge() {
       const b = document.querySelector('#ui-quick [data-a="gacha"]'); const G = this.gc && this.gc();
-      if (b && G) b.classList.toggle('has', G.free !== today() || G.sigils > 0);
+      const hasPull = !!(G && (G.free !== today() || G.sigils > 0 || (G.bonusFree || 0) > 0));
+      if (b) b.classList.toggle('has', hasPull);
+      const mb = document.getElementById('btn-gacha');
+      if (mb && G) {
+        const cnt = (G.bonusFree || 0) + (G.free !== today() ? 1 : 0);
+        const badge = mb.querySelector('.gc-badge');
+        mb.classList.toggle('has', hasPull);
+        if (badge) { badge.style.display = cnt > 0 ? 'inline-block' : 'none'; badge.textContent = cnt; }
+      }
     },
 
     openGacha() { this.gc(); this._gcTab = this._gcTab || 'banner'; this.gcRender(); this.openModal('gacha-modal'); },
@@ -248,11 +276,13 @@
       const can = (n) => G.sigils >= n || (p.shards || 0) >= (n === 1 ? COST1 : COST10);
       const lab = (n) => G.sigils >= n ? `${n} sigil${n > 1 ? 's' : ''}` : `${n === 1 ? COST1 : COST10} 💠 shards`;
       const freeOk = G.free !== today();
+      const bonusFree = G.bonusFree || 0;
       body.innerHTML = `
         <div class="gc-banner"><div class="t">FEATURED THIS WEEK · ★5 LEGENDARY POWER</div><div class="n">✦ ${F ? esc(F.name) : '—'}</div>
           <div class="d">${F ? esc(F.desc(1)) : ''}</div><div class="w">Banner rotates in ${days} day${days === 1 ? '' : 's'} · ${G.guar ? '<b style="color:#ffcf5a">Next ★5 is GUARANTEED featured</b>' : '50/50 on your next ★5'}</div></div>
         <div class="gc-pity">★5 guaranteed in <b>${left5}</b> pull${left5 === 1 ? '' : 's'} · ★4 in <b>${PITY4 - G.p4}</b><div class="bar"><i style="width:${Math.round(100 * G.p5 / HARD5)}%"></i></div></div>
         <div class="gc-pulls">
+          ${bonusFree > 0 ? `<button class="gc-pull free" data-pull="bonus">Claim Free Pull<small>${bonusFree} bonus pull${bonusFree > 1 ? 's' : ''} ready</small></button>` : ''}
           ${freeOk ? `<button class="gc-pull free" data-pull="free">Daily free pull<small>once per day</small></button>` : ''}
           <button class="gc-pull ${can(1) ? '' : 'off'}" data-pull="1">Pull ×1<small>${lab(1)}</small></button>
           <button class="gc-pull ${can(10) ? '' : 'off'}" data-pull="10">Pull ×10<small>${lab(10)} · ★4+ guaranteed</small></button>
@@ -326,7 +356,8 @@
       const G = this.gc(), p = this.player;
       if (this._gcBusy) return;
       let n = 1;
-      if (kind === 'free') { if (G.free === today()) return; G.free = today(); }
+      if (kind === 'bonus') { if (!G.bonusFree || G.bonusFree <= 0) return; G.bonusFree--; }
+      else if (kind === 'free') { if (G.free === today()) return; G.free = today(); }
       else {
         n = kind === '10' ? 10 : 1;
         if (G.sigils >= n) G.sigils -= n;

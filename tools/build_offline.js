@@ -17,12 +17,174 @@
  * Vendor files are downloaded once from the public CDNs the game already uses and cached
  * in tools/vendor_cache/.
  */
-const fs = require('fs'), path = require('path');
+const fs = require('fs'), path = require('path'), vm = require('vm');
 const CRAZY = process.argv.includes('--crazygames');
 const CG_SDK = 'https://sdk.crazygames.com/crazygames-sdk-v3.js';
 const ROOT = path.join(__dirname, '..'), SRC = path.join(ROOT, 'public'), OUT = path.join(ROOT, 'dist', CRAZY ? 'chrono-rift-crazygames' : 'chrono-rift-offline');
 const CACHE = path.join(__dirname, 'vendor_cache');
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36';
+// Kept as standalone files alongside game.bundle.js: head loader + ground_worker.js (which uses importScripts)
+const KEEP_JS = new Set(['game.bundle.js', 'gltf_dequant.js', 'ground_worker.js', 'mmo_data.js', 'world_core.js']);
+
+const REGEX_KW = new Set(['return', 'throw', 'case', 'default', 'delete', 'void', 'typeof', 'in', 'instanceof', 'new', 'else', 'do', 'yield', 'await', 'of']);
+const REGEX_PREV = new Set(['', '(', '[', '{', ',', ';', ':', '?', '=', '!', '&', '|', '^', '~', '+', '-', '*', '/', '%', '<', '>', '=>', 'KW_REGEX']);
+const isIdStart = (c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c === '_' || c === '$';
+const isIdChar = (c) => isIdStart(c) || (c >= '0' && c <= '9');
+
+function minifyJS(src) {
+  let out = '';
+  let lineStart = true, pendingSpace = false, lastOut = '', prevTok = '';
+  const tmplStack = [];
+  const emitChar = (c) => { out += c; lastOut = c; lineStart = (c === '\n'); };
+  const flushSpace = (next) => {
+    if (!pendingSpace || lineStart) { pendingSpace = false; return; }
+    pendingSpace = false;
+    if (
+      (isIdChar(lastOut) && isIdChar(next)) ||
+      (lastOut === '+' && next === '+') ||
+      (lastOut === '-' && next === '-') ||
+      (lastOut === '/' && (next === '/' || next === '*')) ||
+      (lastOut === '*' && next === '/') ||
+      (lastOut >= '0' && lastOut <= '9' && next === '.')
+    ) emitChar(' ');
+  };
+  const scanTemplateText = (i) => {
+    while (i < src.length) {
+      const c = src[i];
+      if (c === '\\') { emitChar(c); if (i + 1 < src.length) emitChar(src[i + 1]); i += 2; continue; }
+      if (c === '`') { emitChar(c); prevTok = 'LIT'; return i + 1; }
+      if (c === '$' && src[i + 1] === '{') {
+        out += '${'; lastOut = '{'; lineStart = false;
+        tmplStack.push(1);
+        prevTok = '{';
+        return i + 2;
+      }
+      if (c !== '\r') emitChar(c);
+      i++;
+    }
+    return i;
+  };
+
+  let i = 0;
+  while (i < src.length) {
+    const c = src[i], n = src[i + 1];
+    if (c === '\r') { i++; continue; }
+    if (c === '\n') {
+      if (!lineStart) { out += '\n'; lastOut = '\n'; lineStart = true; }
+      pendingSpace = false; i++; continue;
+    }
+    if (c === ' ' || c === '\t' || c === '\f' || c === '\v') {
+      if (!lineStart) pendingSpace = true;
+      i++; continue;
+    }
+    // line comment
+    if (c === '/' && n === '/') {
+      i += 2;
+      while (i < src.length && src[i] !== '\n') i++;
+      continue;
+    }
+    // block comment
+    if (c === '/' && n === '*') {
+      i += 2;
+      let hadNL = false;
+      while (i < src.length && !(src[i] === '*' && src[i + 1] === '/')) {
+        if (src[i] === '\n') hadNL = true;
+        i++;
+      }
+      i += 2;
+      if (hadNL) {
+        if (!lineStart) { out += '\n'; lastOut = '\n'; lineStart = true; }
+        pendingSpace = false;
+      } else if (!lineStart) {
+        pendingSpace = true;
+      }
+      continue;
+    }
+    // template literal
+    if (c === '`') {
+      flushSpace('`');
+      emitChar('`');
+      i = scanTemplateText(i + 1);
+      continue;
+    }
+    // closing brace of template ${...}
+    if (c === '}' && tmplStack.length && tmplStack[tmplStack.length - 1] === 1) {
+      tmplStack.pop();
+      flushSpace('}');
+      emitChar('}');
+      i = scanTemplateText(i + 1);
+      continue;
+    }
+    // string literal
+    if (c === '\'' || c === '"') {
+      flushSpace(c);
+      const q = c;
+      emitChar(q); i++;
+      while (i < src.length) {
+        const sc = src[i];
+        if (sc === '\\') { emitChar(sc); if (i + 1 < src.length) emitChar(src[i + 1]); i += 2; continue; }
+        if (sc === q) { emitChar(sc); i++; break; }
+        if (sc !== '\r') emitChar(sc);
+        i++;
+      }
+      prevTok = 'LIT';
+      continue;
+    }
+    // regex literal vs division
+    if (c === '/' && REGEX_PREV.has(prevTok)) {
+      flushSpace('/');
+      emitChar('/'); i++;
+      let inClass = false;
+      while (i < src.length) {
+        const rc = src[i];
+        if (rc === '\\') { emitChar(rc); if (i + 1 < src.length) emitChar(src[i + 1]); i += 2; continue; }
+        if (rc === '[') { inClass = true; emitChar(rc); i++; continue; }
+        if (rc === ']' && inClass) { inClass = false; emitChar(rc); i++; continue; }
+        if (rc === '/' && !inClass) { emitChar(rc); i++; break; }
+        if (rc === '\n') break;
+        if (rc !== '\r') emitChar(rc);
+        i++;
+      }
+      while (i < src.length && isIdChar(src[i])) { emitChar(src[i]); i++; }
+      prevTok = 'LIT';
+      continue;
+    }
+    // identifier / keyword
+    if (isIdStart(c)) {
+      flushSpace(c);
+      let w = '';
+      while (i < src.length && isIdChar(src[i])) { w += src[i]; i++; }
+      out += w; lastOut = w[w.length - 1]; lineStart = false;
+      prevTok = (prevTok !== '.' && REGEX_KW.has(w)) ? 'KW_REGEX' : 'ID';
+      continue;
+    }
+    // number literal
+    if ((c >= '0' && c <= '9') || (c === '.' && n >= '0' && n <= '9')) {
+      flushSpace(c);
+      let num = '';
+      while (i < src.length && (isIdChar(src[i]) || src[i] === '.' || ((src[i] === '+' || src[i] === '-') && (src[i - 1] === 'e' || src[i - 1] === 'E')))) {
+        num += src[i]; i++;
+      }
+      out += num; lastOut = num[num.length - 1]; lineStart = false;
+      prevTok = 'LIT';
+      continue;
+    }
+    // operators & punctuation
+    flushSpace(c);
+    if (c === '{' && tmplStack.length) tmplStack[tmplStack.length - 1]++;
+    else if (c === '}' && tmplStack.length) tmplStack[tmplStack.length - 1]--;
+    if ((c === '+' || c === '-') && n === c) {
+      out += c + n; lastOut = n; lineStart = false; prevTok = 'POST'; i += 2; continue;
+    }
+    if (c === '=' && n === '>') {
+      out += '=>'; lastOut = '>'; lineStart = false; prevTok = '=>'; i += 2; continue;
+    }
+    emitChar(c);
+    prevTok = c;
+    i++;
+  }
+  return out.trim();
+}
 
 const SCRIPTS = {
   'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js': 'three.min.js',
@@ -89,6 +251,38 @@ async function cached(url, name, binary) {
   html = html.replace('<head>', '<head>\n  <script>window.CR_OFFLINE = true;</script>' + (CRAZY ? `\n  <script src="${CG_SDK}"></script>` : ''));
   // the offline edition never talks to Supabase: don't ship the project address or key
   html = html.replace(/const SUPABASE_URL = "[^"]*";/, 'const SUPABASE_URL = "";').replace(/const SUPABASE_KEY = "[^"]*";/, 'const SUPABASE_KEY = "";');
+
+  // bundle & minify the 55 game scripts into a single game.bundle.js (eliminates 54 sequential requests)
+  const jsDir = path.join(OUT, 'assets', 'js');
+  const scriptRe = /[ \t]*<script src="assets\/js\/([^"?]+)(?:\?[^"]*)?"><\/script>[ \t]*\r?\n?/g;
+  const bundled = [];
+  let rawBytes = 0, firstIdx = -1;
+  html = html.replace(scriptRe, (tag, file, offset) => {
+    if (file === 'gltf_dequant.js') return tag;
+    if (firstIdx < 0) firstIdx = offset;
+    const p = path.join(jsDir, file);
+    const code = fs.readFileSync(p, 'utf8');
+    rawBytes += Buffer.byteLength(code, 'utf8');
+    bundled.push({ file, min: minifyJS(code) });
+    return '__CR_BUNDLE_PLACEHOLDER__';
+  });
+  if (bundled.length) {
+    const bundleCode = bundled.map((b) => b.min).join('\n;\n');
+    new vm.Script(bundleCode, { filename: 'game.bundle.js' });
+    fs.writeFileSync(path.join(jsDir, 'game.bundle.js'), bundleCode);
+    let replaced = false;
+    html = html.replace(/__CR_BUNDLE_PLACEHOLDER__/g, () => {
+      if (replaced) return '';
+      replaced = true;
+      return '  <script src="assets/js/game.bundle.js"></script>\n';
+    });
+    for (const { file } of bundled) {
+      if (!KEEP_JS.has(file)) fs.rmSync(path.join(jsDir, file), { force: true });
+    }
+    const minBytes = Buffer.byteLength(bundleCode, 'utf8');
+    console.log(`bundled ${bundled.length} scripts -> assets/js/game.bundle.js (${(rawBytes / 1024).toFixed(1)} KB -> ${(minBytes / 1024).toFixed(1)} KB)`);
+  }
+
   fs.writeFileSync(idxF, html);
 
   // report anything still pointing outside the folder
