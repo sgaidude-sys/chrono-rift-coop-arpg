@@ -7902,6 +7902,8 @@
         });
 
         window.addEventListener('resize', () => {
+          // a hidden/collapsed frame can report 0x0: 0/0 would leave the camera NaN (breaks aiming)
+          if (!window.innerWidth || !window.innerHeight) return;
           this.camera.aspect = window.innerWidth / window.innerHeight;
           this.camera.updateProjectionMatrix();
           this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -8112,6 +8114,13 @@
       // -----------------------------------------------------------------------
       animate() {
         requestAnimationFrame(this.animate);
+        // self-repair: a page loaded or resized while its frame was 0x0 leaves the camera aspect NaN,
+        // which silently breaks aiming (touch auto-aim, skill targeting); fix it once a real size exists
+        if (!(this.camera.aspect > 0) && window.innerWidth && window.innerHeight) {
+          this.camera.aspect = window.innerWidth / window.innerHeight;
+          this.camera.updateProjectionMatrix();
+          this.renderer.setSize(window.innerWidth, window.innerHeight);
+        }
         const rawDt = this.clock.getDelta();
         let dt = Math.min(rawDt, 0.1);
 
@@ -9959,7 +9968,7 @@
   <script src="assets/js/mmo_rpg.js?v=14"></script>
   <script src="assets/js/mmo_audio.js?v=14"></script>
   <script src="assets/js/mmo_vfx.js?v=12"></script>
-  <script src="assets/js/mmo_mobile.js?v=14"></script>
+  <script src="assets/js/mmo_mobile.js?v=15"></script>
   <script src="assets/js/mmo_sky.js?v=14"></script>
   <script src="assets/js/mmo_terrain.js?v=17"></script>
   <script src="assets/js/mmo_foliage.js?v=26"></script>

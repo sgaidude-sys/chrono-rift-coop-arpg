@@ -433,6 +433,8 @@
     haptic(pattern) {
       if (!this.touchUI || typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return;
       if (window.CR_COMFORT && window.CR_COMFORT.get().haptics === false) return;
+      // browsers block (and log an error for) vibrate() until the player has tapped the page
+      if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
       const now = performance.now();
       if (now - (this._lastHapticAt || 0) < 45) return;
       this._lastHapticAt = now;
@@ -482,6 +484,10 @@
       if (this.terrainVisualHeight) target.y = this.terrainVisualHeight(target.x, target.z);
       const v = target.project(this.camera);
       this.mouseNDC.set(v.x, v.y);
+      // attacks fly toward mouseWorld, which is only re-raycast on mouse clicks: refresh it here,
+      // or touch players' arrows and spells head for the last point (the town centre at first)
+      if (this.updateMouseWorld) this.updateMouseWorld();
+      else if (best) this.mouseWorld.copy(target);
     },
 
     updateTouchAssist(dt) {
