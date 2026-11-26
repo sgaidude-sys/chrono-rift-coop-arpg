@@ -17,7 +17,7 @@
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* storage blocked */ } }
   };
   const COMFORT_KEY = 'cr_comfort_v1';
-  const DEF = { shake: 'full', freeze: true, slowmo: true, flash: true };
+  const DEF = { shake: 'full', freeze: true, slowmo: true, flash: true, haptics: true };
   const SHAKE_F = { full: 1, reduced: 0.4, off: 0 };
   let C = Object.assign({}, DEF);
   try { C = Object.assign({}, DEF, JSON.parse(ls.get(COMFORT_KEY) || '{}')); } catch (e) { /* keep defaults */ }
@@ -50,9 +50,9 @@
   body.cr-title-on #combat-tip, body.epic-cine #combat-tip { display: none; }
   /* touch combo-move buttons (inside the skill cluster so they scale with it) */
   #touch-moves { display: none; }
-  body.touch-ui #touch-moves { display: flex; position: absolute; left: 0; bottom: 156px; gap: 6px; }
-  #touch-moves button { all: unset; box-sizing: border-box; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
-    background: rgba(12,16,28,.8); border: 1.5px solid rgba(243,200,107,.55); color: #f5f2eb; font: 800 17px/1 Inter, sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,.45); }
+  body.touch-ui #touch-moves { display: flex; position: absolute; right: 118px; left: auto; bottom: 134px; gap: 5px; }
+  #touch-moves button { all: unset; box-sizing: border-box; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
+    background: rgba(12,16,28,.8); border: 1.5px solid rgba(243,200,107,.55); color: #f5f2eb; font: 800 15px/1 Inter, sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,.45); }
   #touch-moves button:active { transform: scale(.9); }
   #touch-moves button.cd { opacity: .4; }
   /* comfort */
@@ -229,7 +229,8 @@
         <div class="cf-row"><div>Screen shake<small>Camera shake and kicks on hits</small></div>${seg('shake', [['full', 'Full'], ['reduced', 'Reduced'], ['off', 'Off']])}</div>
         <div class="cf-row"><div>Freeze frames<small>Brief pause on heavy hits and parries</small></div>${seg('freeze', [['true', 'On'], ['false', 'Off']])}</div>
         <div class="cf-row"><div>Slow motion<small>Boss phases, kills and Dual Convergence</small></div>${seg('slowmo', [['true', 'On'], ['false', 'Off']])}</div>
-        <div class="cf-row"><div>Flashing effects<small>Screen flashes, speed lines and edge pulses</small></div>${seg('flash', [['true', 'On'], ['false', 'Reduce']])}</div>`;
+        <div class="cf-row"><div>Flashing effects<small>Screen flashes, speed lines and edge pulses</small></div>${seg('flash', [['true', 'On'], ['false', 'Reduce']])}</div>
+        <div class="cf-row"><div>Vibration<small>Subtle touch haptics on hits, parries and jackpots</small></div>${seg('haptics', [['true', 'On'], ['false', 'Off']])}</div>`;
     },
 
     applyCameraShake(dt) {

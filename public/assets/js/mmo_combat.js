@@ -108,8 +108,10 @@
       if (!document.getElementById('combat-style')) {
         const st = document.createElement('style');
         st.id = 'combat-style';
-        st.textContent = `body.touch-ui #slot-parry { right: 58px; width: 50px !important; height: 50px !important; bottom: 170px; touch-action: none; }
-          #slot-parry.blocking { border-color: #ffd56b !important; box-shadow: 0 0 14px rgba(255, 213, 107, 0.6); }`;
+        st.textContent = `body.touch-ui #slot-parry { right: 58px; width: 52px !important; height: 52px !important; bottom: 164px; touch-action: none; }
+          #slot-parry.blocking { border-color: #ffd56b !important; box-shadow: 0 0 14px rgba(255, 213, 107, 0.6); }
+          #slot-parry.parry-now { border-color: #ffe88a !important; box-shadow: 0 0 0 3px rgba(255, 224, 115, 0.35), 0 0 22px rgba(255, 213, 107, 0.95) !important; transform: scale(1.12); animation: crParryFlash .24s ease-in-out infinite alternate; }
+          @keyframes crParryFlash { from { filter: brightness(1.05); } to { filter: brightness(1.5); } }`;
         document.head.appendChild(st);
       }
       this.bindCombatInput();
@@ -211,6 +213,7 @@
       const ra = p.actions && (p.actions.Roll || p.actions.Sword_Dash);
       if (ra) ra.setEffectiveTimeScale(ra.getClip().duration / (ROLL_DUR + 0.03));
       if (this.onRollStart) this.onRollStart(origin);
+      this.haptic && this.haptic(12);
       this.audio && this.audio.playSwing && this.audio.playSwing(false);
       this.spawnShockwaveRing(new THREE.Vector3(p.pos.x, 0.05, p.pos.z), 1.2, 0xbfe6ff, 0.2);
       const slot = document.getElementById('slot-jump');
@@ -414,6 +417,7 @@
       // 50 ms freeze frame + a sharp shake
       this.hitStopTimer = Math.max(this.hitStopTimer || 0, 0.05);
       this.screenShake = Math.max(this.screenShake || 0, 0.38);
+      this.haptic && this.haptic([18, 28, 32]);
       if (this.audio) {
         // steel-on-steel (mmo_sfx adds the clash) + a heavy impact underneath; no chime
         if (this.audio.playSample && !this.audio.playSample('fs_impact_mid', 1.2, 0.42)) this.audio.playSample('mecha_impact', 1.65, 0.75);
@@ -646,6 +650,15 @@
         m._glintFlashT = 0.14;          // restored on the frame clock (see updateWindups)
       }
       if (this.audio && this.audio.playAt && !this.audio.playAt('fs_parry_1', m.pos, 1.55, 0.3, 45)) this.audio.playAt('chime', m.pos, 1.9, 0.42, 45);
+      if (this.player && !this.player.dead && m.pos.distanceTo(this.player.pos) <= (m.isBoss ? 14 : 7.5)) {
+        const slot = document.getElementById('slot-parry');
+        if (slot) {
+          slot.classList.add('parry-now');
+          clearTimeout(this._parryFlashT);
+          this._parryFlashT = setTimeout(() => slot.classList.remove('parry-now'), 520);
+        }
+        this.haptic && this.haptic(14);
+      }
     },
 
     updateWindups(dt) {

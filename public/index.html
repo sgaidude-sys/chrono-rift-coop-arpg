@@ -7969,7 +7969,10 @@
           }
         });
 
+        window.addEventListener('touchstart', () => { this._lastTouchAt = performance.now(); }, { passive: true, capture: true });
+
         this.canvas.addEventListener('mousedown', (e) => {
+          if (performance.now() - (this._lastTouchAt || 0) < 800) return;
           if (this.isAnyModalOpen) return;
           this.mouseNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
           this.mouseNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
@@ -8024,7 +8027,7 @@
 
         const joy = document.getElementById('touch-joystick');
         const knob = document.getElementById('touch-knob');
-        let touching = false;
+        let joyPid = null;
         const updateTouch = (clientX, clientY) => {
           const rect = joy.getBoundingClientRect();
           const cx = rect.left + rect.width / 2;
@@ -8037,13 +8040,16 @@
           knob.style.transform = `translate(${dx}px, ${dy}px)`;
           this.touchVec.set(dx / maxR, dy / maxR);
         };
-        joy.addEventListener('pointerdown', (e) => { touching = true; updateTouch(e.clientX, e.clientY); });
-        window.addEventListener('pointermove', (e) => { if (touching) updateTouch(e.clientX, e.clientY); });
-        window.addEventListener('pointerup', () => {
-          touching = false;
+        const endJoy = (e) => {
+          if (joyPid === null || (e && e.pointerId !== joyPid)) return;
+          joyPid = null;
           knob.style.transform = 'translate(0px, 0px)';
           this.touchVec.set(0, 0);
-        });
+        };
+        joy.addEventListener('pointerdown', (e) => { if (this._floatingJoy || joyPid !== null) return; joyPid = e.pointerId; updateTouch(e.clientX, e.clientY); });
+        window.addEventListener('pointermove', (e) => { if (!this._floatingJoy && joyPid !== null && e.pointerId === joyPid) updateTouch(e.clientX, e.clientY); });
+        window.addEventListener('pointerup', endJoy);
+        window.addEventListener('pointercancel', endJoy);
 
         // Skill bar hover tooltips
         this._hoveredSkillSlot = null;
@@ -9949,7 +9955,7 @@
   <script src="assets/js/mmo_rpg.js?v=14"></script>
   <script src="assets/js/mmo_audio.js?v=14"></script>
   <script src="assets/js/mmo_vfx.js?v=10"></script>
-  <script src="assets/js/mmo_mobile.js?v=11"></script>
+  <script src="assets/js/mmo_mobile.js?v=12"></script>
   <script src="assets/js/mmo_sky.js?v=12"></script>
   <script src="assets/js/mmo_terrain.js?v=16"></script>
   <script src="assets/js/mmo_foliage.js?v=24"></script>
@@ -9963,10 +9969,10 @@
   <script src="assets/js/mmo_polish.js?v=5"></script>
   <script src="assets/js/mmo_realism.js?v=1"></script>
   <script src="assets/js/mmo_hud.js?v=5"></script>
-  <script src="assets/js/mmo_combat.js?v=6"></script>
+  <script src="assets/js/mmo_combat.js?v=7"></script>
   <script src="assets/js/mmo_skillvfx.js?v=1"></script>
   <script src="assets/js/mmo_talents.js?v=4"></script>
-  <script src="assets/js/mmo_ui.js?v=4"></script>
+  <script src="assets/js/mmo_ui.js?v=5"></script>
   <script src="assets/js/mmo_tutorial.js?v=3"></script>
   <script src="assets/js/mmo_social.js?v=2"></script>
   <script src="assets/js/mmo_epic.js?v=3"></script>
@@ -9986,10 +9992,10 @@
   <script src="assets/js/mmo_feel.js?v=1"></script>
   <script src="assets/js/mmo_mobilehud.js?v=3"></script>
   <script src="assets/js/mmo_netbatch.js?v=5"></script>
-  <script src="assets/js/mmo_teach.js?v=4"></script>
+  <script src="assets/js/mmo_teach.js?v=5"></script>
   <script src="assets/js/mmo_foes.js?v=1"></script>
   <script src="assets/js/mmo_legend.js?v=2"></script>
-  <script src="assets/js/mmo_rewards.js?v=5"></script>
+  <script src="assets/js/mmo_rewards.js?v=6"></script>
   <script src="assets/js/mmo_flair.js?v=9"></script>
   <script src="assets/js/mmo_gacha.js?v=4"></script>
   <script src="assets/js/mmo_inkcine.js?v=5"></script>

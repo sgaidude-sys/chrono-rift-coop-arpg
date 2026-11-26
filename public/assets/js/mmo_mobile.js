@@ -9,6 +9,9 @@
   const origInit = GP.initMMOWorld;
   const origUseSkill = GP.useSkill;
   const origOpenModal = GP.openModal;
+  const origUpdateMMOWorld = GP.updateMMOWorld;
+  const origApplyDamage = GP.applyDamageToMonster;
+  const origGainXP = GP.gainXP;
 
   const css = `
   body.touch-ui #hud-top { top: 6px; left: 6px; right: 6px; gap: 6px; }
@@ -60,12 +63,22 @@
   body.touch-ui #slot-1 .skill-icon { font-size: 36px !important; }
   body.touch-ui #slot-2 { right: 98px; bottom: 4px; }
   body.touch-ui #slot-3 { right: 90px; bottom: 72px; }
-  body.touch-ui #slot-4 { right: 38px; bottom: 108px; }
-  body.touch-ui #slot-jump { right: 0; width: 50px !important; height: 50px !important; bottom: 160px; }
-  body.touch-ui #slot-potion { right: 158px; bottom: 4px; width: 48px !important; height: 48px !important; }
-  body.touch-ui #slot-5 { right: 150px; bottom: 62px; }
-  body.touch-ui #touch-joystick { display: block !important; left: 18px; bottom: 26px; width: 128px; height: 128px; }
-  body.touch-ui #touch-knob { width: 52px; height: 52px; top: 36px; left: 36px; }
+  body.touch-ui #slot-4 { right: 34px; bottom: 102px; }
+  body.touch-ui #slot-jump { right: 0; width: 50px !important; height: 50px !important; bottom: 164px; }
+  body.touch-ui #slot-potion { right: 162px; bottom: 4px; width: 48px !important; height: 48px !important; }
+  body.touch-ui #slot-5 { right: 154px; bottom: 64px; }
+  body.touch-ui #touch-joystick { display: block !important; left: 18px; bottom: 26px; width: 128px; height: 128px; pointer-events: none;
+    opacity: 0.42; transition: opacity 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+    border: 1.5px solid rgba(212,175,55,0.45); background: radial-gradient(circle, rgba(20,26,42,0.35), rgba(8,11,20,0.55)); }
+  body.touch-ui #touch-joystick.active { opacity: 0.96; border-color: rgba(255,213,107,0.9);
+    box-shadow: 0 0 22px rgba(212,175,55,0.32), inset 0 0 14px rgba(255,213,107,0.14); }
+  body.touch-ui #touch-knob { width: 52px; height: 52px; top: 36px; left: 36px;
+    background: radial-gradient(circle at 38% 32%, #fff3c4, #D4AF37 65%, #9a7420); box-shadow: 0 2px 10px rgba(0,0,0,0.55); }
+  @media (max-width: 430px) and (orientation: portrait) {
+    body.touch-ui #skill-bar { transform: scale(0.88); transform-origin: bottom right; }
+    body.touch-ui #touch-joystick { width: 112px; height: 112px; }
+    body.touch-ui #touch-knob { width: 46px; height: 46px; top: 31px; left: 31px; }
+  }
   body.touch-ui #mmo-xpbar { width: 100vw; bottom: 0; height: 7px; border-radius: 0; border-left: 0; border-right: 0; }
   body.touch-ui #mmo-xp-text { display: none; }
   body.touch-ui #interact-prompt { bottom: 240px !important; left: 50% !important; transform: translateX(-50%) !important; font-size: 14px; padding: 10px 16px !important; }
@@ -170,60 +183,193 @@
         if (e.target.closest('button') && this.touchUI) setTimeout(() => document.body.classList.remove('menu-open'), 120);
       });
 
-      // hold-to-attack on the big attack button
+      // hold-to-attack on the big attack button (pointerId-scoped)
       const atk = document.getElementById('slot-1');
+      let atkPid = null;
       if (atk) {
         atk.addEventListener('pointerdown', (e) => {
           if (!this.touchUI) return;
           e.preventDefault();
-          this.audio.init();
+          e.stopPropagation();
+          if (this.audio) this.audio.init();
+          atkPid = e.pointerId;
+          try { atk.setPointerCapture && atk.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
           this._touchAttack = true;
           this.mouseDownLeft = true;
         });
-        const stop = () => { if (this._touchAttack) { this._touchAttack = false; this.mouseDownLeft = false; } };
-        atk.addEventListener('pointerup', stop);
-        atk.addEventListener('pointercancel', stop);
-        atk.addEventListener('pointerleave', stop);
+        const stopAtk = (e) => {
+          if (atkPid !== null && e && e.pointerId !== undefined && e.pointerId !== atkPid) return;
+          atkPid = null;
+          if (this._touchAttack) { this._touchAttack = false; this.mouseDownLeft = false; }
+        };
+        atk.addEventListener('pointerup', stopAtk);
+        atk.addEventListener('pointercancel', stopAtk);
+        atk.addEventListener('pointerleave', (e) => {
+          if (atk.hasPointerCapture && atk.hasPointerCapture(e.pointerId)) return;
+          stopAtk(e);
+        });
       }
       // skill buttons should not leak taps to the 3D canvas
       document.querySelectorAll('#skill-bar .skill-slot').forEach((el) => {
         el.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
       });
 
-      // pinch zoom on the canvas
+      // unified multi-touch canvas controller: floating left thumbstick + right-half orbit + 2-finger pinch/tilt
+      this._floatingJoy = true;
+      const joy = document.getElementById('touch-joystick');
+      const knob = document.getElementById('touch-knob');
       const touches = new Map();
-      let pinchStart = 0, zoomStart = 0;
-      this.canvas.addEventListener('pointerdown', (e) => {
-        if (e.pointerType !== 'touch') return;
-        touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-        if (touches.size === 2) {
-          const [a, b] = [...touches.values()];
-          pinchStart = Math.hypot(a.x - b.x, a.y - b.y);
+      let joyPid = null, joyOrigin = { x: 0, y: 0 }, pinchStart = 0, zoomStart = 0;
+
+      const resetJoystick = () => {
+        joyPid = null;
+        this.touchVec.set(0, 0);
+        if (joy) {
+          joy.classList.remove('active');
+          joy.style.left = ''; joy.style.top = ''; joy.style.bottom = '';
+        }
+        if (knob) knob.style.transform = 'translate(0px, 0px)';
+      };
+      this.resetTouchControls = () => {
+        resetJoystick();
+        atkPid = null;
+        this._touchAttack = false;
+        this.mouseDownLeft = false;
+        touches.clear();
+        pinchStart = 0;
+        this._pinchMidY = undefined;
+      };
+      const getCamTouches = () => [...touches.values()].filter(t => t.role === 'cam');
+      const syncPinch = () => {
+        const cam = getCamTouches();
+        if (cam.length >= 2) {
+          cam.forEach(c => { c.moved = true; });
+          pinchStart = Math.hypot(cam[0].x - cam[1].x, cam[0].y - cam[1].y);
           zoomStart = this.cameraZoom;
-          this.mouseDownLeft = false;
+          this._pinchMidY = (cam[0].y + cam[1].y) / 2;
+        } else {
+          pinchStart = 0;
+          this._pinchMidY = undefined;
         }
-      });
-      this.canvas.addEventListener('pointermove', (e) => {
-        if (!touches.has(e.pointerId)) return;
-        touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-        if (touches.size === 2 && pinchStart > 0) {
-          const [a, b] = [...touches.values()];
-          const d = Math.hypot(a.x - b.x, a.y - b.y);
-          this.cameraZoom = Math.max(10, Math.min(30, zoomStart * pinchStart / Math.max(20, d)));
-          this._userZoomed = true;
-          // two fingers dragged up/down together tilt the camera (to look at the sky)
-          const midY = (a.y + b.y) / 2;
-          if (this._pinchMidY !== undefined) {
-            const dy = midY - this._pinchMidY;
-            if (this.cameraPitch === undefined) this.cameraPitch = 0.6454;
-            this.cameraPitch = Math.max(0.04, Math.min(1.3, this.cameraPitch + dy * 0.006));
+      };
+
+      this.canvas.addEventListener('pointerdown', (e) => {
+        if (e.pointerType !== 'touch' || !this.touchUI || e.target !== this.canvas) return;
+        if (this.isAnyModalOpen || this.cutsceneActive || !this.isInWorld) return;
+        if (this.audio) this.audio.init();
+        let role = 'cam';
+        if (joyPid === null && e.clientX < window.innerWidth * 0.48 && e.clientY > 88) {
+          role = 'joy';
+          joyPid = e.pointerId;
+          const half = ((joy && joy.offsetWidth) || 128) * 0.5;
+          const ox = Math.max(half + 10, Math.min(window.innerWidth * 0.48, e.clientX));
+          const oy = Math.max(100, Math.min(window.innerHeight - half - 12, e.clientY));
+          joyOrigin = { x: ox, y: oy };
+          if (joy) {
+            joy.style.left = Math.round(ox - half) + 'px';
+            joy.style.top = Math.round(oy - half) + 'px';
+            joy.style.bottom = 'auto';
+            joy.classList.add('active');
           }
-          this._pinchMidY = midY;
+          const maxR = 44;
+          let dx = e.clientX - ox, dy = e.clientY - oy;
+          const dist = Math.hypot(dx, dy);
+          if (dist > maxR) { dx = (dx / dist) * maxR; dy = (dy / dist) * maxR; }
+          if (knob) knob.style.transform = `translate(${dx}px, ${dy}px)`;
+          this.touchVec.set(dx / maxR, dy / maxR);
+        }
+        touches.set(e.pointerId, { x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY, lastX: e.clientX, lastY: e.clientY, role, moved: false });
+        if (role === 'cam') syncPinch();
+      });
+
+      window.addEventListener('pointermove', (e) => {
+        const t = touches.get(e.pointerId);
+        if (!t) return;
+        t.x = e.clientX; t.y = e.clientY;
+        if (t.role === 'joy' && e.pointerId === joyPid) {
+          const maxR = 44;
+          let dx = e.clientX - joyOrigin.x, dy = e.clientY - joyOrigin.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist > maxR) { dx = (dx / dist) * maxR; dy = (dy / dist) * maxR; }
+          if (knob) knob.style.transform = `translate(${dx}px, ${dy}px)`;
+          this.touchVec.set(dx / maxR, dy / maxR);
+        } else if (t.role === 'cam') {
+          const cam = getCamTouches();
+          if (cam.length >= 2 && pinchStart > 0) {
+            const d = Math.hypot(cam[0].x - cam[1].x, cam[0].y - cam[1].y);
+            this.cameraZoom = Math.max(10, Math.min(30, zoomStart * pinchStart / Math.max(20, d)));
+            this._userZoomed = true;
+            const midY = (cam[0].y + cam[1].y) / 2;
+            if (this._pinchMidY !== undefined) {
+              const dy = midY - this._pinchMidY;
+              if (this.cameraPitch === undefined) this.cameraPitch = 0.6454;
+              this.cameraPitch = Math.max(0.08, Math.min(1.28, this.cameraPitch + dy * 0.006));
+            }
+            this._pinchMidY = midY;
+            t.moved = true;
+            t.lastX = e.clientX; t.lastY = e.clientY;
+          } else if (cam.length === 1) {
+            const dx = e.clientX - t.lastX, dy = e.clientY - t.lastY;
+            t.lastX = e.clientX; t.lastY = e.clientY;
+            if (!t.moved && Math.hypot(e.clientX - t.startX, e.clientY - t.startY) > 6) t.moved = true;
+            if (t.moved) {
+              this.cameraYaw -= dx * 0.0068;
+              if (this.cameraPitch === undefined) this.cameraPitch = 0.6454;
+              this.cameraPitch = Math.max(0.12, Math.min(1.25, this.cameraPitch + dy * 0.0042));
+            }
+          }
         }
       });
-      const endT = (e) => { touches.delete(e.pointerId); if (touches.size < 2) { pinchStart = 0; this._pinchMidY = undefined; } };
-      this.canvas.addEventListener('pointerup', endT);
-      this.canvas.addEventListener('pointercancel', endT);
+
+      const endTouch = (e) => {
+        const t = touches.get(e.pointerId);
+        if (!t) return;
+        const wasSingleCamTap = t.role === 'cam' && !t.moved && pinchStart === 0 && e.type === 'pointerup';
+        touches.delete(e.pointerId);
+        if (t.role === 'joy' && e.pointerId === joyPid) resetJoystick();
+        else if (t.role === 'cam') {
+          syncPinch();
+          if (wasSingleCamTap) this.tryTouchTapNPC(e.clientX, e.clientY);
+        }
+      };
+      window.addEventListener('pointerup', endTouch);
+      window.addEventListener('pointercancel', endTouch);
+      window.addEventListener('blur', () => this.resetTouchControls && this.resetTouchControls());
+    },
+
+    haptic(pattern) {
+      if (!this.touchUI || typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return;
+      if (window.CR_COMFORT && window.CR_COMFORT.get().haptics === false) return;
+      const now = performance.now();
+      if (now - (this._lastHapticAt || 0) < 45) return;
+      this._lastHapticAt = now;
+      try { navigator.vibrate(pattern); } catch (e) { /* unsupported */ }
+    },
+
+    tryTouchTapNPC(clientX, clientY) {
+      if (!this.townNPCs || !this.townNPCs.length || !this.raycaster || !this.camera || !this.openNPCModal) return false;
+      this.mouseNDC.x = (clientX / window.innerWidth) * 2 - 1;
+      this.mouseNDC.y = -(clientY / window.innerHeight) * 2 + 1;
+      if (this.updateMouseWorld) this.updateMouseWorld();
+      const npcRoots = this.townNPCs.map(n => n.meshRoot).filter(Boolean);
+      if (npcRoots.length) {
+        this.raycaster.setFromCamera(this.mouseNDC, this.camera);
+        const hits = this.raycaster.intersectObjects(npcRoots, true);
+        if (hits.length > 0) {
+          let obj = hits[0].object;
+          while (obj && !obj.userData?.npcId) obj = obj.parent;
+          if (obj && obj.userData?.npcId) { this.openNPCModal(obj.userData.npcId); return true; }
+        }
+      }
+      if (this.mouseWorld) {
+        for (let i = 0; i < this.townNPCs.length; i++) {
+          const npc = this.townNPCs[i];
+          if (Math.hypot(this.mouseWorld.x - npc.pos.x, this.mouseWorld.z - npc.pos.z) < 1.6) {
+            this.openNPCModal(npc.id); return true;
+          }
+        }
+      }
+      return false;
     },
 
     // Aim assist on touch: skills target the nearest enemy (or straight ahead)
@@ -236,6 +382,7 @@
         const d = (m.pos.x - p.pos.x) ** 2 + (m.pos.z - p.pos.z) ** 2;
         if (d < bd) { bd = d; best = m; }
       }
+      this._touchTarget = best;
       const target = best
         ? new THREE.Vector3(best.pos.x, 0, best.pos.z)
         : new THREE.Vector3(p.pos.x + Math.sin(p.yaw) * 6, 0, p.pos.z + Math.cos(p.yaw) * 6);
@@ -244,13 +391,95 @@
       this.mouseNDC.set(v.x, v.y);
     },
 
+    updateTouchAssist(dt) {
+      if (!this.touchUI || !this.isInWorld || !this.player || this.player.dead) {
+        if (this._touchRing) this._touchRing.visible = false;
+        return;
+      }
+      const p = this.player;
+      let best = null, bd = 15 * 15;
+      for (let i = 0; i < this.monsters.length; i++) {
+        const m = this.monsters[i];
+        if (m.dead || (m.meshRoot && !m.meshRoot.visible)) continue;
+        const dSq = (m.pos.x - p.pos.x) ** 2 + (m.pos.z - p.pos.z) ** 2;
+        if (dSq < bd) { bd = dSq; best = m; }
+      }
+      this._touchTarget = best;
+
+      // Ground target lock-on ring
+      if (best && this.scene) {
+        if (!this._touchRing) {
+          const geo = new THREE.RingGeometry(0.92, 1.18, 32);
+          geo.rotateX(-Math.PI / 2);
+          this._touchRing = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+            color: 0xffd56b, transparent: true, opacity: 0.72, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide
+          }));
+          this.scene.add(this._touchRing);
+        }
+        const hy = this.terrainVisualHeight ? this.terrainVisualHeight(best.pos.x, best.pos.z) : 0;
+        this._touchRing.position.set(best.pos.x, hy + 0.09, best.pos.z);
+        this._touchRing.scale.setScalar(best.isBoss ? 2.2 : (best.isElite ? 1.35 : 1.0));
+        this._touchRing.material.color.setHex(best.isBoss ? 0xff4b6e : 0xffd56b);
+        this._touchRing.rotation.z += dt * 1.6;
+        this._touchRing.visible = true;
+      } else if (this._touchRing) {
+        this._touchRing.visible = false;
+      }
+
+      // Magnetic melee step-in when holding Attack without steering
+      const joyMag = this.touchVec ? Math.hypot(this.touchVec.x, this.touchVec.y) : 0;
+      if (this._touchAttack && !this.isAnyModalOpen && !this.cutsceneActive && best && joyMag < 0.15
+          && p.leapTimer <= 0 && p.dodgeTimer <= 0 && p.spinTimer <= 0
+          && (p.classId === 'vanguard' || p.classId === 'berserker')) {
+        const dx = best.pos.x - p.pos.x, dz = best.pos.z - p.pos.z;
+        const d = Math.hypot(dx, dz);
+        if (d > 2.1 && d <= 6.0) {
+          const nx = dx / d, nz = dz / d;
+          const clsSpd = (typeof HERO_CLASSES !== 'undefined' && HERO_CLASSES[p.classId] ? HERO_CLASSES[p.classId].speed : 8.5)
+            * (this.getMoveSpeedMult ? this.getMoveSpeedMult() : 1) * 0.85;
+          const step = Math.min(d - 1.9, clsSpd * dt);
+          const half = (window.MMO && window.MMO.WORLD ? window.MMO.WORLD.half : 500) - 10;
+          const px = p.pos.x, pz = p.pos.z;
+          p.pos.x = Math.max(-half, Math.min(half, p.pos.x + nx * step));
+          p.pos.z = Math.max(-half, Math.min(half, p.pos.z + nz * step));
+          if (this.worldClampMove) this.worldClampMove(p.pos, px, pz);
+          if (this.resolveObstacleCollisions) this.resolveObstacleCollisions(p.pos, 0.55);
+          p.yaw = Math.atan2(nx, nz);
+          if (p.meshRoot) { p.meshRoot.position.x = p.pos.x; p.meshRoot.position.z = p.pos.z; p.meshRoot.rotation.y = p.yaw; }
+          this.touchAim();
+        }
+      }
+    },
+
+    applyDamageToMonster(mob, baseDmg, isHeavy, attacker, fromNetwork) {
+      const local = this.touchUI && !fromNetwork && (!attacker || attacker === this.player) && mob && !mob.dead;
+      const r = origApplyDamage ? origApplyDamage.apply(this, arguments) : undefined;
+      if (local) this.haptic(mob.dead ? 26 : (isHeavy ? 20 : 10));
+      return r;
+    },
+
+    gainXP(amount, showText) {
+      const lv0 = this.player ? this.player.level : 0;
+      const r = origGainXP ? origGainXP.apply(this, arguments) : undefined;
+      if (this.player && this.player.level > lv0) this.haptic([20, 32, 46]);
+      return r;
+    },
+
+    updateMMOWorld(dt) {
+      if (origUpdateMMOWorld) origUpdateMMOWorld.call(this, dt);
+      try { this.updateTouchAssist(dt); } catch (e) { /* keep loop alive */ }
+    },
+
     useSkill(slot, isRemoteOrAI = false, actor = null) {
       if (this.touchUI && !isRemoteOrAI && (!actor || actor === this.player) && slot >= 1 && slot <= 4) this.touchAim();
       return origUseSkill.call(this, slot, isRemoteOrAI, actor);
     },
 
     openModal(id) {
-      if (this.touchUI) document.body.classList.remove('menu-open', 'chat-open');
+      if (this.touchUI) {
+        document.body.classList.remove('menu-open', 'chat-open');
+        if (this.resetTouchControls) this.resetTouchControls();
+      }
       return origOpenModal.call(this, id);
     }
   });

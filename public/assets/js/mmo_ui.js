@@ -249,8 +249,10 @@
   body:not(.touch-ui) #skill-bar #slot-5 .ui-ring .fg { stroke: #9fe6ff; filter: drop-shadow(0 0 3px rgba(127,216,255,.8)); }
   body:not(.touch-ui) #skill-bar #slot-parry.blocking { box-shadow: 0 0 0 1.5px var(--ui-gold), 0 0 18px rgba(212,175,55,.5) !important; }
   #ui-potion-n { position: absolute; right: -4px; top: -4px; z-index: 3; font: 800 10px var(--ui-num); color: var(--ui-ivory); text-shadow: var(--ui-shadow); }
-  body.touch-ui #ui-potion-n { display: none; }
-  body.touch-ui .ui-ring, body.touch-ui .ui-sweep { display: none; }
+  body.touch-ui #skill-bar .skill-slot { overflow: visible !important; }
+  body.touch-ui #ui-potion-n { display: grid; place-items: center; right: -3px; top: -3px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 999px;
+    background: rgba(12,16,28,.9); border: 1px solid rgba(212,175,55,.65); font-size: 10px; line-height: 1; }
+  body.touch-ui .ui-ring { display: none; }
 
   #ui-vitals { width: 300px; margin: 0 14px; pointer-events: none; color: var(--ui-ivory); }
   #ui-vitals .row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; text-shadow: var(--ui-shadow); }

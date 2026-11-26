@@ -170,6 +170,7 @@
       this._rwFrenzy = FRENZY_S;
       S.frenzy++;
       // fanfare
+      this.haptic && this.haptic([22, 35, 48]);
       if (this.slowMo) this.slowMo(0.35, 0.7);
       if (this.epicFlash) this.epicFlash(0.55, 420, '#ffd56b');
       if (this.epicCallout) this.epicCallout(n > 1 ? `JACKPOT ×${n}!` : 'JACKPOT!', '#ffd56b');
