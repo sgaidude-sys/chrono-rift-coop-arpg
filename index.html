@@ -33,7 +33,7 @@
     // exact URLs the loaders request (monster models carry ?v=2, the others don't)
     var list = ['models/animations_arpg.glb', 'models/env/oak.glb', 'models/env/pines.glb', 'models/env/rocks.glb', 'models/env/bush.glb',
       'models/monsters/qm/blob_greenblob.glb?v=2', 'models/monsters/qm/basic_rat.glb?v=2', 'models/monsters/qm/blob_chicken.glb?v=2'];
-    if (first) list.push('models/heroes/hero_vanguard.glb');
+    if (first) list.push('models/heroes/hero_ranger.glb');            // the prologue is played as Lyra (Ranger)
     // kept in memory and handed to the model loader (gltf_dequant.js), so nothing downloads twice
     var P = window.CR_PREFETCH = {};
     list.forEach(function (u) { try { var abs = new URL(A + u, location.href).href;
@@ -9990,7 +9990,7 @@
   <script src="public/assets/js/mmo_account.js?v=2"></script>
   <script src="public/assets/js/mmo_heroselect.js?v=3"></script>
   <script src="public/assets/js/mmo_offline.js?v=2"></script>
-  <script src="public/assets/js/mmo_prologue.js?v=1"></script>
+  <script src="public/assets/js/mmo_prologue.js?v=2"></script>
   <script src="public/assets/js/mmo_crazy.js?v=1"></script>
 </body>
 </html>
