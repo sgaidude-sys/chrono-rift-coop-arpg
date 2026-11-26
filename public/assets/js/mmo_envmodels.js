@@ -27,7 +27,7 @@
     pine: { file: 'pines.glb', fitFrom: 'pine', fit: 'height', nodes: ['SM_FreeTree_05', 'SM_FreeTree_08', 'SM_FreeTree_06', 'SM_FreeTree_02', 'SM_FreeTree_07'], sway: 0.0035, tint: 0.3, shadow: true, cap: 900, sizeMul: 1.12 },
     rock: { file: 'rocks.glb', fitFrom: 'rock', fit: 'blend', nodes: ['SM_Rocks_01', 'SM_Rocks_02', 'SM_Rocks_04', 'SM_Rocks_06', 'SM_Rocks_07'], sway: 0, tint: 0.55, shadow: false, cap: 1200, sizeMul: 1.0 },
     boulder: { file: 'rocks.glb', fitFrom: 'boulder', fit: 'blend', nodes: ['SM_Rocks_03', 'SM_Rocks_05', 'SM_Rocks_04'], sway: 0, tint: 0.55, shadow: true, cap: 900, sizeMul: 1.0 },
-    bush: { file: 'bush.glb', fitFrom: null, size: { h: 1.15 }, fit: 'height', nodes: null, sway: 0.03, tint: 0.3, shadow: false, cap: isTouch ? 900 : 2200, sizeMul: 1.0 }
+    bush: { file: 'bush.glb', fitFrom: null, size: { h: 1.15 }, fit: 'height', nodes: null, sway: 0.03, tint: 0.3, shadow: false, cap: isTouch ? 1200 : 2200, sizeMul: 1.0 }
   };
 
   // Vertex-clustering simplification: snap vertices to a grid, merge each cell into one
@@ -127,11 +127,20 @@
       const loader = this.loader || new THREE.GLTFLoader();
       const files = {};
       Object.keys(SET).forEach((t) => { if (SET[t].desktopOnly && isTouch) return; (files[SET[t].file] = files[SET[t].file] || []).push(t); });
-      Object.keys(files).forEach((file) => {
-        loader.load(base + file, (gltf) => {
-          files[file].forEach((t) => { try { this.installEnvType(t, gltf); } catch (e) { console.warn('[EnvModels]', t, e); } });
-        }, undefined, (e) => console.warn('[EnvModels] failed to load', file, e));
-      });
+      this._startDeferredEnvModels = () => {
+        if (this._envmStarted) return;
+        this._envmStarted = true;
+        Object.keys(files).forEach((file) => {
+          loader.load(base + file, (gltf) => {
+            files[file].forEach((t) => { try { this.installEnvType(t, gltf); } catch (e) { console.warn('[EnvModels]', t, e); } });
+          }, undefined, (e) => console.warn('[EnvModels] failed to load', file, e));
+        });
+      };
+      if (isTouch && window.CR_FIRST_RUN) {
+        setTimeout(() => this._startDeferredEnvModels && this._startDeferredEnvModels(), 3000);
+      } else {
+        this._startDeferredEnvModels();
+      }
     },
 
     // size of the procedural shape a model replaces (so footprints / collisions keep matching)
@@ -174,7 +183,8 @@
         inst.setColorAt(0, new THREE.Color(1, 1, 1));
         inst.count = 0;
         inst.frustumCulled = false;
-        inst.castShadow = cfg.shadow && !isTouch;
+        inst.userData.envShadow = !!cfg.shadow;
+        inst.castShadow = !!(cfg.shadow && (this.gfxQuality ? this.gfxQuality !== 'low' : true));
         inst.receiveShadow = false;
         inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
         this.scene.add(inst);
@@ -256,10 +266,25 @@
         });
         inst.instanceMatrix.needsUpdate = true;
         if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
+        inst.userData.envShadow = !!(src.userData && src.userData.envShadow);
         inst.castShadow = src.castShadow; inst.receiveShadow = false;
         this.scene.add(inst);
         return inst;
       });
+    },
+
+    applyEnvShadowQuality(level) {
+      const on = level !== 'low';
+      if (this.propInst) {
+        Object.values(this.propInst).forEach((inst) => {
+          if (inst && inst.userData && inst.userData.envShadow) inst.castShadow = on;
+        });
+      }
+      if (this.townDecor) {
+        this.townDecor.forEach((inst) => {
+          if (inst && inst.userData && inst.userData.envShadow) inst.castShadow = on;
+        });
+      }
     },
 
     updateMMOWorld(dt) {

@@ -31,9 +31,12 @@
     window.CR_GROUND_P.catch(function () {});
     // models for the first fight (the browser keeps them for the game's own requests)
     var first = false; try { first = !sessionStorage.getItem('cr_char') && !(JSON.parse(localStorage.getItem('cr_guest_chars') || '[]').length); } catch (e) { /* storage blocked */ }
+    var mob = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || Math.min(screen.width, screen.height) < 820;
     // exact URLs the loaders request (monster models carry ?v=2, the others don't)
-    var list = ['models/animations_arpg.glb', 'models/env/oak.glb', 'models/env/pines.glb', 'models/env/rocks.glb', 'models/env/bush.glb',
-      'models/monsters/qm/blob_greenblob.glb?v=2', 'models/monsters/qm/basic_rat.glb?v=2', 'models/monsters/qm/blob_chicken.glb?v=2'];
+    var list = mob
+      ? ['models/animations_arpg.glb', 'models/monsters/qm/blob_greenblob.glb?v=2', 'models/monsters/qm/basic_rat.glb?v=2', 'models/monsters/qm/blob_chicken.glb?v=2']
+      : ['models/animations_arpg.glb', 'models/env/oak.glb', 'models/env/pines.glb', 'models/env/rocks.glb', 'models/env/bush.glb',
+        'models/monsters/qm/blob_greenblob.glb?v=2', 'models/monsters/qm/basic_rat.glb?v=2', 'models/monsters/qm/blob_chicken.glb?v=2'];
     if (first) list.push('models/heroes/hero_ranger.glb');            // the prologue is played as Lyra (Ranger)
     // kept in memory and handed to the model loader (gltf_dequant.js), so nothing downloads twice
     var P = window.CR_PREFETCH = {};
@@ -9955,11 +9958,11 @@
   <script src="assets/js/mmo_world.js?v=27"></script>
   <script src="assets/js/mmo_rpg.js?v=14"></script>
   <script src="assets/js/mmo_audio.js?v=14"></script>
-  <script src="assets/js/mmo_vfx.js?v=10"></script>
-  <script src="assets/js/mmo_mobile.js?v=12"></script>
-  <script src="assets/js/mmo_sky.js?v=12"></script>
+  <script src="assets/js/mmo_vfx.js?v=11"></script>
+  <script src="assets/js/mmo_mobile.js?v=13"></script>
+  <script src="assets/js/mmo_sky.js?v=13"></script>
   <script src="assets/js/mmo_terrain.js?v=16"></script>
-  <script src="assets/js/mmo_foliage.js?v=24"></script>
+  <script src="assets/js/mmo_foliage.js?v=25"></script>
   <script src="assets/js/mmo_rocks.js?v=4"></script>
   <script src="assets/js/mmo_props.js?v=5"></script>
   <script src="assets/js/mmo_water.js?v=2"></script>
@@ -9967,7 +9970,7 @@
   <script src="assets/js/mmo_combatfx.js?v=5"></script>
   <script src="assets/js/mmo_grounding.js?v=4"></script>
   <script src="assets/js/mmo_anime.js?v=5"></script>
-  <script src="assets/js/mmo_polish.js?v=5"></script>
+  <script src="assets/js/mmo_polish.js?v=6"></script>
   <script src="assets/js/mmo_realism.js?v=1"></script>
   <script src="assets/js/mmo_hud.js?v=5"></script>
   <script src="assets/js/mmo_combat.js?v=7"></script>
@@ -9979,31 +9982,31 @@
   <script src="assets/js/mmo_epic.js?v=3"></script>
   <script src="assets/js/mmo_travel.js?v=7"></script>
   <script src="assets/js/mmo_party.js?v=1"></script>
-  <script src="assets/js/mmo_envmodels.js?v=2"></script>
+  <script src="assets/js/mmo_envmodels.js?v=3"></script>
   <script src="assets/js/mmo_bossmodels.js?v=2"></script>
   <script src="assets/js/mmo_sfx.js?v=2"></script>
   <script src="assets/js/mmo_roles.js?v=1"></script>
   <script src="assets/js/mmo_hunt.js?v=2"></script>
   <script src="assets/js/mmo_cc.js?v=3"></script>
-  <script src="assets/js/mmo_style.js?v=2"></script>
+  <script src="assets/js/mmo_style.js?v=3"></script>
   <script src="assets/js/mmo_flow.js?v=1"></script>
   <script src="assets/js/mmo_moves.js?v=4"></script>
   <script src="assets/js/mmo_kits.js?v=1"></script>
   <script src="assets/js/mmo_overdrive.js?v=1"></script>
   <script src="assets/js/mmo_feel.js?v=1"></script>
-  <script src="assets/js/mmo_mobilehud.js?v=3"></script>
+  <script src="assets/js/mmo_mobilehud.js?v=4"></script>
   <script src="assets/js/mmo_netbatch.js?v=5"></script>
   <script src="assets/js/mmo_teach.js?v=5"></script>
   <script src="assets/js/mmo_foes.js?v=1"></script>
   <script src="assets/js/mmo_legend.js?v=2"></script>
-  <script src="assets/js/mmo_rewards.js?v=6"></script>
+  <script src="assets/js/mmo_rewards.js?v=7"></script>
   <script src="assets/js/mmo_flair.js?v=9"></script>
   <script src="assets/js/mmo_gacha.js?v=4"></script>
   <script src="assets/js/mmo_inkcine.js?v=5"></script>
-  <script src="assets/js/mmo_account.js?v=2"></script>
-  <script src="assets/js/mmo_heroselect.js?v=3"></script>
+  <script src="assets/js/mmo_account.js?v=3"></script>
+  <script src="assets/js/mmo_heroselect.js?v=4"></script>
   <script src="assets/js/mmo_offline.js?v=2"></script>
-  <script src="assets/js/mmo_prologue.js?v=5"></script>
+  <script src="assets/js/mmo_prologue.js?v=6"></script>
   <script src="assets/js/mmo_crazy.js?v=2"></script>
 </body>
 </html>

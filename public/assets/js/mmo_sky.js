@@ -10,7 +10,7 @@
 
   const isTouch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
   const params = new URLSearchParams(location.search);
-  const FX_LOW = params.get('fx') === 'low' || (isTouch && Math.min(screen.width, screen.height) < 820);
+  const FX_LOW = params.get('fx') === 'low';
 
   // Sun direction shared by the sky disk and the shadow-casting light (golden hour, ~28° up)
   const SUN_DIR = new THREE.Vector3(0.48, 0.47, 0.74).normalize();
@@ -260,7 +260,8 @@
       try {
         const w = window.innerWidth, h = window.innerHeight;
         const pr = this.renderer.getPixelRatio();
-        const hdr = this.renderer.capabilities.isWebGL2;
+        const gl = this.renderer.getContext();
+        const hdr = !!(this.renderer.capabilities.isWebGL2 && (gl.getExtension('EXT_color_buffer_half_float') || gl.getExtension('EXT_color_buffer_float')));
         const rt = new THREE.WebGLRenderTarget(w * pr, h * pr, {
           minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat,
           type: hdr ? THREE.HalfFloatType : THREE.UnsignedByteType
@@ -276,8 +277,11 @@
         this.fxOn = true;
         window.addEventListener('resize', () => {
           if (!this.composer) return;
+          const rpr = this.renderer.getPixelRatio();
+          if (this.composer.setPixelRatio) this.composer.setPixelRatio(rpr);
           this.composer.setSize(window.innerWidth, window.innerHeight);
-          this.bloomPass.setSize(window.innerWidth * 0.5, window.innerHeight * 0.5);
+          const bm = this._bloomScale || 0.5;
+          if (this.bloomPass) this.bloomPass.setSize(window.innerWidth * 0.5 * bm, window.innerHeight * 0.5 * bm);
         });
       } catch (e) {
         console.warn('[VFX] HDR pipeline unavailable, using direct ACES', e);

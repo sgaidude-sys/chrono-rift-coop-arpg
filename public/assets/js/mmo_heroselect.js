@@ -120,22 +120,48 @@
   .hs-go:active { transform: translateY(1px); }
   .hs-hint { position: absolute; left: clamp(20px, 4.5vw, 72px); bottom: clamp(20px, 5vh, 56px); font-size: 11px; letter-spacing: .14em; color: rgba(245,242,235,.42); }
   .hs-hint kbd { font: 700 10px 'Plus Jakarta Sans', sans-serif; padding: 2px 5px; border: 1px solid rgba(245,242,235,.3); border-radius: 3px; margin: 0 2px; }
-  /* ---------- narrow screens / phones ---------- */
-  @media (max-width: 900px), (pointer: coarse) and (max-height: 520px) {
-    #hero-modal.hs { background: linear-gradient(180deg, rgba(5,7,12,.82) 0%, rgba(5,7,12,0) 22%, rgba(5,7,12,0) 48%, rgba(5,7,12,.9) 72%) !important; }
-    .hs-left { left: 0; right: 0; top: 14px; width: auto; text-align: center; }
-    .hs-brand { font-size: 15px; } .hs-brand small, .hs-kicker, .hs-hint { display: none; }
-    .hs-roster { flex-direction: row; justify-content: center; gap: 6px; margin-top: 12px; }
+  /* ---------- portrait phones ---------- */
+  @media (max-width: 900px) and (orientation: portrait) {
+    #hero-modal.hs { background: linear-gradient(180deg, rgba(5,7,12,.82) 0%, rgba(5,7,12,0) 22%, rgba(5,7,12,0) 48%, rgba(5,7,12,.92) 72%) !important; }
+    .hs-left { left: 0; right: 0; top: 12px; width: auto; text-align: center; }
+    .hs-brand { font-size: 14px; } .hs-brand small, .hs-kicker, .hs-hint { display: none; }
+    body.cr-lyra-call .hs-brand { display: none; }
+    body.cr-lyra-call .hs-left { top: calc(74px + env(safe-area-inset-top)); }
+    .hs-roster { flex-direction: row; justify-content: center; gap: 6px; margin-top: 10px; }
     .hs-root .class-card { grid-template-columns: 1fr; justify-items: center; gap: 4px; padding: 6px 8px; border-left: 0; border-bottom: 1px solid rgba(245,242,235,.12); }
     .hs-root .class-card.selected { border-bottom-color: var(--c); background: linear-gradient(0deg, color-mix(in srgb, var(--c) 18%, transparent), transparent); }
-    .hs-root .class-card .sg { width: 38px; height: 38px; } .hs-root .class-card .nm { font-size: 11px; } .hs-root .class-card .rl { display: none; }
-    .hs-right { left: 16px; right: 16px; top: auto; bottom: 184px; width: auto; }
-    .hs-name { font-size: 32px; margin: 4px 0 6px; } .hs-blurb { font-size: 12.5px; line-height: 1.5; }
-    .hs-meta { margin: 10px 0 0; padding: 8px 0; } .hs-stats, .hs-sk-h, .hs-sks { display: none; }
-    .hs-bottom { left: 16px; right: 16px; width: auto; gap: 12px 18px; }
-    .hs-go { padding: 15px 0; }
+    .hs-root .class-card .sg { width: 36px; height: 36px; } .hs-root .class-card .nm { font-size: 11px; } .hs-root .class-card .rl { display: none; }
+    .hs-right { left: 16px; right: 16px; top: auto; bottom: 144px; width: auto; }
+    .hs-name { font-size: 28px; margin: 4px 0 6px; } .hs-blurb { font-size: 12px; line-height: 1.45; }
+    .hs-meta { margin: 8px 0 0; padding: 6px 0; } .hs-stats, .hs-sk-h, .hs-sks { display: none; }
+    .hs-bottom { left: 16px; right: 16px; bottom: calc(12px + env(safe-area-inset-bottom)); width: auto; gap: 10px 14px; }
+    .hs-go { padding: 13px 0; font-size: 13.5px; }
     .hs-realm-btn em { display: none; } .hs-realm-btn::after { content: ' ›'; color: #D4AF37; }
     .hs-realm-pop { width: min(340px, calc(100vw - 32px)); }
+  }
+  /* ---------- landscape phones: crisp 2-column framing around centered 3D hero ---------- */
+  @media (max-height: 520px) and (orientation: landscape), (pointer: coarse) and (max-height: 520px) and (min-width: 500px) {
+    #hero-modal.hs { background: linear-gradient(90deg, rgba(5,7,12,.88) 0%, rgba(5,7,12,.45) 22%, rgba(5,7,12,0) 34%, rgba(5,7,12,0) 62%, rgba(5,7,12,.82) 74%, rgba(5,7,12,.94) 100%) !important; }
+    .hs-brand, .hs-brand small, .hs-kicker, .hs-hint, .hs-stats, .hs-sk-h, .hs-sks, .hs-meta, .hs-realm-btn em { display: none; }
+    .hs-left { left: 12px; right: auto; top: 10px; bottom: 10px; width: 148px; text-align: left; display: flex; flex-direction: column; justify-content: center; }
+    .hs-roster { flex-direction: column; gap: 3px; margin-top: 0; }
+    .hs-root .class-card { grid-template-columns: 30px 1fr; justify-items: start; gap: 8px; padding: 6px 8px; border-left: 1px solid rgba(245,242,235,.12); border-bottom: 0; }
+    .hs-root .class-card.selected { border-left-color: var(--c); background: linear-gradient(90deg, color-mix(in srgb, var(--c) 18%, transparent), transparent 88%); }
+    .hs-root .class-card .sg { width: 30px; height: 30px; } .hs-root .class-card .sg::before { inset: 4px; }
+    .hs-root .class-card svg { width: 17px; height: 17px; }
+    .hs-root .class-card .nm { font-size: 12px; letter-spacing: .08em; }
+    .hs-root .class-card .rl { display: block; font-size: 9px; margin-top: 1px; letter-spacing: .08em; }
+    .hs-right { left: auto; right: 12px; top: 10px; bottom: auto; width: min(214px, 31vw); }
+    .hs-ep { font-size: 8.5px; letter-spacing: .24em; }
+    .hs-name { font-size: 22px; margin: 3px 0 4px; }
+    .hs-blurb { font-size: 10.5px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .hs-bottom { left: auto; right: 12px; bottom: 10px; width: min(214px, 31vw); gap: 8px 10px; }
+    .hs-field label { font-size: 8px; margin-bottom: 2px; }
+    .hs-field input { padding: 4px 0; font-size: 13px; }
+    .hs-realm-btn { padding: 4px 0; font-size: 12px; }
+    .hs-realm-btn::after { content: ' ›'; color: #D4AF37; }
+    .hs-go { padding: 10px 0; font-size: 12px; letter-spacing: .18em; }
+    .hs-realm-pop { width: min(300px, calc(100vw - 24px)); }
   }
   @media (max-height: 860px) and (min-width: 901px) { .hs-sk span { display: none; } .hs-sk kbd { grid-row: auto; } .hs-sk { padding: 6px 0; } .hs-sk-h { margin-top: 18px; } .hs-meta { margin: 14px 0 16px; } }
   @media (max-height: 640px) and (min-width: 901px) { .hs-sks, .hs-sk-h, .hs-blurb { display: none; } }
@@ -280,14 +306,15 @@
         const p = this.player, cam = this.camera;
         const face = p.meshRoot ? p.meshRoot.rotation.y : (p.yaw || 0);
         const t = performance.now() / 1000;
-        const narrow = window.innerWidth < 900;
-        const a = face + Math.sin(t * 0.22) * 0.2 + (narrow ? 0 : -0.12);
-        const dist = narrow ? 7.4 : 5.0;
+        const isPortrait = window.innerWidth < 900 && window.innerHeight >= window.innerWidth;
+        const isShortLand = window.innerHeight < 520;
+        const a = face + Math.sin(t * 0.22) * 0.2 + (isPortrait ? 0 : -0.12);
+        const dist = isPortrait ? 7.4 : (isShortLand ? 5.6 : 5.0);
         const base = (this.terrainVisualHeight ? this.terrainVisualHeight(p.pos.x, p.pos.z) : 0) + p.pos.y;
-        _c.set(p.pos.x + Math.sin(a) * dist, base + (narrow ? 2.0 : 1.45), p.pos.z + Math.cos(a) * dist);
+        _c.set(p.pos.x + Math.sin(a) * dist, base + (isPortrait ? 2.0 : 1.45), p.pos.z + Math.cos(a) * dist);
         if (!this._hsCam) this._hsCam = _c.clone(); else this._hsCam.lerp(_c, 0.08);
         cam.position.copy(this._hsCam);
-        _l.set(p.pos.x, base + (narrow ? -0.35 : 1.0), p.pos.z);
+        _l.set(p.pos.x, base + (isPortrait ? -0.35 : (isShortLand ? 0.95 : 1.0)), p.pos.z);
         cam.lookAt(_l);
         cam.updateMatrixWorld();
       }

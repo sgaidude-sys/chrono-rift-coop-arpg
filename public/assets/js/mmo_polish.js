@@ -122,14 +122,15 @@
   // 6) Quality presets
   // ---------------------------------------------------------------------------
   const QUALITY = {
-    low:    { label: 'Low',    pr: 0.8,  prCap: 1.0, shadow: 512,  grass: 0.35, motes: 0.4, bloom: 0 },
-    medium: { label: 'Medium', pr: 1.0,  prCap: 1.25, shadow: 1024, grass: 0.65, motes: 0.7, bloom: 0.5 },
-    high:   { label: 'High',   pr: 1.0,  prCap: 2.0, shadow: 2048, grass: 1.0,  motes: 1.0, bloom: 1.0 }
+    low:    { label: 'Low',    pr: 0.75, prCap: 1.15, shadow: 512,  grass: 0.45, motes: 0.45, bloom: 0,   post: false },
+    medium: { label: 'Medium', pr: 0.85, prCap: 1.65, shadow: 1024, grass: 0.75, motes: 0.75, bloom: 0.5, post: true  },
+    high:   { label: 'High',   pr: 1.0,  prCap: 2.0,  shadow: 2048, grass: 1.0,  motes: 1.0,  bloom: 1.0, post: true  }
   };
   const ORDER = ['low', 'medium', 'high'];
   function defaultQuality() {
-    try { const s = localStorage.getItem('cr_gfx_quality'); if (QUALITY[s]) return s; } catch (e) { /* storage blocked */ }
-    if (isTouch || new URLSearchParams(location.search).get('fx') === 'low') return 'low';
+    try { const s = localStorage.getItem('cr_gfx_quality_v2'); if (QUALITY[s]) return s; } catch (e) { /* storage blocked */ }
+    if (new URLSearchParams(location.search).get('fx') === 'low') return 'low';
+    if (isTouch) return (navigator.deviceMemory && navigator.deviceMemory <= 2) ? 'low' : 'medium';
     return (navigator.hardwareConcurrency || 8) <= 4 ? 'medium' : 'high';
   }
 
@@ -292,7 +293,10 @@
     setGraphicsQuality(level, silent) {
       const Q = QUALITY[level] || QUALITY.high;
       this.gfxQuality = level;
-      try { localStorage.setItem('cr_gfx_quality', level); } catch (e) { /* storage blocked */ }
+      this._bloomScale = Q.bloom || 0.5;
+      if (!silent) {
+        try { localStorage.setItem('cr_gfx_quality_v2', level); } catch (e) { /* storage blocked */ }
+      }
       const r = this.renderer;
       const pr = Math.min(Q.prCap, (window.devicePixelRatio || 1) * Q.pr);
       r.setPixelRatio(pr);
@@ -300,13 +304,10 @@
       if (this.composer) {
         if (this.composer.setPixelRatio) this.composer.setPixelRatio(pr);
         this.composer.setSize(window.innerWidth, window.innerHeight);
-      }
-      // bloom: off on Low (direct render), half-res on Medium, full on High
-      if (this.composer) {
-        this.fxOn = Q.bloom > 0;
+        this.fxOn = Q.post !== false;
         if (this.bloomPass) {
           this.bloomPass.enabled = Q.bloom > 0;
-          this.bloomPass.setSize(window.innerWidth * 0.5 * Q.bloom, window.innerHeight * 0.5 * Q.bloom);
+          if (Q.bloom > 0) this.bloomPass.setSize(window.innerWidth * 0.5 * Q.bloom, window.innerHeight * 0.5 * Q.bloom);
         }
       }
       // shadow map resolution
@@ -315,11 +316,12 @@
         sun.shadow.mapSize.set(Q.shadow, Q.shadow);
         if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
       }
+      if (this.applyEnvShadowQuality) this.applyEnvShadowQuality(level);
       // grass density / ambient particles
       if (this.grassMesh && this.grassCount) this.grassMesh.geometry.instanceCount = Math.max(500, Math.round(this.grassCount * Q.grass));
       if (this.moteMesh && this.moteCount) this.moteMesh.geometry.setDrawRange(0, Math.round(this.moteCount * Q.motes));
-      if (this._gfxBtn) this._gfxBtn.textContent = `🎛️ Graphics: ${Q.label}`;
-      if (!silent && this.showLootToast) this.showLootToast(`🎛️ Graphics quality: ${Q.label}`);
+      if (this._gfxBtn) this._gfxBtn.textContent = `✦ Graphics: ${Q.label}`;
+      if (!silent && this.showLootToast) this.showLootToast(`✦ Graphics quality: ${Q.label}`);
     },
 
     cycleGraphicsQuality() {
@@ -335,7 +337,7 @@
       b.className = 'mini-btn';
       b.title = 'Graphics quality: Low / Medium / High';
       b.onclick = () => this.cycleGraphicsQuality();
-      b.textContent = `🎛️ Graphics: ${(QUALITY[this.gfxQuality] || QUALITY.high).label}`;
+      b.textContent = `✦ Graphics: ${(QUALITY[this.gfxQuality] || QUALITY.high).label}`;
       if (audioBtn && audioBtn.parentNode) audioBtn.parentNode.insertBefore(b, audioBtn.nextSibling);
       else document.body.appendChild(b);
       this._gfxBtn = b;

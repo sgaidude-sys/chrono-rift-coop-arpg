@@ -14,7 +14,7 @@
 
   const isTouch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
   const params = new URLSearchParams(location.search);
-  const FX_LOW = params.get('fx') === 'low' || (isTouch && Math.min(screen.width, screen.height) < 820);
+  const FX_LOW = params.get('fx') === 'low';
 
   // Cinematic grade: contrast, saturation, warm highlights / cool shadows, vignette
   const GradeShader = {
@@ -101,16 +101,31 @@
       else this.renderer.render(this.scene, this.camera);
     },
 
-    // Auto-disable bloom if the device can't keep up
+    // Auto-disable heavy passes if the device can't keep up (after warmup so startup stalls don't trigger)
     adaptiveFX(dt) {
-      if (!this.composer || !this.fxOn) return;
+      if (!this.isInWorld || !this.composer || !this.fxOn) return;
+      this._fxWarmup = (this._fxWarmup || 0) + Math.min(dt, 0.1);
+      if (this._fxWarmup < 4.5) return;
       this._fpsWindow.push(dt);
       if (this._fpsWindow.length < 180) return;
       const avg = this._fpsWindow.reduce((a, b) => a + b, 0) / this._fpsWindow.length;
       this._fpsWindow.length = 0;
-      if (avg > 1 / 34) {
-        this.fxOn = false;
-        console.info('[VFX] low frame rate — bloom disabled');
+      if (avg > 1 / 28) {
+        if (this.bloomPass && this.bloomPass.enabled) {
+          this.bloomPass.enabled = false;
+          if (this.shaftPass) this.shaftPass.enabled = false;
+          const r = this.renderer;
+          if (r && r.getPixelRatio && r.getPixelRatio() > 1.25) {
+            r.setPixelRatio(1.25);
+            r.setSize(window.innerWidth, window.innerHeight);
+            if (this.composer.setPixelRatio) this.composer.setPixelRatio(1.25);
+            this.composer.setSize(window.innerWidth, window.innerHeight);
+          }
+          console.info('[VFX] low frame rate — bloom & shafts stepped down (keeping color grade)');
+        } else if (avg > 1 / 24) {
+          this.fxOn = false;
+          console.info('[VFX] very low frame rate — post-processing disabled');
+        }
       }
     },
 

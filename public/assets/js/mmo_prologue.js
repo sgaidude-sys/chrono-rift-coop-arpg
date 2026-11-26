@@ -127,12 +127,47 @@
     color: #F5F2EB; text-shadow: 0 2px 14px rgba(0,0,0,.85); display: none; width: min(92vw, 640px); }
   body.cr-lyra-call #cr-call { display: block; animation: crOpIn .5s ease; }
   #cr-call .t { font: 900 clamp(17px, 2.4vw, 26px) 'Cinzel', serif; letter-spacing: .16em; color: #ffd56b; }
-  #cr-call .s { font: 600 clamp(12px, 1.4vw, 14px) 'Plus Jakarta Sans', Inter, sans-serif; letter-spacing: .08em; margin-top: 6px; color: rgba(245,242,235,.85); }`;
+  #cr-call .s { font: 600 clamp(12px, 1.4vw, 14px) 'Plus Jakarta Sans', Inter, sans-serif; letter-spacing: .08em; margin-top: 6px; color: rgba(245,242,235,.85); }
+  /* compact mobile layout for opening banners, dialogue & hints */
+  #cr-op-banner.runnable { pointer-events: auto; cursor: pointer; }
+  #cr-op-banner.running { border-color: #2ee68a; box-shadow: 0 4px 18px rgba(0,0,0,.45), 0 0 18px rgba(46,230,138,.35); }
+  body.touch-ui #cr-op-banner { top: calc(56px + env(safe-area-inset-top)); min-width: 0; max-width: min(86vw, 270px); padding: 5px 12px 6px; border-radius: 10px; }
+  body.touch-ui #cr-op-banner .t { font-size: 11.5px; letter-spacing: .09em; }
+  body.touch-ui #cr-op-banner .c { font-size: 10px; margin-top: 2px; }
+  body.touch-ui #cr-op-banner .bar { height: 3px; margin-top: 4px; }
+  body.touch-ui #cr-op-talk { left: 50%; transform: translateX(-50%); bottom: calc(174px + env(safe-area-inset-bottom)); max-width: min(88vw, 340px); padding: 7px 11px; gap: 8px; border-radius: 11px; animation: none; }
+  body.touch-ui #cr-op-talk .pf { width: 28px; height: 28px; font-size: 14px; border-width: 1.5px; }
+  body.touch-ui #cr-op-talk .nm { font-size: 9.5px; }
+  body.touch-ui #cr-op-talk .tx { font-size: 11.5px; line-height: 1.35; margin-top: 1px; min-height: 16px; }
+  body.touch-ui #cr-op-hints { bottom: calc(146px + env(safe-area-inset-bottom)); gap: 6px; }
+  body.touch-ui #cr-op-hints .h { padding: 5px 10px; font-size: 11px; }
+  body.touch-ui #cr-op-tip { right: auto; left: 50%; transform: translateX(-50%); bottom: calc(142px + env(safe-area-inset-bottom)); padding: 6px 11px; font-size: 11px; max-width: 84vw; text-align: center; }
+  @media (max-height: 500px) {
+    body.touch-ui #cr-op-banner { top: calc(5px + env(safe-area-inset-top)); max-width: min(44vw, 250px); padding: 4px 11px 5px; }
+    body.touch-ui #cr-op-banner .t { font-size: 10.5px; }
+    body.touch-ui #cr-op-banner .c { font-size: 9.5px; }
+    body.touch-ui #cr-op-talk { bottom: calc(8px + env(safe-area-inset-bottom)); max-width: min(48vw, 310px); padding: 5px 9px; gap: 7px; }
+    body.touch-ui #cr-op-talk .pf { width: 24px; height: 24px; font-size: 12px; }
+    body.touch-ui #cr-op-talk .tx { font-size: 10.5px; line-height: 1.3; }
+    body.touch-ui #cr-op-hints { bottom: calc(10px + env(safe-area-inset-bottom)); }
+    body.touch-ui #cr-op-tip { bottom: calc(10px + env(safe-area-inset-bottom)); max-width: min(48vw, 300px); }
+    #cr-call { top: calc(6px + env(safe-area-inset-top)); left: calc(50% - 30px); width: min(36vw, 290px); }
+    #cr-call .t { font-size: 13px; letter-spacing: .1em; }
+    #cr-call .s { display: none; }
+  }`;
 
   function ensureUi() {
     if (document.getElementById('cr-op-banner')) return;
     const st = document.createElement('style'); st.id = 'cr-op-css'; st.textContent = CSS; document.head.appendChild(st);
     const b = document.createElement('div'); b.id = 'cr-op-banner'; b.innerHTML = '<div class="t"></div><div class="c"></div><div class="bar"><i></i></div>';
+    b.addEventListener('click', (e) => {
+      if (!b.classList.contains('runnable')) return;
+      e.stopPropagation();
+      if (window.game && window.game.toggleAutoRun) {
+        if (window.game.audio) window.game.audio.init();
+        window.game.toggleAutoRun();
+      }
+    });
     const h = document.createElement('div'); h.id = 'cr-op-hints';
     const t = document.createElement('div'); t.id = 'cr-op-tip';
     const k = document.createElement('div'); k.id = 'cr-op-talk'; k.innerHTML = '<div class="pf"></div><div><div class="nm"></div><div class="tx"></div></div>';
@@ -210,29 +245,62 @@
     });
   }
 
-  // First run only: download just what the first fight needs. The other heroes, the town NPCs and the
-  // later-zone monsters (incl. MALAKOR) are queued and fetched a few seconds into the prologue,
-  // long before the player reaches town (placeholders upgrade when each model arrives).
+  // First run & mobile load diet: download just what the opening scene needs immediately.
+  // Remaining heroes, weapons, NPCs, props and later-zone monsters stream smoothly in the background.
   const loadAll0 = GP.loadAllAssets;
   GP.loadAllAssets = function () {
-    if (!window.CR_FIRST_RUN || !this.loader) return loadAll0.apply(this, arguments);
+    const isCoarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    if ((!window.CR_FIRST_RUN && !isCoarse) || !this.loader) return loadAll0.apply(this, arguments);
     const L = this.loader, real = L.load.bind(L);
-    const cls = (window.CR_ACCOUNT && CR_ACCOUNT.playing && CR_ACCOUNT.playing.cls) || 'vanguard';
-    // the hero is built from this class's model as soon as it arrives (the start-up waits for it)
-    if (this.player && this.player.classId !== cls) this.player.classId = cls;
+    const cls = (window.CR_ACCOUNT && CR_ACCOUNT.playing && CR_ACCOUNT.playing.cls) || (this.player && this.player.classId) || 'vanguard';
+    if (window.CR_FIRST_RUN && this.player && this.player.classId !== cls) this.player.classId = cls;
+    const hc = typeof HERO_CLASSES !== 'undefined' ? HERO_CLASSES[cls] : null;
+    const keepW = new Set(['Arrow', (this.player && this.player.weaponId) || (hc && hc.defaultWeapon) || '', (this.player && this.player.offhandId) || (hc && hc.defaultOffhand) || ''].filter(Boolean));
     const q = this._deferredLoads = [];
     L.load = function (url) {
-      const u = String(url), m = /heroes\/hero_(\w+)\.glb/.exec(u);
-      if (/models\/npcs\//.test(u) || /models\/monsters\/(monster_|boss_)/.test(u) || (m && m[1] !== cls)) { q.push(Array.prototype.slice.call(arguments)); return undefined; }
+      const u = String(url);
+      if (window.CR_FIRST_RUN) {
+        const hm = /heroes\/hero_(\w+)\.glb/.exec(u);
+        const wm = /models\/weapons\/([^/?]+)\.glb/.exec(u);
+        if (/models\/npcs\//.test(u) || /models\/props\//.test(u) || /models\/monsters\/(monster_|boss_)/.test(u)
+            || (hm && hm[1] !== cls) || (wm && !keepW.has(wm[1]))) {
+          q.push(Array.prototype.slice.call(arguments));
+          return undefined;
+        }
+      } else if (isCoarse) {
+        if (/models\/monsters\/(monster_|boss_)/.test(u)) {
+          q.push(Array.prototype.slice.call(arguments));
+          return undefined;
+        }
+      }
       return real.apply(null, arguments);
     };
     try { return loadAll0.apply(this, arguments); } finally { L.load = real; }
   };
-  GP.releaseDeferredLoads = function () {
-    const q = this._deferredLoads; if (!q) return;
+  GP.releaseDeferredLoads = function (immediate) {
+    if (this._startDeferredEnvModels) this._startDeferredEnvModels();
+    const q = this._deferredLoads || [];
     this._deferredLoads = null;
+    const sq = this._staggerQueue || [];
+    this._staggerQueue = null;
+    const all = q.concat(sq);
+    if (!all.length) return;
     if (window.crMark) crMark('deferred_released');
-    q.forEach((a) => this.loader.load.apply(this.loader, a));
+    if (immediate) {
+      all.forEach((a) => this.loader.load.apply(this.loader, a));
+      return;
+    }
+    const prio = (u) => (/heroes\//.test(u) ? 0 : (/weapons\//.test(u) ? 1 : (/npcs\/|props\//.test(u) ? 2 : 3)));
+    all.sort((a, b) => prio(String(a[0])) - prio(String(b[0])));
+    this._staggerQueue = all;
+    const step = () => {
+      if (!this._staggerQueue || !this._staggerQueue.length) { this._staggerQueue = null; return; }
+      const batch = this._staggerQueue.splice(0, 5);
+      batch.forEach((a) => this.loader.load.apply(this.loader, a));
+      if (this._staggerQueue && this._staggerQueue.length) setTimeout(step, 350);
+      else this._staggerQueue = null;
+    };
+    step();
   };
 
   // first rendered frame (start-up timing)
@@ -333,7 +401,7 @@
       glow.rotation.x = -Math.PI / 2; glow.position.y = 0.03; g.add(glow);
       const light = glow;
       this.scene.add(g);
-      setTimeout(() => this.releaseDeferredLoads && this.releaseDeferredLoads(), 6000);
+      setTimeout(() => this.releaseDeferredLoads && this.releaseDeferredLoads(false), 4500);
 
       this._op = { t: 0, kills: 0, wave: 1, mobs: [], g, ring, light, C, P, vfxT: 0, done: false };
       // wave 1: three right in front of the hero
@@ -391,7 +459,7 @@
       this._op = null; this._lyraPick = true;
       hideBanner(); hideTalk();
       const st = this.openingState(); if (st) { st.stage = 2; this.saveMMOState && this.saveMMOState(); }
-      this.releaseDeferredLoads && this.releaseDeferredLoads();             // all four hero models for the previews
+      this.releaseDeferredLoads && this.releaseDeferredLoads(true);             // all four hero models for the previews
       ensureUi();
       document.body.classList.add('cr-lyra-call');
       this._lockedClass = null;                                             // Lyra's class lock no longer applies
@@ -536,7 +604,9 @@
       const p = this.player, B = this._opBeacon;
       const d = B ? Math.round(Math.hypot(B.target.x - p.pos.x, B.target.z - p.pos.z)) : 0;
       const where = this.isInTownSafeZone && this.isInTownSafeZone(p.pos) ? `Head into the Meadows · ${d} m` : (d > 14 ? `Beacon ${d} m away` : 'Monsters nearby!');
-      banner('FIRST HUNT: DEFEAT 10 MONSTERS', `${st.kills} / ${MISSION} · ${where}`, st.kills / MISSION, 'gold' + (fresh ? ' pop' : ''));
+      const runHint = isTouch() ? (this._autoRun ? ' · Running… (tap stop)' : ' · Tap to Auto-Run') : '';
+      const cls = 'gold' + (fresh ? ' pop' : '') + (isTouch() ? (' runnable' + (this._autoRun ? ' running' : '')) : '');
+      banner('FIRST HUNT: DEFEAT 10 MONSTERS', `${st.kills} / ${MISSION} · ${where}${runHint}`, st.kills / MISSION, cls);
     },
 
     finishFirstMission() {
@@ -622,8 +692,11 @@
         // safety net: never get stuck in the prologue
         if (O.t > 75 && !O.done) this.finishPrologue();
       }
-      // safety net for the deferred downloads (e.g. the prologue was skipped on a resume)
-      if (this._deferredLoads && this.isInWorld) { this._deferT = (this._deferT || 0) + dt; if (this._deferT > 10) this.releaseDeferredLoads(); }
+      // safety net for the deferred downloads (e.g. returning mobile session or skipped prologue)
+      if ((this._deferredLoads || (this._envm && !this._envmStarted)) && this.isInWorld) {
+        this._deferT = (this._deferT || 0) + dt;
+        if (this._deferT > (this._op ? 10 : 3)) this.releaseDeferredLoads(false);
+      }
       if (this._opAfterIntro && !this.cutsceneActive && !this._op) {
         this._opAfterIntro = false;
         this.startFirstMission();

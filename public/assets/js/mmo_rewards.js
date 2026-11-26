@@ -78,8 +78,11 @@
   #cr-tal-nudge kbd { padding: 1px 6px; border-radius: 4px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3); font: 700 10.5px 'JetBrains Mono', monospace; color: #F5F2EB; }
   #cr-tal-nudge .x { all: unset; cursor: pointer; padding: 2px 5px; font: 700 14px Inter, sans-serif; color: rgba(245,242,235,.6); }
   #cr-tal-nudge .x:hover { color: #fff; }
-  body.touch-ui #cr-tal-nudge { right: auto; bottom: auto; top: 66px; left: 50%; transform: translateX(-50%); max-width: 92vw; }
+  body.touch-ui #cr-tal-nudge { right: auto; bottom: auto; top: 108px; left: 50%; transform: translateX(-50%); max-width: 90vw; padding: 6px 11px; font-size: 11.5px; }
   body.touch-ui #cr-tal-nudge kbd { display: none; }
+  @media (max-height: 500px) {
+    body.touch-ui #cr-tal-nudge { top: auto; bottom: 10px; padding: 5px 10px; font-size: 11px; }
+  }
   body.cr-title-on #cr-tal-nudge, body.cr-acct-on #cr-tal-nudge, body.cr-prologue #cr-tal-nudge, body.cr-lyra-call #cr-tal-nudge, body.epic-cine #cr-tal-nudge { display: none !important; }
   `;
 

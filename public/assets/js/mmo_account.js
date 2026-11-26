@@ -129,6 +129,18 @@
     #cr-acct { background: linear-gradient(180deg, rgba(5,7,12,.55) 0%, rgba(5,7,12,.88) 40%, rgba(5,7,12,.95) 100%); }
     #cr-acct .pane { left: 16px; right: 16px; width: auto; top: auto; bottom: 16px; transform: none; max-height: calc(100vh - 32px); }
     #cr-acct h2 { margin-top: 20px; }
+  }
+  @media (max-height: 520px) {
+    #cr-acct .pane { top: 10px; bottom: 10px; transform: none; max-height: calc(100vh - 20px); }
+    #cr-acct .brand { font-size: 18px; }
+    #cr-acct .brand small { display: none; }
+    #cr-acct h2 { margin: 12px 0 4px; font-size: 16px; }
+    #cr-acct .sub { font-size: 11.5px; margin-bottom: 10px; }
+    #cr-acct .who { margin-top: 10px; padding-bottom: 8px; }
+    #cr-acct .ch { padding: 8px 10px; gap: 10px; }
+    #cr-acct .ch .sg { width: 34px; height: 34px; }
+    #cr-acct .ch .nm { font-size: 14px; }
+    #cr-acct .btn { padding: 9px 12px; font-size: 11.5px; }
   }`;
 
   const GP = ChronoRiftCoOpGame.prototype;

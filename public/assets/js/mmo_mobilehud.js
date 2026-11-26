@@ -32,12 +32,12 @@
   };
 
   const css = `
-  #hud-sys { display: none; position: fixed; top: 6px; left: 186px; z-index: 14; gap: 5px; }
+  #hud-sys { display: none; position: fixed; top: 6px; left: 158px; z-index: 14; gap: 4px; }
   body.touch-ui #hud-sys { display: flex; }
   body.cr-title-on #hud-sys, body.cr-acct-on #hud-sys, body.epic-cine #hud-sys { display: none !important; }
-  #hud-sys button { all: unset; box-sizing: border-box; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
-    background: rgba(12,16,28,.78); border: 1.5px solid rgba(243,200,107,.5); color: #f5f2eb; font: 700 16px/1 Inter, sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,.45); }
-  #hud-sys button svg, #minimap-wrap.folded .hud-fold svg { width: 17px; height: 17px; fill: none; stroke: #f5f2eb; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; display: block; }
+  #hud-sys button { all: unset; box-sizing: border-box; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
+    background: rgba(12,16,28,.78); border: 1.5px solid rgba(243,200,107,.5); color: #f5f2eb; font: 700 14px/1 Inter, sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,.45); }
+  #hud-sys button svg, #minimap-wrap.folded .hud-fold svg { width: 14px; height: 14px; fill: none; stroke: #f5f2eb; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; display: block; }
   #hud-sys button:active { transform: scale(.92); }
   #hud-sys button.pulse { animation: hudPulse 1.6s ease-in-out 4; }
   @keyframes hudPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(243,200,107,.0); } 50% { box-shadow: 0 0 0 7px rgba(243,200,107,.35); } }
@@ -45,32 +45,38 @@
     background: rgba(10,14,24,.92); color: #f5f2eb; border: 1px solid rgba(243,200,107,.5); border-radius: 10px; padding: 8px 12px; font: 600 12.5px/1.4 Inter, sans-serif; max-width: min(86vw, 420px); text-align: center; }
   #hud-toast.on { opacity: 1; }
   /* fold buttons */
-  .hud-fold { all: unset; cursor: pointer; font: 800 13px/1 Inter, sans-serif; color: #f3c86b; padding: 2px 6px; border-radius: 6px; background: rgba(0,0,0,.35); margin-left: auto; }
+  .hud-fold { all: unset; cursor: pointer; font: 800 12px/1 Inter, sans-serif; color: #f3c86b; padding: 2px 6px; border-radius: 6px; background: rgba(0,0,0,.35); margin-left: auto; }
   #story-tracker.folded > :not(.story-tracker-head) { display: none !important; }
-  #minimap-wrap .hud-fold { position: absolute; top: 2px; left: 2px; z-index: 2; font-size: 12px; padding: 1px 5px; }
+  #minimap-wrap .hud-fold { position: absolute; top: 2px; left: 2px; z-index: 2; font-size: 11px; padding: 1px 4px; }
   #minimap-wrap.folded { padding: 0 !important; background: transparent !important; border: none !important; box-shadow: none !important; }
   #minimap-wrap.folded > :not(.hud-fold) { display: none !important; }
-  #minimap-wrap.folded .hud-fold { position: static; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; font-size: 17px;
+  #minimap-wrap.folded .hud-fold { position: static; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; font-size: 14px;
     background: rgba(12,16,28,.78); border: 1.5px solid rgba(243,200,107,.5); }
   /* clean */
   body.touch-ui.hud-clean #tut-pill, body.touch-ui.hud-clean #story-tracker, body.touch-ui.hud-clean #style-rank .hits,
+  body.touch-ui.hud-clean #party-panel .currency-pills, body.touch-ui.hud-clean #travel-bar button.locked,
   body.touch-ui.hud-clean #mmo-quick button:not([data-a="menu"]):not([data-a="chat"]) { display: none !important; }
-  body.touch-ui.hud-clean #minimap-canvas { width: 76px !important; height: 76px !important; }
+  body.touch-ui.hud-clean #minimap-canvas { width: 64px !important; height: 64px !important; }
   body.touch-ui.hud-clean .minimap-caption { display: none !important; }
+  body.touch-ui.hud-clean #mmo-quick { top: 82px !important; }
   /* combat only */
   body.touch-ui.hud-combat #tut-pill, body.touch-ui.hud-combat #story-tracker, body.touch-ui.hud-combat #minimap-wrap,
   body.touch-ui.hud-combat #mmo-quick button:not([data-a="menu"]), body.touch-ui.hud-combat #style-rank,
   body.touch-ui.hud-combat #party-panel .hero-name-line, body.touch-ui.hud-combat #party-panel .hero-sub-line,
   body.touch-ui.hud-combat #party-panel .currency-pills, body.touch-ui.hud-combat #party-panel .class-badge { display: none !important; }
-  body.touch-ui.hud-combat #party-panel { width: 150px !important; padding: 5px 6px !important; }
+  body.touch-ui.hud-combat #party-panel { width: 126px !important; padding: 4px 6px !important; }
+  body.touch-ui.hud-combat #mmo-quick { top: 6px !important; }
   body.touch-ui.hud-clean:not(.chat-open) #chat-panel, body.touch-ui.hud-combat:not(.chat-open) #chat-panel { display: none !important; }
-  /* landscape phones: quick buttons in one row under the minimap, mounts above the joystick */
+  /* landscape phones: compact quick buttons in one row under the minimap, mounts above the joystick */
   @media (max-height: 500px) {
-    body.touch-ui #mmo-quick { flex-direction: row-reverse !important; top: 130px !important; bottom: auto !important; right: 6px !important; gap: 6px !important; }
-    body.touch-ui #mmo-quick button { width: 34px !important; height: 34px !important; font-size: 16px !important; }
-    body.touch-ui.hud-clean #mmo-quick, body.touch-ui.hud-combat #mmo-quick { top: 92px !important; }
-    body.touch-ui #travel-bar { right: auto !important; left: 20px !important; top: auto !important; bottom: 142px !important; flex-direction: row !important; }
-    body.touch-ui #travel-bar button { width: 34px !important; height: 34px !important; }
+    body.touch-ui #mmo-quick { flex-direction: row-reverse !important; top: 82px !important; bottom: auto !important; right: 6px !important; gap: 5px !important; }
+    body.touch-ui #mmo-quick button { width: 30px !important; height: 30px !important; font-size: 14px !important; }
+    body.touch-ui #mmo-quick button svg { width: 15px !important; height: 15px !important; }
+    body.touch-ui.hud-clean #minimap-canvas { width: 56px !important; height: 56px !important; }
+    body.touch-ui.hud-clean #mmo-quick, body.touch-ui.hud-combat #mmo-quick { top: 70px !important; }
+    body.touch-ui.hud-combat #mmo-quick { top: 6px !important; }
+    body.touch-ui #travel-bar { right: auto !important; left: 12px !important; top: auto !important; bottom: 118px !important; flex-direction: row !important; gap: 6px !important; }
+    body.touch-ui #travel-bar button { width: 30px !important; height: 30px !important; }
   }`;
 
   const GP = ChronoRiftCoOpGame.prototype;
@@ -201,8 +207,14 @@
       if (!this._hudBar || !this.touchUI) return;
       const pp = document.getElementById('party-panel');
       if (!pp || !pp.offsetParent) return;
-      const left = Math.round(pp.getBoundingClientRect().right + 6) + 'px';
+      const rect = pp.getBoundingClientRect();
+      const left = Math.round(rect.right + 5) + 'px';
       if (this._hudBar.style.left !== left) this._hudBar.style.left = left;
+      const chip = document.getElementById('cr-obj-chip');
+      if (chip) {
+        const top = Math.round(rect.bottom + 5) + 'px';
+        if (chip.style.top !== top) chip.style.top = top;
+      }
     }
   });
 })();

@@ -50,7 +50,15 @@
   #style-rank .hits b { font-size: 15px; color: #f5f2eb; letter-spacing: 0; margin-right: 4px; }
   #epic-combo { display: none !important; }
   body.epic-cine #style-rank, body.cr-title-on #style-rank { opacity: 0 !important; }
-  body.touch-ui #style-rank { top: 22%; right: 3vw; } body.touch-ui #style-rank .l { font-size: 44px; } body.touch-ui #style-rank .gauge { width: 110px; }`;
+  body.touch-ui #style-rank { top: 172px; right: 10px; }
+  body.touch-ui #style-rank .l { font-size: 36px; }
+  body.touch-ui #style-rank .gauge { width: 88px; }
+  @media (max-height: 500px) {
+    body.touch-ui #style-rank { top: 106px; right: 10px; }
+    body.touch-ui #style-rank .l { font-size: 28px; }
+    body.touch-ui #style-rank .nm { font-size: 9px; letter-spacing: 2px; }
+    body.touch-ui #style-rank .gauge { width: 72px; height: 3px; }
+  }`;
 
   const GP = ChronoRiftCoOpGame.prototype;
   const orig = {
