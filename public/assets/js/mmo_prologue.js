@@ -23,8 +23,8 @@
  *   5. Rewards are equipped automatically (no trip to the gear menu). A "Rift-Touched Alpha" elite
  *      appears a short run further out (beacon, health banner, Rift Rat adds at half health) and
  *      drops Epic armor, about four minutes in.
- *   6. "Report to Lyra": back at the gate she hands the hero on to Warden Elric's quests (stage 7)
- *      and promises a daily supply cache: one free Rift Cache pull on each later day played.
+ *   6. "Report to Lyra": back at the gate she hands the hero on to Warden Elric's quests (stage 7),
+ *      a cliffhanger names the Meadows' tyrant, and Lyra's 7-day supply cache opens (mmo_daily.js).
  *  Runs once per hero (mmoState.opening). Heroes that already saw Chapter I skip it all.
  * ============================================================================= */
 (function () {
@@ -75,9 +75,6 @@
       window.CR_FIRST_RUN = true;
     } catch (e) { /* storage blocked: the normal flow still works */ }
   };
-
-  // local calendar day, e.g. "2026-11-27" (the daily supply cache refills at local midnight)
-  const dayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
   if (typeof ChronoRiftCoOpGame === 'undefined') return;                   // a class declaration, not a window property
   const GP = ChronoRiftCoOpGame.prototype;
@@ -770,30 +767,29 @@
 
     finishReturn() {
       const st = this.openingState(); if (st.stage !== 6) return;
-      st.stage = 7; st.cacheDay = dayKey(); this.saveMMOState && this.saveMMOState();
+      st.stage = 7; this.saveMMOState && this.saveMMOState();
       this.clearOpBeacon();
       if (this._autoRun && this.stopAutoRun) this.stopAutoRun();
       voiced(this, 'town_lyra_2', LYRA[0], LYRA[1], 'An Alpha, this close to the walls… The breach is spreading. Find Warden Elric. He\'ll need every blade. I\'ll hold the gate.', 8);
       banner('NEW QUESTS UNLOCKED', 'Warden Elric is waiting beside the gate', 1, 'gold done pop');
-      setTimeout(() => {
-        banner('LYRA\'S SUPPLY CACHE', 'Come back tomorrow: a free Rift Cache pull', 1, 'gold');
-        setTimeout(() => { if (this.openingState().stage === 7) hideBanner(); }, 7000);
-      }, 8500);
       tip('Talk to Warden Elric (❗) for your next quests · [U] Rift Cache: 1 free pull', 9);
+      // cliffhanger: the Meadows' tyrant, then Lyra's daily supply cache (day 1 of the login track)
+      this._opOutro = true;                                                  // the daily card waits for this
+      setTimeout(() => { this._opOutro = false; }, 22000);
+      setTimeout(() => {
+        if (this.openingState().stage !== 7) return;
+        hideBanner();
+        caption('THE NEXT THREAT', 'Mycelord Fungaron stirs in the Meadows', 5);
+        if (this.spawnVFXFlipbook) this.spawnVFXFlipbook('vortex', this.player.pos, 6, 1.0, 0x9a6bff);
+        setTimeout(() => {
+          banner('TYRANT OF THE MEADOWS', 'Level up on Elric\'s quests, then take him down', 1, 'danger');
+          setTimeout(() => { hideBanner(); this._opOutro = false; if (this.dlyOpen && this.dlyClaimable && this.dlyClaimable()) this.dlyOpen(); }, 5500);
+        }, 4800);
+      }, 8500);
     },
 
-    // returning on a later day: Lyra's supply cache has refilled (one free pull per day)
-    checkDailyCache() {
-      const st = this.openingState(); if (!st || st.stage < 4) return;
-      const today = dayKey();
-      if (!st.cacheDay) { st.cacheDay = today; this.saveMMOState && this.saveMMOState(); return; }
-      if (st.cacheDay === today) return;
-      st.cacheDay = today; this.saveMMOState && this.saveMMOState();
-      if (this.grantFreeRiftPull) this.grantFreeRiftPull('Lyra\'s Supply Cache');
-      else if (this.sigilAdd) this.sigilAdd(1, 'Lyra\'s Supply Cache');
-      banner('LYRA\'S SUPPLY CACHE', 'Welcome back! A free Rift Cache pull is waiting in ☰', 1, 'gold done pop');
-      setTimeout(hideBanner, 7000);
-    },
+    // the daily reward now lives in the 7-day login track (mmo_daily.js); kept for saves that call it
+    checkDailyCache() {},
 
     // ---------------------------------------------------------------------------------------------
     // hooks

@@ -574,7 +574,7 @@
         const f = frac.toFixed(3);
         if (s.last !== f) { s.last = f; s.sw.style.setProperty('--cd', f); }
       });
-      if (U.potN) set(U.potN, 'potN', String(p.potions || 0));
+      if (U.potN) set(U.potN, 'potNTxt', String(p.potions || 0));   // cache key must differ from the element's own key
       // quick-menu talent badge
       const tb = U.quick.querySelector('[data-a="talents"]');
       if (tb && this.talentPointsTotal) tb.classList.toggle('has', this.talentPointsTotal() > this.talentPointsSpent());
