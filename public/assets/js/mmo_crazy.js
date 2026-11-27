@@ -218,6 +218,7 @@
     if (!S.ready || v === S.playing) return;
     S.playing = v;
     if (v && !loadingDone) stopLoading();
+    if (v && window.crMark) crMark('gameplay_start');
     safe(() => v ? CG.game.gameplayStart() : CG.game.gameplayStop());
     log(v ? 'gameplayStart' : 'gameplayStop');
   }

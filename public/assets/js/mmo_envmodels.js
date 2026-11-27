@@ -138,7 +138,8 @@
         });
       };
       if (isTouch && window.CR_FIRST_RUN) {
-        setTimeout(() => this._startDeferredEnvModels && this._startDeferredEnvModels(), 3000);
+        // after the hero model is in (a fixed timer let scenery compete with it on slow connections)
+        (window.CR_HERO_READY || Promise.resolve()).then(() => setTimeout(() => this._startDeferredEnvModels && this._startDeferredEnvModels(), 600));
       } else {
         this._startDeferredEnvModels();
       }

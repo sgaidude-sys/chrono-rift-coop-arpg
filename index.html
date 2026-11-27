@@ -29,6 +29,8 @@
       return b;
     })();
     window.CR_GROUND_P.catch(function () {});
+    // the hero model downloads first: sounds, effect sheets and scenery wait for it (or 9 s at most)
+    var heroReady; window.CR_HERO_READY = new Promise(function (r) { heroReady = r; }); window.CR_HERO_READY_DONE = function () { heroReady(); }; setTimeout(heroReady, 9000);
     // models for the first fight (the browser keeps them for the game's own requests)
     var first = false; try { first = !sessionStorage.getItem('cr_char') && !(JSON.parse(localStorage.getItem('cr_guest_chars') || '[]').length); } catch (e) { /* storage blocked */ }
     var mob = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || Math.min(screen.width, screen.height) < 820;
@@ -2064,7 +2066,8 @@
         comp.connect(this.masterGain);
         this.masterGain.connect(this.ctx.destination);
 
-        this.preloadSamples();
+        // sound effects download after the hero model, so a slow connection gets into the world first
+        (window.CR_HERO_READY || Promise.resolve()).then(() => this.preloadSamples());
         this.setZone(this.zone || 'ashenvale_bastion', true);
       }
 
@@ -2690,11 +2693,11 @@
           t.generateMipmaps = true;
           return t;
         };
-        const texPlaza = loadTiledTex('public/assets/vfx/floor_plaza.png');
-        const texCobble = loadTiledTex('public/assets/vfx/floor_cobble.png');
-        const texGrass = loadTiledTex('public/assets/vfx/floor_grass.png');
-        const texCatacomb = loadTiledTex('public/assets/vfx/floor_catacomb.png');
-        const texScifi = loadTiledTex('public/assets/vfx/floor_scifi.png');
+        const texPlaza = loadTiledTex('public/assets/vfx/floor_plaza.webp');
+        const texCobble = loadTiledTex('public/assets/vfx/floor_cobble.webp');
+        const texGrass = loadTiledTex('public/assets/vfx/floor_grass.webp');
+        const texCatacomb = loadTiledTex('public/assets/vfx/floor_catacomb.webp');
+        const texScifi = loadTiledTex('public/assets/vfx/floor_scifi.webp');
 
         // Shared soft radial contact shadow decal texture for grounded entities & props
         const aoCanvas = document.createElement('canvas');
@@ -3434,22 +3437,23 @@
         const texLoader = new THREE.TextureLoader();
         const vfxList = {
           anima: 'public/assets/vfx/effect_anima.png',
-          bighit: 'public/assets/vfx/effect_bighit.png',
-          charged: 'public/assets/vfx/effect_charged.png',
+          bighit: 'public/assets/vfx/effect_bighit.webp',
+          charged: 'public/assets/vfx/effect_charged.webp',
           eldenring: 'public/assets/vfx/effect_eldenring.png',
-          explosion: 'public/assets/vfx/effect_explosion.png',
-          impact: 'public/assets/vfx/effect_impact.png',
-          smallhit: 'public/assets/vfx/effect_smallhit.png',
-          vortex: 'public/assets/vfx/effect_vortex.png'
+          explosion: 'public/assets/vfx/effect_explosion.webp',
+          impact: 'public/assets/vfx/effect_impact.webp',
+          smallhit: 'public/assets/vfx/effect_smallhit.webp',
+          vortex: 'public/assets/vfx/effect_vortex.webp'
         };
-        Object.entries(vfxList).forEach(([k, url]) => {
+        // effect sheets wait for the hero model (hits show plain sparks until they arrive)
+        (window.CR_HERO_READY || Promise.resolve()).then(() => Object.entries(vfxList).forEach(([k, url]) => {
           texLoader.load(
             url,
             (t) => { this.vfxTextures[k] = t; },
             undefined,
             (err) => console.warn('[TextureLoader] Failed to load VFX texture:', url, err)
           );
-        });
+        }));
 
         this.rebuildHeroMesh();
 
@@ -9969,7 +9973,7 @@
   <script src="public/assets/js/mmo_audio.js?v=14"></script>
   <script src="public/assets/js/mmo_vfx.js?v=12"></script>
   <script src="public/assets/js/mmo_mobile.js?v=15"></script>
-  <script src="public/assets/js/mmo_sky.js?v=14"></script>
+  <script src="public/assets/js/mmo_sky.js?v=15"></script>
   <script src="public/assets/js/mmo_terrain.js?v=17"></script>
   <script src="public/assets/js/mmo_foliage.js?v=26"></script>
   <script src="public/assets/js/mmo_rocks.js?v=4"></script>
@@ -9979,7 +9983,7 @@
   <script src="public/assets/js/mmo_combatfx.js?v=5"></script>
   <script src="public/assets/js/mmo_grounding.js?v=4"></script>
   <script src="public/assets/js/mmo_anime.js?v=5"></script>
-  <script src="public/assets/js/mmo_polish.js?v=7"></script>
+  <script src="public/assets/js/mmo_polish.js?v=8"></script>
   <script src="public/assets/js/mmo_realism.js?v=1"></script>
   <script src="public/assets/js/mmo_hud.js?v=5"></script>
   <script src="public/assets/js/mmo_combat.js?v=7"></script>
@@ -9991,7 +9995,7 @@
   <script src="public/assets/js/mmo_epic.js?v=3"></script>
   <script src="public/assets/js/mmo_travel.js?v=8"></script>
   <script src="public/assets/js/mmo_party.js?v=1"></script>
-  <script src="public/assets/js/mmo_envmodels.js?v=5"></script>
+  <script src="public/assets/js/mmo_envmodels.js?v=6"></script>
   <script src="public/assets/js/mmo_bossmodels.js?v=3"></script>
   <script src="public/assets/js/mmo_sfx.js?v=2"></script>
   <script src="public/assets/js/mmo_roles.js?v=1"></script>
@@ -10015,7 +10019,7 @@
   <script src="public/assets/js/mmo_account.js?v=3"></script>
   <script src="public/assets/js/mmo_heroselect.js?v=5"></script>
   <script src="public/assets/js/mmo_offline.js?v=2"></script>
-  <script src="public/assets/js/mmo_prologue.js?v=9"></script>
-  <script src="public/assets/js/mmo_crazy.js?v=2"></script>
+  <script src="public/assets/js/mmo_prologue.js?v=10"></script>
+  <script src="public/assets/js/mmo_crazy.js?v=3"></script>
 </body>
 </html>

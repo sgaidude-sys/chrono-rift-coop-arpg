@@ -270,7 +270,9 @@
         if (this.renderer.capabilities.isWebGL2 && THREE.WebGLMultisampleRenderTarget) {
           try {
             rt = new THREE.WebGLMultisampleRenderTarget(w * pr, h * pr, rtOpts);
-            rt.samples = Math.min(4, gl.getParameter(gl.MAX_SAMPLES) || 4);
+            // 2x MSAA on phones reporting 4 GB of memory or less (the multisampled buffer is the largest render target)
+            const lowMem = isTouch && navigator.deviceMemory && navigator.deviceMemory <= 4;
+            rt.samples = Math.min(lowMem ? 2 : 4, gl.getParameter(gl.MAX_SAMPLES) || 4);
           } catch (e) { rt = null; }
         }
         if (!rt) rt = new THREE.WebGLRenderTarget(w * pr, h * pr, rtOpts);

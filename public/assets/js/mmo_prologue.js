@@ -319,6 +319,18 @@
     step();
   };
 
+  // the hero model is in: release the sounds, effect sheets and scenery that waited for it
+  if (window.CR_HERO_READY_DONE) {
+    const heroPoll = setInterval(() => {
+      const g = window.game;
+      if (!(g && g.player && g.player.glbNode)) return;
+      clearInterval(heroPoll);
+      if (window.crMark) crMark('hero_ready');
+      window.CR_HERO_READY_DONE();
+    }, 100);
+    setTimeout(() => clearInterval(heroPoll), 15000);
+  }
+
   // first rendered frame (start-up timing)
   const animate0 = GP.animate;
   GP.animate = function () { if (window.crMark && !this._crFirstFrame) { this._crFirstFrame = true; crMark('first_frame'); } return animate0.apply(this, arguments); };

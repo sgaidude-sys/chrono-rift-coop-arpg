@@ -149,6 +149,21 @@
     },
 
     initPolish() {
+      // ---- the GPU dropped the game (out of memory on a phone): save, step down to Low and reload once,
+      //      instead of leaving a frozen black screen ----
+      if (this.renderer && this.renderer.domElement && !this._ctxLossHook) {
+        this._ctxLossHook = true;
+        this.renderer.domElement.addEventListener('webglcontextlost', (e) => {
+          e.preventDefault();
+          let tries = 0;
+          try { tries = +sessionStorage.getItem('cr_ctx_lost') || 0; } catch (err) { /* storage blocked */ }
+          if (tries >= 1) return;
+          try { sessionStorage.setItem('cr_ctx_lost', String(tries + 1)); localStorage.setItem('cr_gfx_quality_v2', 'low'); } catch (err) { /* storage blocked */ }
+          try { if (this.saveMMOState) this.saveMMOState(); if (this.acctSaveNow) this.acctSaveNow(); } catch (err) { /* reload anyway */ }
+          console.warn('[Polish] WebGL context lost: reloading at Low quality');
+          setTimeout(() => location.reload(), 300);
+        }, false);
+      }
       // ---- shard pool ----
       const geo = new THREE.OctahedronGeometry(1, 0);
       geo.scale(0.45, 1.35, 0.45);
@@ -298,7 +313,9 @@
         try { localStorage.setItem('cr_gfx_quality_v2', level); } catch (e) { /* storage blocked */ }
       }
       const r = this.renderer;
-      const pr = Math.min(Q.prCap, (window.devicePixelRatio || 1) * Q.pr);
+      // phones reporting 4 GB of memory or less: a smaller render target keeps them under the GPU memory limit
+      const lowMem = isTouch && navigator.deviceMemory && navigator.deviceMemory <= 4;
+      const pr = Math.min(lowMem ? Math.min(1.5, Q.prCap) : Q.prCap, (window.devicePixelRatio || 1) * Q.pr);
       r.setPixelRatio(pr);
       r.setSize(window.innerWidth, window.innerHeight);
       if (this.composer) {
