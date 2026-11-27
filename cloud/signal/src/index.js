@@ -19,6 +19,9 @@
  *  relay pass: RELAY_DAILY_CAP passes per UTC day (default 30), each good for 1 hour, at most
  *  15 messages/s and 64 KB per message. This keeps relaying well inside the free plan, so
  *  matchmaking itself always has room; with no card on the account it can never be billed.
+ *  Presence: clients send the text 'ping' every 25 s; the platform answers 'pong' without waking
+ *  the room (free). While a room has players, an alarm about once a minute removes anyone silent
+ *  for over 70 s (a phone closed or backgrounded without a clean disconnect) and updates the list.
  *  GET /turn              -> { iceServers: [...] } relay credentials (Cloudflare TURN) for players
  *                            whose networks block direct links (mobile carriers). Short-lived (2 h)
  *                            and capped per day (TURN_DAILY_CAP, default 300) so usage stays far
@@ -34,6 +37,7 @@ const CAP = 4;
 const MAX_MSG = 16 * 1024;
 const RATE_N = 40, RATE_MS = 10000;
 const RELAY_MAX = 64 * 1024, RELAY_N = 150, RELAY_MS = 60 * 60 * 1000;
+const STALE_SOCKET_MS = 70 * 1000, SWEEP_MS = 60 * 1000;
 
 const STALE_MS = 2 * 60 * 60 * 1000;      // a room that stopped reporting for 2 h is dropped
 const BAD = /(fuck|shit|cunt|nigg|fag|rape|nazi|hitler|porn|sex|dick|pussy|whore|slut|bitch|kill\s*your)/i;
@@ -103,7 +107,34 @@ async function turnServers(env, lobby) {
 }
 
 export class Room {
-  constructor(ctx, env) { this.ctx = ctx; this.env = env; }
+  constructor(ctx, env) {
+    this.ctx = ctx; this.env = env; this.pruned = new Set();
+    // keep-alive pings are answered by the platform without waking the object
+    try { ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong')); } catch (e) { /* older runtime */ }
+  }
+
+  // when did we last hear from this socket (message, keep-alive ping, or joining)?
+  lastHeard(ws) {
+    let t = 0;
+    try { const d = this.ctx.getWebSocketAutoResponseTimestamp(ws); if (d) t = d.getTime(); } catch (e) { /* none yet */ }
+    const a = ws.deserializeAttachment() || {};
+    return Math.max(t, a.seen || 0, a.j || 0);
+  }
+
+  async alarm() {
+    const now = Date.now();
+    let changed = false, live = 0;
+    for (const w of this.ctx.getWebSockets()) {
+      if (this.pruned.has(w) || !this.idOf(w)) continue;
+      if (now - this.lastHeard(w) > STALE_SOCKET_MS) {
+        this.pruned.add(w); changed = true;
+        this.bye(w);
+        try { w.close(4004, 'stale'); } catch (e) { /* gone */ }
+      } else live++;
+    }
+    if (changed) await this.report(null);
+    if (live > 0) await this.ctx.storage.setAlarm(now + SWEEP_MS);
+  }
 
   async fetch(req) {
     const u = new URL(req.url);
@@ -113,7 +144,7 @@ export class Room {
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     this.ctx.acceptWebSocket(server, [id]);
-    server.serializeAttachment({ id, n: 0, t0: Date.now() });
+    server.serializeAttachment({ id, n: 0, t0: Date.now(), j: Date.now() });
     if (!enabled(this.env)) {
       server.serializeAttachment({ id, rejected: true });
       server.send(JSON.stringify({ from: 'server', msg: { k: 'off' } }));
@@ -131,6 +162,7 @@ export class Room {
         // the first player in an empty room decides whether it is listed, and its title
         if (!live.length) await this.ctx.storage.put('meta', { pub: u.searchParams.get('pub') === '1', title: cleanTitle(u.searchParams.get('title')) });
         await this.report(null);
+        if (!(await this.ctx.storage.getAlarm())) await this.ctx.storage.setAlarm(Date.now() + SWEEP_MS);
       }
     }
     return new Response(null, { status: 101, webSocket: client });
@@ -144,6 +176,7 @@ export class Room {
     const a = ws.deserializeAttachment() || {};
     if (a.rejected) return;
     const now = Date.now();
+    a.seen = now;
     // relayed game traffic (players whose networks block direct links)
     if (data.length > 40 && data.indexOf('"k":"r"') !== -1) {
       let m; try { m = JSON.parse(data); } catch (e) { return; }
@@ -193,13 +226,13 @@ export class Room {
     }
   }
 
-  async webSocketClose(ws) { this.bye(ws); await this.report(ws); }
-  async webSocketError(ws) { this.bye(ws); await this.report(ws); }
+  async webSocketClose(ws) { if (!this.pruned.has(ws)) this.bye(ws); await this.report(ws); }
+  async webSocketError(ws) { if (!this.pruned.has(ws)) this.bye(ws); await this.report(ws); }
 
   // players in the room right now (one per id; turned-away and closing sockets excluded)
   count(except) {
     const ids = new Set();
-    for (const w of this.ctx.getWebSockets()) { if (w === except) continue; const id = this.idOf(w); if (id) ids.add(id); }
+    for (const w of this.ctx.getWebSockets()) { if (w === except || this.pruned.has(w)) continue; const id = this.idOf(w); if (id) ids.add(id); }
     return ids.size;
   }
 

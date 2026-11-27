@@ -27,7 +27,7 @@
   const MAX_MSG = 240 * 1024;               // bytes per message (netbatch splits bundles at 200 KB)
   const RATE = 60, BURST = 120;             // incoming messages per second per peer (token bucket)
   const HEARTBEAT_MS = 2000, PEER_TIMEOUT_MS = 9000, CONNECT_TIMEOUT_MS = 6000;   // direct links form in 1-3 s; blocked networks switch to the relay after this
-  const NET_VERSION = 10;                     // shown in the Play Together panel (helps when debugging two devices)
+  const NET_VERSION = 12;                     // shown in the Play Together panel (helps when debugging two devices)
   const ICE = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun.cloudflare.com:3478' }];
 
   const q = new URLSearchParams(location.search);
@@ -55,15 +55,19 @@
   // Cloud signaling: a free Cloudflare Worker (cloud/signal) relays introductions between players
   // in the same room over a WebSocket. It reconnects on drops (players already linked stay linked).
   function WsSignal(base) {
-    let ws = null, self = null, room = null, onMsg = null, queue = [], left = false, tries = 0, timer = 0;
+    let ws = null, self = null, room = null, onMsg = null, queue = [], left = false, tries = 0, timer = 0, ping = 0;
     // public / title only matter for the first player in an empty room (they decide whether it's listed)
     const url = () => { const m = CR_NET.roomMeta || {}; return base.replace(/^http/, 'ws').replace(/\/$/, '') + '/room/' + encodeURIComponent(room) + '?id=' + encodeURIComponent(self)
       + (m.pub ? '&pub=1' : '') + (m.title ? '&title=' + encodeURIComponent(String(m.title).slice(0, 28)) : ''); };
     const open = () => {
       if (left) return;
       ws = new WebSocket(url());
-      ws.onopen = () => { tries = 0; CR_NET.signalState = 'open'; ws.send(JSON.stringify({ msg: { k: 'hello' } })); queue.splice(0).forEach((s) => ws.send(s)); };
+      ws.onopen = () => {
+        tries = 0; CR_NET.signalState = 'open'; ws.send(JSON.stringify({ msg: { k: 'hello' } })); queue.splice(0).forEach((s) => ws.send(s));
+        clearInterval(ping); ping = setInterval(() => { try { if (ws && ws.readyState === 1) ws.send('ping'); } catch (e) { /* closing */ } }, 25000);
+      };
       ws.onmessage = (e) => {
+        if (e.data === 'pong') return;
         let d; try { d = JSON.parse(e.data); } catch (err) { return; }
         if (!d || !d.msg) return;
         if (d.from === 'server') {
@@ -84,7 +88,7 @@
     return {
       join(r, selfId, cb) { room = r; self = selfId; onMsg = cb; CR_NET.signalState = 'connecting'; open(); },
       send(to, msg) { const s = JSON.stringify({ to, msg }); if (ws && ws.readyState === 1) ws.send(s); else if (queue.length < 200) queue.push(s); },
-      leave() { left = true; clearTimeout(timer); try { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ msg: { k: 'bye' } })); ws && ws.close(); } catch (e) { /* closed */ } ws = null; }
+      leave() { left = true; clearTimeout(timer); clearInterval(ping); try { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ msg: { k: 'bye' } })); ws && ws.close(); } catch (e) { /* closed */ } ws = null; }
     };
   }
 
@@ -276,6 +280,7 @@
           ch.transport = CR_NET.makeTransport(room, selfId, handlers);
           ch.transport.connect();
           ch.state = 'joined';
+          if (!ch._bye) { ch._bye = () => { if (ch.state === 'joined') ch.unsubscribe(); }; window.addEventListener('pagehide', ch._bye); }
           setTimeout(() => statusCb && statusCb('SUBSCRIBED'), 0);
         } catch (e) {
           console.warn('[net] connect failed', e);
@@ -304,7 +309,7 @@
         presence.forEach((s, id) => { out[id] = [Object.assign({ presence_ref: id }, s)]; });
         return out;
       },
-      unsubscribe() { ch.state = 'closed'; if (ch.transport) ch.transport.close(); ch.transport = null; presence.clear(); return Promise.resolve('ok'); },
+      unsubscribe() { if (ch._bye) { window.removeEventListener('pagehide', ch._bye); ch._bye = null; } ch.state = 'closed'; if (ch.transport) ch.transport.close(); ch.transport = null; presence.clear(); return Promise.resolve('ok'); },
       peers() { return ch.transport ? ch.transport.peers() : []; },
       relayed() { return ch.transport && ch.transport.relayed ? ch.transport.relayed() : []; },
       diag() { return ch.transport && ch.transport.diag ? ch.transport.diag() : []; }
@@ -333,8 +338,9 @@
       onOpen(id) { log('peer joined', id); if (ch.self && ch.transport) ch.transport.sendTo(id, { t: 'p', s: ch.self }); },
       onClose(id) {
         buckets.delete(id);
-        const s = presence.get(id);
-        if (s) { presence.delete(id); emitPresence('leave', { key: id, leftPresences: [s], currentPresences: [] }); emitPresence('sync', {}); }
+        const s = presence.get(id) || { id };
+        presence.delete(id);
+        emitPresence('leave', { key: id, leftPresences: [s], currentPresences: [] }); emitPresence('sync', {});
       },
       onRelay(id) { ch.stats.relayed = (ch.stats.relayed || 0) + 1; log('relaying', id); if (CR_NET.onRelay) CR_NET.onRelay(id); },
       onFail(id, why) { ch.stats.failed.push({ id, why, at: Date.now() }); log('peer failed', id, why); if (CR_NET.onPeerFail) CR_NET.onPeerFail(id, why); },
