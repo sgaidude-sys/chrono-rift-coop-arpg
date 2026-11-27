@@ -26,7 +26,8 @@
   const ROOM_CAP = 4;                       // players per room (self included)
   const MAX_MSG = 240 * 1024;               // bytes per message (netbatch splits bundles at 200 KB)
   const RATE = 60, BURST = 120;             // incoming messages per second per peer (token bucket)
-  const HEARTBEAT_MS = 2000, PEER_TIMEOUT_MS = 9000, CONNECT_TIMEOUT_MS = 15000;
+  const HEARTBEAT_MS = 2000, PEER_TIMEOUT_MS = 9000, CONNECT_TIMEOUT_MS = 6000;   // direct links form in 1-3 s; blocked networks switch to the relay after this
+  const NET_VERSION = 10;                     // shown in the Play Together panel (helps when debugging two devices)
   const ICE = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun.cloudflare.com:3478' }];
 
   const q = new URLSearchParams(location.search);
@@ -162,7 +163,7 @@
       dc.onmessage = (e) => receive(id, L, e.data);
     };
     const receive = (id, L, data) => {
-      L.lastSeen = Date.now();
+      L.lastSeen = Date.now(); L.got = (L.got || 0) + 1;
       if (typeof data !== 'string' || data.length > MAX_MSG) return;
       let obj; try { obj = JSON.parse(data); } catch (err) { return; }
       if (obj && obj.t === '_hb') return;
@@ -229,7 +230,7 @@
     };
     const sendRaw = (id, L, s) => {
       if (!L.open) return;
-      if (L.relay) { if (s.length <= RELAY_MAX) signal.send(id, { k: 'r', d: s }); return; }
+      if (L.relay) { if (s.length <= RELAY_MAX && JSON.stringify(s).length <= 62 * 1024) { L.sent = (L.sent || 0) + 1; signal.send(id, { k: 'r', d: s }); } return; }
       if (!L.dc || L.dc.readyState !== 'open') return;
       if (L.dc.bufferedAmount > 4 * 1024 * 1024) return;          // a stalled link: skip rather than pile up
       try { L.dc.send(s); } catch (e) { /* closing */ }
@@ -252,7 +253,9 @@
       broadcast(obj) { const s = JSON.stringify(obj); if (s.length > MAX_MSG) return false; links.forEach((L, id) => sendRaw(id, L, s)); return true; },
       sendTo(id, obj) { const L = links.get(id); if (!L) return; const s = JSON.stringify(obj); if (s.length <= MAX_MSG) sendRaw(id, L, s); },
       peers() { return [...links.entries()].filter(([, L]) => L.open).map(([id]) => id); },
-      relayed() { return [...links.entries()].filter(([, L]) => L.open && L.relay).map(([id]) => id); }
+      relayed() { return [...links.entries()].filter(([, L]) => L.open && L.relay).map(([id]) => id); },
+      diag() { return [...links.entries()].map(([id, L]) => ({ id, state: L.open ? (L.relay ? 'relay' : 'direct') : (L.pc ? 'connecting (' + (L.pc.iceConnectionState || '?') + ')' : 'connecting'), sent: L.sent || 0, got: L.got || 0 })); },
+      relayRefused() { return relayRefused; }
     };
   }
 
@@ -303,7 +306,8 @@
       },
       unsubscribe() { ch.state = 'closed'; if (ch.transport) ch.transport.close(); ch.transport = null; presence.clear(); return Promise.resolve('ok'); },
       peers() { return ch.transport ? ch.transport.peers() : []; },
-      relayed() { return ch.transport && ch.transport.relayed ? ch.transport.relayed() : []; }
+      relayed() { return ch.transport && ch.transport.relayed ? ch.transport.relayed() : []; },
+      diag() { return ch.transport && ch.transport.diag ? ch.transport.diag() : []; }
     };
     function emitPresence(event, payload) {
       (ch.bindings.presence || []).forEach((b) => {
@@ -370,6 +374,7 @@
     signal: (q.get('sig') || 'cloud').toLowerCase(),
     SIGNAL_URL: q.get('sigurl') || 'https://chrono-rift-signal.sgaidude.workers.dev',
     signalState: 'idle',
+    VERSION: NET_VERSION,
     ROOM_CAP,
     enabled() { return !!CR_NET.mode; },
     forceRelay: q.has('relay') && q.get('relay') !== 'fail',             // ?relay: test the relay path

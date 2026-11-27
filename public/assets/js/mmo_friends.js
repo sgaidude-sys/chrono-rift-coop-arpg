@@ -70,6 +70,7 @@
   #cr-fr .who .empty { color: rgba(245,242,235,.4); font-style: italic; }
   #cr-fr .st { min-height: 17px; text-align: center; font-size: 12px; color: #9fe7b8; margin-top: 8px; }
   #cr-fr .st.warn { color: #ffb48a; }
+  #cr-fr .diag { margin-top: 8px; font: 600 10px/1.35 'JetBrains Mono', monospace; color: rgba(245,242,235,.45); text-align: center; word-break: break-word; }
   #cr-fr .foot { margin-top: 12px; display: flex; justify-content: space-between; gap: 8px; }
   #cr-mp-pill { position: fixed; z-index: 47; left: 50%; top: calc(6px + env(safe-area-inset-top)); transform: translateX(-50%); display: none; cursor: pointer;
     padding: 5px 12px; border-radius: 999px; background: rgba(10,16,26,.82); border: 1px solid rgba(127,227,255,.55); color: #bdf3ff;
@@ -217,6 +218,7 @@
         <button class="pri" data-a="copy">COPY INVITE LINK</button>
         <div class="who">${me}${rows}${empty}</div>
         <div class="st ${note || sig === 'down' || (M.fails && !peers.length) ? 'warn' : ''}">${esc(status)}</div>
+        <div class="diag">${this.mpDiag()}</div>
         <div class="foot"><button class="sec" data-a="leave">LEAVE ROOM</button><button class="sec" data-a="close">CLOSE</button></div>`;
     },
 
@@ -233,6 +235,14 @@
         else if (sdk.game.hideInviteButton) sdk.game.hideInviteButton();
         this._mpCgOpen = open;
       } catch (e) { /* older SDK */ }
+    },
+
+    // small connection readout: version, matchmaking state, each link (direct / relay / connecting / failed)
+    mpDiag() {
+      const ch = this.channel, links = ch && ch.diag ? ch.diag() : [];
+      const fails = ch && ch.stats ? ch.stats.failed.slice(-3).map((f) => f.why) : [];
+      const l = links.map((d, i) => `P${i + 2}: ${d.state}${d.state === 'relay' ? ` ↑${d.sent} ↓${d.got}` : ''}`).join(' · ');
+      return esc(`net v${CR_NET.VERSION || '?'} · match: ${CR_NET.signalState}${l ? ' · ' + l : ' · no links yet'}${fails.length ? ' · failed: ' + fails.join(', ') : ''}`);
     },
 
     mpPill() {
@@ -325,7 +335,7 @@
       const el = document.getElementById('cr-fr');
       if (el && el.classList.contains('on') && !this._mp) this.mpRefreshRooms(false);
       if (el && el.classList.contains('on') && this._mp) {
-        const sig = (this.remotePeers ? this.remotePeers.size : 0) + '|' + CR_NET.signalState + '|' + (this._mp.fails || 0);
+        const sig = (this.remotePeers ? this.remotePeers.size : 0) + '|' + CR_NET.signalState + '|' + (this._mp.fails || 0) + '|' + this.mpDiag();
         if (sig !== this._mpSig) { this._mpSig = sig; this.mpRender(); }
       }
     }
