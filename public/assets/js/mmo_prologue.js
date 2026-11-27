@@ -20,6 +20,11 @@
  *      beacon over the nearest Meadows pack and a tracker "Defeat 10 monsters (0/10)",
  *      rewarded with an Epic item. Levels 1-2 need less XP (mmo_data.js), so the first
  *      level-up and talent point land in the first minute or two.
+ *   5. Rewards are equipped automatically (no trip to the gear menu). A "Rift-Touched Alpha" elite
+ *      appears a short run further out (beacon, health banner, Rift Rat adds at half health) and
+ *      drops Epic armor, about four minutes in.
+ *   6. "Report to Lyra": back at the gate she hands the hero on to Warden Elric's quests (stage 7)
+ *      and promises a daily supply cache: one free Rift Cache pull on each later day played.
  *  Runs once per hero (mmoState.opening). Heroes that already saw Chapter I skip it all.
  * ============================================================================= */
 (function () {
@@ -70,6 +75,9 @@
       window.CR_FIRST_RUN = true;
     } catch (e) { /* storage blocked: the normal flow still works */ }
   };
+
+  // local calendar day, e.g. "2026-11-27" (the daily supply cache refills at local midnight)
+  const dayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
   if (typeof ChronoRiftCoOpGame === 'undefined') return;                   // a class declaration, not a window property
   const GP = ChronoRiftCoOpGame.prototype;
@@ -594,6 +602,7 @@
             it.req = 1; it.name = `Lyra's ${it.baseName || 'Gift'}`;
             if (this.spawnVFXFlipbook) this.spawnVFXFlipbook('eldenring', p.pos, 4, 0.6, 0x4aa8ff);
             this.pickupItem(it);
+            this.opAutoEquip(it);
           } catch (e) { /* bag full */ }
           tip(isTouch() ? 'Follow the gold beacon into the Meadows' : 'Follow the gold beacon into the Meadows  ·  [Shift] sprint', 7);
         }, 2600);
@@ -640,17 +649,150 @@
     finishFirstMission() {
       const st = this.openingState(); st.stage = 4; this.saveMMOState && this.saveMMOState();
       const p = this.player;
-      banner('FIRST HUNT COMPLETE!', 'Reward: Epic gear + 1 Free Rift Cache Pull!', 1, 'gold done pop');
+      let gain = 0;
       try {
         const it = this.generateItem({ ilvl: Math.max(3, p.level || 1), rarity: 'epic', cls: p.classId });
         it.req = 1;
         if (this.spawnVFXFlipbook) this.spawnVFXFlipbook('eldenring', p.pos, 4.5, 0.7, 0xc07bff);
         this.pickupItem(it);
+        gain = this.opAutoEquip(it);
       } catch (e) { /* bag full */ }
+      banner('FIRST HUNT COMPLETE!', gain ? `Epic gear equipped · Power +${gain} ▲` : 'Reward: Epic gear + a free Rift Cache pull', 1, 'gold done pop');
       if (this.grantFreeRiftPull) this.grantFreeRiftPull('First Hunt');
       else if (this.sigilAdd) this.sigilAdd(1, 'First Hunt');
       if (this._opBeacon) { this.scene.remove(this._opBeacon.g); this._opBeacon = null; }
-      setTimeout(() => { hideBanner(); tip(isTouch() ? 'Equip your Epic in ☰ → Gear · Claim your free Rift Cache pull in ☰!' : 'Equip your Epic [I] · Press [U] for your free Rift Cache pull!', 8); }, 3500);
+      // no lull: the next goal arrives while the reward is still on screen
+      setTimeout(() => { if (this.openingState().stage === 4) this.startAlpha(); }, 3800);
+    },
+
+    // equip an opening reward straight away (no trip to the gear menu); returns the power gained
+    opAutoEquip(it) {
+      try {
+        const st = this.mmoState;
+        if (!it || !st || !st.bag.some(b => b.uid === it.uid) || !this.canEquip || !this.canEquip(it)) return 0;
+        if (this.isUpgrade && !this.isUpgrade(it)) return 0;
+        const cur = st.equip && st.equip[it.slot];
+        const gain = Math.max(1, Math.round((this.itemScore ? this.itemScore(it) : 0) - (cur && this.itemScore ? this.itemScore(cur) : 0)));
+        this.equipItem(it.uid);
+        if (this.spawnFloatingText) setTimeout(() => this.spawnFloatingText(this.player.pos, 'EQUIPPED! ▲', '#2ee68a', 18), 500);
+        if (this.haptic) this.haptic([14, 24, 22]);
+        return gain;
+      } catch (e) { return 0; }
+    },
+
+    // gold beam + ring over a fixed point (the Alpha, Lyra)
+    setOpBeacon(target) {
+      if (!this._opBeacon) {
+        const g = new THREE.Group();
+        const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.9, 40, 16, 1, true), new THREE.MeshBasicMaterial({ color: 0xffd56b, transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+        beam.position.y = 20; g.add(beam);
+        const disc = new THREE.Mesh(new THREE.RingGeometry(2.2, 3.0, 40), new THREE.MeshBasicMaterial({ color: 0xffd56b, transparent: true, opacity: 0.7, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }));
+        disc.rotation.x = -Math.PI / 2; disc.position.y = 0.08; g.add(disc);
+        this.scene.add(g);
+        this._opBeacon = { g, target: target.clone() };
+      }
+      this._opBeacon.target.copy(target);
+      const hy = this.terrainVisualHeight ? this.terrainVisualHeight(target.x, target.z) : 0;
+      this._opBeacon.g.position.set(target.x, hy, target.z);
+    },
+    clearOpBeacon() { if (this._opBeacon) { this.scene.remove(this._opBeacon.g); this._opBeacon = null; } },
+
+    // ---------------------------------------------------------------------------------------------
+    // 5. The Rift-Touched Alpha: a mini-boss a short run away, about four minutes in
+    // ---------------------------------------------------------------------------------------------
+    startAlpha() {
+      const st = this.openingState(); st.stage = 5; this.saveMMOState && this.saveMMOState();
+      const p = this.player;
+      // further out from town than the hero stands, inside the Meadows
+      const dir = V(p.pos.x, 0, p.pos.z);
+      if (dir.lengthSq() < 4) dir.set(40, 0, 330);
+      dir.normalize();
+      const r = Math.min(150, Math.max(70, Math.hypot(p.pos.x, p.pos.z) + 24));
+      const pos = dir.multiplyScalar(r);
+      const lvl = Math.max(2, (p.level || 1) + 1);
+      const m = this.createWorldMob('op_alpha_' + Date.now().toString(36), { type: 'thumper', name: '★ Rift-Touched Thumper', level: lvl, elite: true }, pos.x, pos.z, null);
+      m.isAdd = true; m._alpha = true;
+      m.maxHp = Math.round(m.maxHp * 1.15); m.hp = m.maxHp;
+      m.dmg = Math.max(1, Math.round(m.dmg * 0.6));                          // a big fight, not a wall
+      this._opAlpha = m; this._opAlphaAdds = false;
+      if (this.spawnVFXFlipbook) { this.spawnVFXFlipbook('vortex', pos, 7, 1.2, 0x9a6bff); setTimeout(() => this.spawnVFXFlipbook && this.spawnVFXFlipbook('explosion', pos, 5, 0.9, 0xb48cff), 300); }
+      this.setOpBeacon(pos);
+      this.updateAlphaBanner(true);
+      voiced(this, 'town_lyra_1', LYRA[0], LYRA[1], 'Wait… something big just came through the breach. Bring it down before it reaches the walls!', 6);
+    },
+
+    updateAlphaBanner(fresh) {
+      const m = this._opAlpha, p = this.player; if (!m) return;
+      const d = Math.round(Math.hypot(m.pos.x - p.pos.x, m.pos.z - p.pos.z));
+      const runHint = isTouch() && d > 14 ? (this._autoRun ? ' · Running… (tap stop)' : ' · Tap to Auto-Run') : '';
+      const info = d > 14 ? `A giant came through the breach · ${d} m${runHint}` : `Bring it down! · ${Math.max(0, Math.ceil(100 * m.hp / m.maxHp))}% HP`;
+      const cls = 'danger' + (fresh ? ' pop' : '') + (isTouch() && d > 14 ? (' runnable' + (this._autoRun ? ' running' : '')) : '');
+      banner('★ SLAY THE RIFT-TOUCHED ALPHA', info, 1 - m.hp / m.maxHp, cls);
+    },
+
+    finishAlpha() {
+      const st = this.openingState(); if (st.stage !== 5) return;
+      st.stage = 6; this.saveMMOState && this.saveMMOState();
+      const p = this.player, at = this._opAlpha ? this._opAlpha.pos.clone() : p.pos.clone();
+      this._opAlpha = null;
+      this.clearOpBeacon();
+      if (this.spawnVFXFlipbook) { this.spawnVFXFlipbook('explosion', at, 6, 0.9, 0xffd56b); this.spawnVFXFlipbook('eldenring', p.pos, 5, 0.8, 0xffd56b); }
+      if (this.shakeCamera) this.shakeCamera(0.5, 0.35);
+      let gain = 0;
+      try {
+        const eq = (this.mmoState && this.mmoState.equip) || {};
+        const slots = ['chest', 'head', 'legs', 'feet', 'hands'].filter(s => !eq[s] || eq[s].rarity !== 'epic');
+        const it = this.generateItem({ ilvl: Math.max(4, (p.level || 1) + 1), rarity: 'epic', cls: p.classId, slot: slots[0] });
+        it.req = 1; this.pickupItem(it);
+        gain = this.opAutoEquip(it);
+      } catch (e) { /* bag full or no such slot */ }
+      banner('ALPHA SLAIN!', gain ? `Epic armor equipped · Power +${gain} ▲` : 'Epic loot claimed!', 1, 'gold done pop');
+      if (window.CR_HAPPY) window.CR_HAPPY();
+      setTimeout(() => { if (this.openingState().stage === 6) this.startReturn(); }, 3600);
+    },
+
+    // ---------------------------------------------------------------------------------------------
+    // 6. Back to Lyra at the Rift Gate: she hands the hero on to Warden Elric's quests
+    // ---------------------------------------------------------------------------------------------
+    startReturn() {
+      const st = this.openingState(); st.stage = 6;
+      this.setOpBeacon(V(2.4, 0, 3.2));
+      this.updateReturnBanner(true);
+    },
+
+    updateReturnBanner(fresh) {
+      const p = this.player, B = this._opBeacon; if (!B) return;
+      const d = Math.round(Math.hypot(B.target.x - p.pos.x, B.target.z - p.pos.z));
+      const runHint = isTouch() ? (this._autoRun ? ' · Running… (tap stop)' : ' · Tap to Auto-Run') : '';
+      const cls = 'gold' + (fresh ? ' pop' : '') + (isTouch() ? (' runnable' + (this._autoRun ? ' running' : '')) : '');
+      banner('REPORT TO LYRA', `Rift Gate · ${d} m${runHint}`, 0, cls);
+    },
+
+    finishReturn() {
+      const st = this.openingState(); if (st.stage !== 6) return;
+      st.stage = 7; st.cacheDay = dayKey(); this.saveMMOState && this.saveMMOState();
+      this.clearOpBeacon();
+      if (this._autoRun && this.stopAutoRun) this.stopAutoRun();
+      voiced(this, 'town_lyra_2', LYRA[0], LYRA[1], 'An Alpha, this close to the walls… The breach is spreading. Find Warden Elric. He\'ll need every blade. I\'ll hold the gate.', 8);
+      banner('NEW QUESTS UNLOCKED', 'Warden Elric is waiting beside the gate', 1, 'gold done pop');
+      setTimeout(() => {
+        banner('LYRA\'S SUPPLY CACHE', 'Come back tomorrow: a free Rift Cache pull', 1, 'gold');
+        setTimeout(() => { if (this.openingState().stage === 7) hideBanner(); }, 7000);
+      }, 8500);
+      tip('Talk to Warden Elric (❗) for your next quests · [U] Rift Cache: 1 free pull', 9);
+    },
+
+    // returning on a later day: Lyra's supply cache has refilled (one free pull per day)
+    checkDailyCache() {
+      const st = this.openingState(); if (!st || st.stage < 4) return;
+      const today = dayKey();
+      if (!st.cacheDay) { st.cacheDay = today; this.saveMMOState && this.saveMMOState(); return; }
+      if (st.cacheDay === today) return;
+      st.cacheDay = today; this.saveMMOState && this.saveMMOState();
+      if (this.grantFreeRiftPull) this.grantFreeRiftPull('Lyra\'s Supply Cache');
+      else if (this.sigilAdd) this.sigilAdd(1, 'Lyra\'s Supply Cache');
+      banner('LYRA\'S SUPPLY CACHE', 'Welcome back! A free Rift Cache pull is waiting in ☰', 1, 'gold done pop');
+      setTimeout(hideBanner, 7000);
     },
 
     // ---------------------------------------------------------------------------------------------
@@ -675,7 +817,7 @@
           this.updateMissionBanner(true);
           if (st.kills >= MISSION) this.finishFirstMission();
           else this.placeMissionBeacon();
-        }
+        } else if (st && st.stage === 5 && mob && mob._alpha) this.finishAlpha();
       }
       return r;
     },
@@ -736,6 +878,39 @@
         if (st && st.stage === 2 && this.storyState && this.storyState.seen.has('ch1')) this.startFirstMission();
         else if (st && st.stage === 2) { this._opAfterIntro = true; orig.triggerStoryChapter.call(this, 'ch1'); }
         else if (st && st.stage === 3) { this.placeMissionBeacon(); this.updateMissionBanner(true); }
+        // stage 4 = finished the hunt (earlier versions ended the opening there: low-level heroes get the Alpha)
+        else if (st && ((st.stage === 4 && (this.player.level || 1) <= 5) || st.stage === 5)) this.startAlpha();
+        else if (st && st.stage === 6) this.startReturn();
+        else this.checkDailyCache();
+      }
+      const ost = this._opBeacon || this._opAlpha ? this.openingState() : null;
+      // the Alpha: beacon follows it, banner shows its health, rift adds at half health
+      if (ost && ost.stage === 5) {
+        const m = this._opAlpha;
+        if (!m || (!m.dead && this.monsters.indexOf(m) < 0)) { this.clearOpBeacon(); this.startAlpha(); }  // despawned out of range
+        else if (!m.dead) {
+          this.setOpBeacon(m.pos);
+          this._opAlphaT = (this._opAlphaT || 0) + dt;
+          if (this._opAlphaT > 0.25) { this._opAlphaT = 0; this.updateAlphaBanner(false); }
+          if (!this._opAlphaAdds && m.hp < m.maxHp * 0.5) {
+            this._opAlphaAdds = true;
+            [0, 1].forEach((i) => {
+              const a = (i ? 1 : -1) * 1.2 + m.yaw;
+              const x = m.pos.x + Math.sin(a) * 3, z = m.pos.z + Math.cos(a) * 3;
+              const add = this.createWorldMob(`op_add_${i}_${Date.now().toString(36)}`, { type: 'field_rat', name: 'Rift Rat', level: Math.max(1, m.level - 1) }, x, z, null);
+              add.isAdd = true; add.aggroTimer = 20;
+              if (this.spawnVFXFlipbook) this.spawnVFXFlipbook('vortex', add.pos, 3, 0.6, 0x9a6bff);
+            });
+            banner('★ THE ALPHA CALLS THE RIFT!', 'Rift Rats join the fight', 1 - m.hp / m.maxHp, 'danger pop');
+          }
+        }
+      }
+      // walking back to Lyra
+      if (ost && ost.stage === 6 && this._opBeacon) {
+        const B = this._opBeacon.target, p = this.player;
+        this._opRetT = (this._opRetT || 0) + dt;
+        if (this._opRetT > 0.4) { this._opRetT = 0; this.updateReturnBanner(false); }
+        if (Math.hypot(B.x - p.pos.x, B.z - p.pos.z) < 7) this.finishReturn();
       }
       if (this._opRing) {
         const R = this._opRing; R.t += dt;
@@ -747,7 +922,7 @@
         this._opBeacon.g.children[1].rotation.z += dt;
         this._opBannerT = (this._opBannerT || 0) + dt;
         if (this._opBannerT > 0.5 && st && st.stage === 3) { this._opBannerT = 0; this.updateMissionBanner(false); }
-        if (this._opBannerT === 0 && Math.random() < 0.1) this.placeMissionBeacon();
+        if (this._opBannerT === 0 && st && st.stage === 3 && Math.random() < 0.1) this.placeMissionBeacon();
       }
     }
   });

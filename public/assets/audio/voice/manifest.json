@@ -113,6 +113,18 @@
   "speaker": "Rift Gatekeeper Lyra",
   "text": "You came... Then the rift chose well. Take my reserve weapon, and clear the Meadows before more break through."
  },
+ "town_lyra_1": {
+  "file": "assets/audio/voice/town_lyra_1.mp3",
+  "dur": 5.136,
+  "speaker": "Rift Gatekeeper Lyra",
+  "text": "Wait... something big just came through the breach. Bring it down before it reaches the walls!"
+ },
+ "town_lyra_2": {
+  "file": "assets/audio/voice/town_lyra_2.mp3",
+  "dur": 7.128,
+  "speaker": "Rift Gatekeeper Lyra",
+  "text": "An Alpha, this close to the walls... The breach is spreading. Find Warden Elric. He'll need every blade. I'll hold the gate."
+ },
  "kaelen_greet": {
   "file": "assets/audio/voice/kaelen_greet.mp3",
   "dur": 7.56,

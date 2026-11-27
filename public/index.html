@@ -2019,7 +2019,7 @@
         this._barkCooldownUntil = 0;
         this._lastStepIdx = {};
         this.voiceManifest = {};
-        this.voiceVer = 'v=5';   // bump when voice clips are regenerated (busts browser caches)
+        this.voiceVer = 'v=6';   // bump when voice clips are regenerated (busts browser caches)
         this.manifestReady = fetch(this.base + 'voice/manifest.json?' + this.voiceVer)
           .then(r => r.ok ? r.json() : {})
           .then(m => { this.voiceManifest = m || {}; })
@@ -9972,7 +9972,7 @@
   <script src="assets/js/mmo_rpg.js?v=14"></script>
   <script src="assets/js/mmo_audio.js?v=14"></script>
   <script src="assets/js/mmo_vfx.js?v=12"></script>
-  <script src="assets/js/mmo_mobile.js?v=15"></script>
+  <script src="assets/js/mmo_mobile.js?v=16"></script>
   <script src="assets/js/mmo_sky.js?v=15"></script>
   <script src="assets/js/mmo_terrain.js?v=17"></script>
   <script src="assets/js/mmo_foliage.js?v=26"></script>
@@ -10019,7 +10019,7 @@
   <script src="assets/js/mmo_account.js?v=3"></script>
   <script src="assets/js/mmo_heroselect.js?v=5"></script>
   <script src="assets/js/mmo_offline.js?v=2"></script>
-  <script src="assets/js/mmo_prologue.js?v=10"></script>
-  <script src="assets/js/mmo_crazy.js?v=3"></script>
+  <script src="assets/js/mmo_prologue.js?v=11"></script>
+  <script src="assets/js/mmo_crazy.js?v=4"></script>
 </body>
 </html>

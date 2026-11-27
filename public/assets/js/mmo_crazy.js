@@ -231,6 +231,8 @@
       && !document.querySelector('#gacha-stage.on')));
   }
   setInterval(tick, 400);
+  // other modules call this for big wins (e.g. the opening's Alpha kill)
+  window.CR_HAPPY = () => { if (S.ready) safe(() => CG.game.happytime()); };
 
   // arrow keys / space never scroll the portal page
   window.addEventListener('keydown', (e) => {

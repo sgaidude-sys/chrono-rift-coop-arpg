@@ -99,6 +99,8 @@ LINES = {
     "call_2": ("aldous", "Her call echoed through four timelines. Four champions turned toward the light... but only one would answer."),
     "answer_0": ("aldous", "The call was answered. A champion stepped out of the rift, and the battle for Ashenvale began."),
     "town_lyra_0": ("lyra", "You came... Then the rift chose well. Take my reserve weapon, and clear the Meadows before more break through."),
+    "town_lyra_1": ("lyra", "Wait... something big just came through the breach. Bring it down before it reaches the walls!"),
+    "town_lyra_2": ("lyra", "An Alpha, this close to the walls... The breach is spreading. Find Warden Elric. He'll need every blade. I'll hold the gate."),
 
     # --- NPC greetings & services ---
     "kaelen_greet": ("kaelen", "Hail, hero! The Chrono-Rifts warped steel and starlight alike. Bring me your blades, and I'll temper them hot enough to cleave an Archon."),

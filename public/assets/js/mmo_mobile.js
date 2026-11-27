@@ -656,8 +656,9 @@
     getMobileObjectiveTarget() {
       const st = this.mmoState, M = window.MMO, wg = this.worldGen, p = this.player;
       if (!st || !M || !wg || !p) return null;
-      if (st.opening && st.opening.stage === 3 && this._opBeacon && this._opBeacon.target) {
-        return { x: this._opBeacon.target.x, z: this._opBeacon.target.z, label: 'First Hunt', action: 'combat' };
+      if (st.opening && st.opening.stage >= 3 && st.opening.stage <= 6 && this._opBeacon && this._opBeacon.target) {
+        const lbl = { 3: 'First Hunt', 5: 'Rift-Touched Alpha', 6: 'Report to Lyra' }[st.opening.stage] || 'Objective';
+        return { x: this._opBeacon.target.x, z: this._opBeacon.target.z, label: lbl, action: st.opening.stage === 6 ? 'npc' : 'combat' };
       }
       if (!this.questDefs || !this.questStatus) return null;
       const ready = this.questDefs.find(q => this.questStatus(q) === 'ready');
