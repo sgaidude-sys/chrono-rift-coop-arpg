@@ -57,8 +57,9 @@
         if (alone()) { items = items.filter(it => ALWAYS[it.e]); if (!items.length) return; }   // nobody to hear it
         // split very large bundles (big host snapshots) to stay well under the 256 KB payload cap
         while (items.length) {
+          const cap = (window.CR_NET && window.CR_NET.mode) ? 48 * 1024 : MAX_BYTES;   // peer-to-peer: relayed bundles must stay small
           let n = items.length, body = JSON.stringify(items);
-          while (body.length > MAX_BYTES && n > 1) { n = Math.ceil(n / 2); body = JSON.stringify(items.slice(0, n)); }
+          while (body.length > cap && n > 1) { n = Math.ceil(n / 2); body = JSON.stringify(items.slice(0, n)); }
           const part = items.slice(0, n); items = items.slice(n);
           B.sent++;
           const r = origSend({ type: 'broadcast', event: 'bundle', payload: { v: 1, m: part } });

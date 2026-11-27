@@ -5,6 +5,10 @@ compatibility_date = "2026-11-01"
 # multiplayer on/off switch: change to "false" (dashboard: Workers > chrono-rift-signal > Settings > Variables)
 [vars]
 MP_ENABLED = "true"
+# relay passes (TURN credentials) handed out per UTC day; keeps usage inside the free 1,000 GB / month
+TURN_DAILY_CAP = "300"
+# relayed sessions (game traffic through this service when direct links are blocked) per UTC day, 1 hour each
+RELAY_DAILY_CAP = "30"
 
 [[durable_objects.bindings]]
 name = "ROOMS"

@@ -13,6 +13,13 @@
  *   • Anything going wrong (room full, multiplayer switched off, a network that blocks direct
  *     connections) shows a short note and the player simply keeps playing solo
  *  Solo players never connect anywhere: the network is only used once a room is created/joined.
+ *
+ *  CrazyGames integration (docs.crazygames.com/requirements/multiplayer):
+ *   • updateRoom({ roomId, isJoinable, inviteParams }) on join, isJoinable:false while full,
+ *     leftRoom() on leave, so friends can Join / Invite from the CrazyGames UI
+ *   • addJoinRoomListener: "join friend" while the game is already running
+ *   • isInstantMultiplayer: started from the CrazyGames multiplayer UI -> a new private room
+ *   • CrazyGames usernames (when logged in) are shown in the room's player list
  * ============================================================================= */
 (function () {
   'use strict';
@@ -197,8 +204,9 @@
         return;
       }
       const peers = [...(this.remotePeers || new Map()).values()];
-      const me = `<div class="me"><span>${esc(this.player.name || 'You')} (you)</span><span>Lv ${this.player.level || 1}</span></div>`;
-      const rows = peers.map((p) => `<div><span>${esc(safeName(p.name))}</span><span>Lv ${p.level || 1}</span></div>`).join('');
+      const cg = (n) => (n ? ` <small style="opacity:.7">@${esc(safeName(n))}</small>` : '');
+      const me = `<div class="me"><span>${esc(this.player.name || 'You')}${cg(this._cgName)} (you)</span><span>Lv ${this.player.level || 1}</span></div>`;
+      const rows = peers.map((p) => `<div><span>${esc(safeName(p.name))}${cg(p.cgName)}</span><span>Lv ${p.level || 1}</span></div>`).join('');
       const empty = Array.from({ length: Math.max(0, CR_NET.ROOM_CAP - 1 - peers.length) }, () => '<div class="empty"><span>Open slot</span><span></span></div>').join('');
       const sig = CR_NET.signalState;
       const status = note || (sig === 'connecting' ? 'Connecting to matchmaking…' : sig === 'retrying' ? 'Reconnecting to matchmaking…' : sig === 'down' ? 'Matchmaking unreachable: friends already here stay connected.'
@@ -210,6 +218,21 @@
         <div class="who">${me}${rows}${empty}</div>
         <div class="st ${note || sig === 'down' || (M.fails && !peers.length) ? 'warn' : ''}">${esc(status)}</div>
         <div class="foot"><button class="sec" data-a="leave">LEAVE ROOM</button><button class="sec" data-a="close">CLOSE</button></div>`;
+    },
+
+    // tell CrazyGames which room the player is in and whether friends can still join
+    mpCgRoom(kind) {
+      const sdk = CG(); if (!sdk || !sdk.game) return;
+      const M = this._mp;
+      try {
+        if (kind === 'left') { if (sdk.game.leftRoom) sdk.game.leftRoom(); else if (sdk.game.hideInviteButton) sdk.game.hideInviteButton(); return; }
+        if (!M || !M.code) return;
+        const open = ((this.remotePeers ? this.remotePeers.size : 0) + 1) < CR_NET.ROOM_CAP;
+        if (sdk.game.updateRoom) sdk.game.updateRoom({ roomId: M.code, isJoinable: open, inviteParams: { roomId: M.code } });
+        else if (open && sdk.game.showInviteButton) sdk.game.showInviteButton({ roomId: M.code });
+        else if (sdk.game.hideInviteButton) sdk.game.hideInviteButton();
+        this._mpCgOpen = open;
+      } catch (e) { /* older SDK */ }
     },
 
     mpPill() {
@@ -246,9 +269,10 @@
       CR_NET.roomMeta = { pub: !!pub, title: `${safeName(this.player && this.player.name)}'s Realm` };
       CR_NET.enable('p2p');
       if (!this.supabase || !this.supabase.__p2p) { this.supabase = CR_NET.client(); this.supabase.__p2p = true; }
+      await CR_NET.fetchTurn();                                           // relay pass first, so blocked networks can still link up
       try { await this.joinRealtimeRoom(code); } catch (e) { console.warn('[friends] join failed', e); toast('Couldn\'t open the room. Playing solo.', 5); this.mpLeave(true); }
       const sdk = CG();
-      if (sdk && this._mp) { try { sdk.game.showInviteButton({ roomId: code }); } catch (e) { /* not supported */ } }
+      if (sdk && this._mp) this.mpCgRoom('join');
       this.mpRender(); this.mpPill();
     },
 
@@ -256,7 +280,7 @@
       const M = this._mp; this._mp = null;
       ss.set('cr_mp_room', null); ss.set('cr_mp_pub', null);
       stripUrl();
-      const sdk = CG(); if (sdk) { try { sdk.game.hideInviteButton(); } catch (e) { /* ignore */ } }
+      if (M) this.mpCgRoom('left');
       if (this.channel && this.supabase && this.supabase.__p2p) { try { this.supabase.removeChannel(this.channel); } catch (e) { /* closed */ } }
       this.channel = null; this.channelSubscribed = false;
       if (this.remotePeers) { this.remotePeers.forEach((p) => { if (p.meshRoot) this.scene.remove(p.meshRoot); }); this.remotePeers.clear(); }
@@ -278,7 +302,15 @@
         this._mpPending = true;
         let code = null;
         const sdk = CG();
-        if (sdk) { try { code = sdk.game.getInviteParam('roomId'); } catch (e) { /* older SDK */ } }
+        if (sdk) {
+          try { code = (sdk.game.inviteParams && sdk.game.inviteParams.roomId) || sdk.game.getInviteParam('roomId'); } catch (e) { /* older SDK */ }
+          // a friend's invite accepted while the game is already running
+          try { if (sdk.game.addJoinRoomListener) sdk.game.addJoinRoomListener((p) => { if (p && p.roomId) { ss.set('cr_mp_room', cleanCode(p.roomId)); ss.set('cr_mp_pub', null); } }); } catch (e) { /* older SDK */ }
+          // started from CrazyGames' multiplayer UI: straight into a new private room, joinable at once
+          try { if (!code && sdk.game.isInstantMultiplayer && !ss.get('cr_mp_instant')) { ss.set('cr_mp_instant', '1'); code = newCode(); this._mpInstant = true; } } catch (e) { /* older SDK */ }
+          // the CrazyGames username, shown to the others in the room
+          try { if (sdk.user && sdk.user.isUserAccountAvailable) sdk.user.getUser().then((u) => { if (u && u.username) this._cgName = String(u.username).slice(0, 20); }).catch(() => {}); } catch (e) { /* no user module */ }
+        }
         if (!code) code = new URLSearchParams(location.search).get('join');
         if (code) ss.set('cr_mp_room', cleanCode(code));
         stripUrl();                                                         // an invite is used once
@@ -286,9 +318,10 @@
       const pending = ss.get('cr_mp_room');
       if (pending && (!this._mp || this._mp.code !== pending) && this.mpReady() && !this._mpJoining) {
         this._mpJoining = true;
-        this.mpJoin(pending, false, ss.get('cr_mp_pub') === '1').finally(() => { this._mpJoining = false; });
+        this.mpJoin(pending, !!this._mpInstant, ss.get('cr_mp_pub') === '1').finally(() => { this._mpJoining = false; this._mpInstant = false; });
       }
       this.mpPill();
+      if (this._mp && CG()) { const open = ((this.remotePeers ? this.remotePeers.size : 0) + 1) < CR_NET.ROOM_CAP; if (open !== this._mpCgOpen) this.mpCgRoom('update'); }
       const el = document.getElementById('cr-fr');
       if (el && el.classList.contains('on') && !this._mp) this.mpRefreshRooms(false);
       if (el && el.classList.contains('on') && this._mp) {
@@ -300,7 +333,14 @@
 
   // a stranger's offensive hero name shows as "Hero"
   const hrs0 = GP.handleRemotePlayerState;
-  if (hrs0) GP.handleRemotePlayerState = function (entry) { if (entry && entry.name) entry.name = safeName(entry.name); return hrs0.apply(this, arguments); };
+  if (hrs0) GP.handleRemotePlayerState = function (entry) {
+    if (entry && entry.name) entry.name = safeName(entry.name);
+    const r = hrs0.apply(this, arguments);
+    if (entry && entry.cg && this.remotePeers && this.remotePeers.has(entry.id)) this.remotePeers.get(entry.id).cgName = safeName(entry.cg);
+    return r;
+  };
+  const bps0 = GP.buildPlayerStatePayload;
+  if (bps0) GP.buildPlayerStatePayload = function () { const p = bps0.apply(this, arguments); if (p && this._cgName) p.cg = this._cgName; return p; };
 
   const upd0 = GP.updateMMOWorld;
   GP.updateMMOWorld = function (dt) {

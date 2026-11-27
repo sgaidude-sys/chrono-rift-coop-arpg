@@ -68,6 +68,7 @@
         if (d.from === 'server') {
           if (d.msg.k === 'full') { left = true; CR_NET.signalState = 'full'; if (CR_NET.onRoomFull) CR_NET.onRoomFull(); }
           else if (d.msg.k === 'off') { left = true; CR_NET.signalState = 'off'; if (CR_NET.onOff) CR_NET.onOff(); }
+          else onMsg('server', d.msg);                                       // e.g. 'norelay': today's relay budget is used up
           return;
         }
         onMsg(d.from, d.msg);
@@ -123,43 +124,64 @@
   // descriptions / candidates travel as plain JSON (BroadcastChannel and WebSockets can't carry the objects)
   const plainSdp = (d) => ({ type: d.type, sdp: d.sdp });
 
+  // How a link works: try a direct WebRTC data channel first. If that can't be made (some networks,
+  // mostly mobile carriers, block direct links), the pair falls back to relaying through the
+  // matchmaking service ({ k: 'r', d }), which the server allows within a free daily budget.
+  const RELAY_MAX = 56 * 1024, RELAY_HB_MS = 4000, RELAY_TIMEOUT_MS = 14000;
   function MeshTransport(room, selfId, cb, signal) {
-    const links = new Map();                // id -> { pc, dc, open, lastSeen, timer }
-    let hb = null, closed = false;
+    const links = new Map();                // id -> { pc, dc, open, relay, lastSeen, timer }
+    let hb = null, closed = false, relayRefused = false;
 
-    const drop = (id, why) => {
-      const L = links.get(id); if (!L) return;
-      links.delete(id);
+    const close = (L) => {
       clearTimeout(L.timer);
       try { L.dc && L.dc.close(); } catch (e) { /* closed */ }
-      try { L.pc.close(); } catch (e) { /* closed */ }
+      try { L.pc && L.pc.close(); } catch (e) { /* closed */ }
+      L.dc = null; L.pc = null;
+    };
+    const drop = (id, why) => {
+      const L = links.get(id); if (!L) return;
+      // a direct link that couldn't be made / broke: keep the player through the relay instead
+      if ((why === 'timeout' || why === 'failed') && !relayRefused && !closed && !L.relay) { toRelay(id, L); return; }
+      links.delete(id);
+      close(L);
       if (L.open) cb.onClose(id); else if (why) cb.onFail(id, why);
       log('drop', id, why || '');
     };
+    const toRelay = (id, L) => {
+      close(L);
+      L.relay = true; L.lastSeen = Date.now();
+      signal.send(id, { k: 'r', d: '{"t":"_hb"}' });                    // wakes the other side's relay too
+      log('relay', id);
+      if (!L.open) { L.open = true; cb.onOpen(id); }
+      if (cb.onRelay) cb.onRelay(id);
+    };
     const wireChannel = (id, L, dc) => {
       L.dc = dc;
-      dc.onopen = () => { L.open = true; L.lastSeen = Date.now(); clearTimeout(L.timer); log('open', id); cb.onOpen(id); };
-      dc.onclose = () => drop(id);
-      dc.onmessage = (e) => {
-        L.lastSeen = Date.now();
-        if (typeof e.data !== 'string' || e.data.length > MAX_MSG) return;
-        let obj; try { obj = JSON.parse(e.data); } catch (err) { return; }
-        if (obj && obj.t === '_hb') return;
-        cb.onMessage(id, obj);
-      };
+      dc.onopen = () => { if (L.relay) return; L.open = true; L.lastSeen = Date.now(); clearTimeout(L.timer); log('open', id); cb.onOpen(id); };
+      dc.onclose = () => { if (!L.relay) drop(id); };
+      dc.onmessage = (e) => receive(id, L, e.data);
+    };
+    const receive = (id, L, data) => {
+      L.lastSeen = Date.now();
+      if (typeof data !== 'string' || data.length > MAX_MSG) return;
+      let obj; try { obj = JSON.parse(data); } catch (err) { return; }
+      if (obj && obj.t === '_hb') return;
+      cb.onMessage(id, obj);
     };
     const link = (id, initiator) => {
       if (links.has(id) || closed) return links.get(id);
       if (links.size + 1 >= ROOM_CAP) { signal.send(id, { k: 'full' }); return null; }
-      const pc = new RTCPeerConnection({ iceServers: ICE });
-      const L = { pc, dc: null, open: false, lastSeen: Date.now(), timer: 0 };
+      const L = { pc: null, dc: null, open: false, relay: false, lastSeen: Date.now(), timer: 0 };
       links.set(id, L);
+      if (CR_NET.forceRelay) { toRelay(id, L); return L; }             // testing: skip the direct attempt
+      // STUN finds a direct route; a TURN relay pass (if configured) is only used when that fails
+      const pc = L.pc = new RTCPeerConnection({ iceServers: ICE.concat(CR_NET.turnServers || []), iceTransportPolicy: CR_NET.forceFail ? 'relay' : 'all' });
       L.timer = setTimeout(() => { if (!L.open) drop(id, 'timeout'); }, CONNECT_TIMEOUT_MS);
       pc.onicecandidate = (e) => { if (e.candidate) signal.send(id, { k: 'ice', c: e.candidate.toJSON ? e.candidate.toJSON() : e.candidate }); };
-      pc.onconnectionstatechange = () => { if (pc.connectionState === 'failed') drop(id, 'failed'); else if (pc.connectionState === 'closed') drop(id); };
+      pc.onconnectionstatechange = () => { if (L.relay) return; if (pc.connectionState === 'failed') drop(id, 'failed'); else if (pc.connectionState === 'closed') drop(id); };
       if (initiator) {
         wireChannel(id, L, pc.createDataChannel('cr', { ordered: true }));
-        pc.createOffer().then((o) => pc.setLocalDescription(o)).then(() => signal.send(id, { k: 'offer', sdp: plainSdp(pc.localDescription) })).catch((e) => drop(id, 'offer ' + e));
+        pc.createOffer().then((o) => pc.setLocalDescription(o)).then(() => signal.send(id, { k: 'offer', sdp: plainSdp(pc.localDescription) })).catch(() => drop(id, 'failed'));
       } else {
         pc.ondatachannel = (e) => wireChannel(id, L, e.channel);
       }
@@ -168,45 +190,69 @@
     const onSignal = async (from, msg) => {
       if (!msg || closed) return;
       try {
+        if (from === 'server') {
+          if (msg.k === 'norelay') {
+            // over today's relay budget: relayed players can't stay linked
+            relayRefused = true;
+            [...links.entries()].filter(([, L]) => L.relay).forEach(([id, L]) => { links.delete(id); close(L); if (L.open) cb.onClose(id); cb.onFail(id, 'blocked'); });
+          }
+          return;
+        }
+        if (msg.k === 'r') {
+          let L = links.get(from);
+          if (!L) { if (relayRefused || links.size + 1 >= ROOM_CAP) return; L = { pc: null, dc: null, open: false, relay: false, lastSeen: Date.now(), timer: 0 }; links.set(from, L); }
+          if (!L.relay) toRelay(from, L);
+          receive(from, L, msg.d);
+          return;
+        }
         if (msg.k === 'hello' || msg.k === 'here') {
           // the lower id makes the offer, so two peers never both offer at once
           if (msg.k === 'hello') signal.send(from, { k: 'here' });
           if (selfId < from) link(from, true);
         } else if (msg.k === 'offer') {
-          const L = link(from, false); if (!L) return;
+          const L = link(from, false); if (!L || L.relay) return;
           await L.pc.setRemoteDescription(msg.sdp);
           const a = await L.pc.createAnswer(); await L.pc.setLocalDescription(a);
           signal.send(from, { k: 'answer', sdp: plainSdp(L.pc.localDescription) });
           (L.pendingIce || []).forEach((c) => L.pc.addIceCandidate(c).catch(() => {})); L.pendingIce = null;
         } else if (msg.k === 'answer') {
-          const L = links.get(from); if (!L) return;
+          const L = links.get(from); if (!L || L.relay) return;
           await L.pc.setRemoteDescription(msg.sdp);
           (L.pendingIce || []).forEach((c) => L.pc.addIceCandidate(c).catch(() => {})); L.pendingIce = null;
         } else if (msg.k === 'ice') {
-          const L = links.get(from); if (!L) return;
+          const L = links.get(from); if (!L || L.relay) return;
           if (!L.pc.remoteDescription) (L.pendingIce = L.pendingIce || []).push(msg.c);
           else L.pc.addIceCandidate(msg.c).catch(() => {});
-        } else if (msg.k === 'bye') drop(from);
+        } else if (msg.k === 'bye') { const L = links.get(from); if (L) { links.delete(from); close(L); if (L.open) cb.onClose(from); } }
         else if (msg.k === 'full') cb.onFail(from, 'room full');
-      } catch (e) { drop(from, 'signal ' + e); }
+      } catch (e) { drop(from, 'failed'); }
     };
-    const sendRaw = (L, s) => {
-      if (!L.open || !L.dc || L.dc.readyState !== 'open') return;
+    const sendRaw = (id, L, s) => {
+      if (!L.open) return;
+      if (L.relay) { if (s.length <= RELAY_MAX) signal.send(id, { k: 'r', d: s }); return; }
+      if (!L.dc || L.dc.readyState !== 'open') return;
       if (L.dc.bufferedAmount > 4 * 1024 * 1024) return;          // a stalled link: skip rather than pile up
       try { L.dc.send(s); } catch (e) { /* closing */ }
     };
     return {
       connect() {
         signal.join(room, selfId, onSignal);
+        let tick = 0;
         hb = setInterval(() => {
           const now = Date.now(), ping = JSON.stringify({ t: '_hb' });
-          links.forEach((L, id) => { if (L.open) { sendRaw(L, ping); if (now - L.lastSeen > PEER_TIMEOUT_MS) drop(id); } });
+          tick++;
+          links.forEach((L, id) => {
+            if (!L.open) return;
+            if (!L.relay) { sendRaw(id, L, ping); if (now - L.lastSeen > PEER_TIMEOUT_MS) drop(id); }
+            else { if (tick % Math.round(RELAY_HB_MS / HEARTBEAT_MS) === 0) sendRaw(id, L, ping); if (now - L.lastSeen > RELAY_TIMEOUT_MS) { links.delete(id); close(L); cb.onClose(id); } }
+          });
         }, HEARTBEAT_MS);
       },
-      close() { closed = true; clearInterval(hb); [...links.keys()].forEach((id) => drop(id)); signal.leave(); },
-      broadcast(obj) { const s = JSON.stringify(obj); if (s.length > MAX_MSG) return false; links.forEach((L) => sendRaw(L, s)); return true; },
-      sendTo(id, obj) { const L = links.get(id); if (!L) return; const s = JSON.stringify(obj); if (s.length <= MAX_MSG) sendRaw(L, s); },
-      peers() { return [...links.entries()].filter(([, L]) => L.open).map(([id]) => id); }
+      close() { closed = true; clearInterval(hb); [...links.keys()].forEach((id) => { const L = links.get(id); links.delete(id); close(L); if (L.open) cb.onClose(id); }); signal.leave(); },
+      broadcast(obj) { const s = JSON.stringify(obj); if (s.length > MAX_MSG) return false; links.forEach((L, id) => sendRaw(id, L, s)); return true; },
+      sendTo(id, obj) { const L = links.get(id); if (!L) return; const s = JSON.stringify(obj); if (s.length <= MAX_MSG) sendRaw(id, L, s); },
+      peers() { return [...links.entries()].filter(([, L]) => L.open).map(([id]) => id); },
+      relayed() { return [...links.entries()].filter(([, L]) => L.open && L.relay).map(([id]) => id); }
     };
   }
 
@@ -256,7 +302,8 @@
         return out;
       },
       unsubscribe() { ch.state = 'closed'; if (ch.transport) ch.transport.close(); ch.transport = null; presence.clear(); return Promise.resolve('ok'); },
-      peers() { return ch.transport ? ch.transport.peers() : []; }
+      peers() { return ch.transport ? ch.transport.peers() : []; },
+      relayed() { return ch.transport && ch.transport.relayed ? ch.transport.relayed() : []; }
     };
     function emitPresence(event, payload) {
       (ch.bindings.presence || []).forEach((b) => {
@@ -285,6 +332,7 @@
         const s = presence.get(id);
         if (s) { presence.delete(id); emitPresence('leave', { key: id, leftPresences: [s], currentPresences: [] }); emitPresence('sync', {}); }
       },
+      onRelay(id) { ch.stats.relayed = (ch.stats.relayed || 0) + 1; log('relaying', id); if (CR_NET.onRelay) CR_NET.onRelay(id); },
       onFail(id, why) { ch.stats.failed.push({ id, why, at: Date.now() }); log('peer failed', id, why); if (CR_NET.onPeerFail) CR_NET.onPeerFail(id, why); },
       onMessage(id, m) {
         if (!m || typeof m.t !== 'string') return;
@@ -324,7 +372,26 @@
     signalState: 'idle',
     ROOM_CAP,
     enabled() { return !!CR_NET.mode; },
+    forceRelay: q.has('relay') && q.get('relay') !== 'fail',             // ?relay: test the relay path
+    forceFail: q.get('relay') === 'fail',                                // ?relay=fail: direct links fail (like a blocking network)
     enable(m) { CR_NET.mode = m || 'p2p'; },
+    // relay pass for networks that block direct links (mobile carriers); reused until it nearly expires
+    turnServers: null, turnUntil: 0,
+    async fetchTurn() {
+      if (CR_NET.turnServers && Date.now() < CR_NET.turnUntil) return CR_NET.turnServers;
+      try {
+        const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        const t = setTimeout(() => ctl && ctl.abort(), 4000);
+        const r = await fetch(CR_NET.SIGNAL_URL.replace(/\/$/, '') + '/turn', { cache: 'no-store', signal: ctl ? ctl.signal : undefined });
+        clearTimeout(t);
+        const j = await r.json();
+        if (Array.isArray(j.iceServers) && j.iceServers.length) {
+          CR_NET.turnServers = j.iceServers;
+          CR_NET.turnUntil = Date.now() + Math.max(60, (j.ttl || 7200) - 600) * 1000;
+        } else log('no relay pass:', j.why);
+      } catch (e) { log('relay pass unavailable', e); }
+      return CR_NET.turnServers;
+    },
     disable() { CR_NET.mode = null; },
     makeSignal() {
       if (CR_NET.signalFactory) return CR_NET.signalFactory();
