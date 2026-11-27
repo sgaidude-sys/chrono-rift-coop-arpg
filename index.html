@@ -6086,6 +6086,12 @@
       // -----------------------------------------------------------------------
       async initSupabaseCoOp() {
         try {
+          // free peer-to-peer co-op (mmo_net.js): same channel API, no Supabase / server traffic
+          if (window.CR_NET && window.CR_NET.enabled()) {
+            this.supabase = window.CR_NET.client();
+            await this.joinRealtimeRoom(this.roomCode);
+            return;
+          }
           if (window.CR_OFFLINE || !window.supabase) return;
           this.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
           await this.loadOrInitHeroFromSupabase();
@@ -10008,6 +10014,7 @@
   <script src="public/assets/js/mmo_overdrive.js?v=1"></script>
   <script src="public/assets/js/mmo_feel.js?v=1"></script>
   <script src="public/assets/js/mmo_mobilehud.js?v=6"></script>
+  <script src="public/assets/js/mmo_net.js?v=2"></script>
   <script src="public/assets/js/mmo_netbatch.js?v=5"></script>
   <script src="public/assets/js/mmo_teach.js?v=6"></script>
   <script src="public/assets/js/mmo_foes.js?v=1"></script>
