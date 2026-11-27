@@ -51,6 +51,41 @@
     };
   }
 
+  // Cloud signaling: a free Cloudflare Worker (cloud/signal) relays introductions between players
+  // in the same room over a WebSocket. It reconnects on drops (players already linked stay linked).
+  function WsSignal(base) {
+    let ws = null, self = null, room = null, onMsg = null, queue = [], left = false, tries = 0, timer = 0;
+    // public / title only matter for the first player in an empty room (they decide whether it's listed)
+    const url = () => { const m = CR_NET.roomMeta || {}; return base.replace(/^http/, 'ws').replace(/\/$/, '') + '/room/' + encodeURIComponent(room) + '?id=' + encodeURIComponent(self)
+      + (m.pub ? '&pub=1' : '') + (m.title ? '&title=' + encodeURIComponent(String(m.title).slice(0, 28)) : ''); };
+    const open = () => {
+      if (left) return;
+      ws = new WebSocket(url());
+      ws.onopen = () => { tries = 0; CR_NET.signalState = 'open'; ws.send(JSON.stringify({ msg: { k: 'hello' } })); queue.splice(0).forEach((s) => ws.send(s)); };
+      ws.onmessage = (e) => {
+        let d; try { d = JSON.parse(e.data); } catch (err) { return; }
+        if (!d || !d.msg) return;
+        if (d.from === 'server') {
+          if (d.msg.k === 'full') { left = true; CR_NET.signalState = 'full'; if (CR_NET.onRoomFull) CR_NET.onRoomFull(); }
+          else if (d.msg.k === 'off') { left = true; CR_NET.signalState = 'off'; if (CR_NET.onOff) CR_NET.onOff(); }
+          return;
+        }
+        onMsg(d.from, d.msg);
+      };
+      ws.onclose = () => {
+        if (left) return;
+        CR_NET.signalState = 'retrying';
+        if (tries++ < 6) timer = setTimeout(open, Math.min(15000, 1000 * Math.pow(2, tries)));
+        else { CR_NET.signalState = 'down'; if (CR_NET.onSignalDown) CR_NET.onSignalDown(); }
+      };
+    };
+    return {
+      join(r, selfId, cb) { room = r; self = selfId; onMsg = cb; CR_NET.signalState = 'connecting'; open(); },
+      send(to, msg) { const s = JSON.stringify({ to, msg }); if (ws && ws.readyState === 1) ws.send(s); else if (queue.length < 200) queue.push(s); },
+      leave() { left = true; clearTimeout(timer); try { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ msg: { k: 'bye' } })); ws && ws.close(); } catch (e) { /* closed */ } ws = null; }
+    };
+  }
+
   // ---------------------------------------------------------------------------------------------
   // Transports — interface: connect(), close(), broadcast(obj), sendTo(id, obj), peers()
   //   callbacks: onOpen(id), onClose(id), onMessage(id, obj), onFail(id, why)
@@ -180,7 +215,7 @@
   // ---------------------------------------------------------------------------------------------
   function PeerChannel(name, opts) {
     const selfId = (opts && opts.config && opts.config.presence && opts.config.presence.key) || ('peer_' + Math.random().toString(36).slice(2));
-    const room = String(name).replace(/[^A-Za-z0-9_-]/g, '');
+    const room = String(name).replace(/^coop-room-/i, '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 16);
     const presence = new Map();             // id -> latest tracked state
     const buckets = new Map();              // id -> { tokens, at }
     const ch = {
@@ -283,12 +318,17 @@
   const mode = (q.get('net') || '').toLowerCase();
   const CR_NET = window.CR_NET = {
     mode: (mode === 'p2p' || mode === 'local') ? mode : null,
-    signal: (q.get('sig') || 'local').toLowerCase(),
+    // 'cloud' (default): the Cloudflare matchmaking Worker; 'local': two tabs on one computer, no server
+    signal: (q.get('sig') || 'cloud').toLowerCase(),
+    SIGNAL_URL: q.get('sigurl') || 'https://chrono-rift-signal.sgaidude.workers.dev',
+    signalState: 'idle',
     ROOM_CAP,
     enabled() { return !!CR_NET.mode; },
+    enable(m) { CR_NET.mode = m || 'p2p'; },
+    disable() { CR_NET.mode = null; },
     makeSignal() {
-      if (CR_NET.signalFactory) return CR_NET.signalFactory();       // phase 2: WebSocket signaling plugs in here
-      return LocalSignal();
+      if (CR_NET.signalFactory) return CR_NET.signalFactory();
+      return CR_NET.signal === 'local' ? LocalSignal() : WsSignal(CR_NET.SIGNAL_URL);
     },
     makeTransport(room, selfId, cb) {
       if (CR_NET.mode === 'local') return LocalTransport(room, selfId, cb);

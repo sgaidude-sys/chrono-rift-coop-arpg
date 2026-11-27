@@ -1,0 +1,24 @@
+name = "chrono-rift-signal"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+
+# multiplayer on/off switch: change to "false" (dashboard: Workers > chrono-rift-signal > Settings > Variables)
+[vars]
+MP_ENABLED = "true"
+
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+[[durable_objects.bindings]]
+name = "LOBBY"
+class_name = "Lobby"
+
+# free plan: SQLite-backed Durable Objects only
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Lobby"]

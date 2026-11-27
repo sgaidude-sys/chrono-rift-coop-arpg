@@ -26,3 +26,4 @@ node_modules/
 # offline edition build output and its CDN download cache
 dist/
 tools/vendor_cache/
+.wrangler/

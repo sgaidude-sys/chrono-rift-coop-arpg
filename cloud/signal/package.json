@@ -1,0 +1,16 @@
+{
+  "name": "chrono-rift-signal",
+  "private": true,
+  "description": "Free matchmaking / WebRTC signaling for Chrono-Rift portal co-op (Cloudflare Workers + Durable Objects)",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  },
+  "allowScripts": {
+    "workerd@1.20261123.1": true,
+    "esbuild@0.28.2": true
+  }
+}
