@@ -22,6 +22,10 @@
  *  Presence: clients send the text 'ping' every 25 s; the platform answers 'pong' without waking
  *  the room (free). While a room has players, an alarm about once a minute removes anyone silent
  *  for over 70 s (a phone closed or backgrounded without a clean disconnect) and updates the list.
+ *  Capacity (stays inside the free plan, never "crashes"): opening a NEW room is paused when
+ *  ROOMS_CONCURRENT_CAP rooms are already open or today's room time (ROOM_MINUTES_DAILY_CAP,
+ *  counted by the per-minute sweep) is used up; the player gets { k: 'busy' } and a friendly
+ *  "realms are busy" note. Rooms already open, and joining them, are never affected.
  *  GET /turn              -> { iceServers: [...] } relay credentials (Cloudflare TURN) for players
  *                            whose networks block direct links (mobile carriers). Short-lived (2 h)
  *                            and capped per day (TURN_DAILY_CAP, default 300) so usage stays far
@@ -54,7 +58,10 @@ export default {
     if (url.pathname === '/status') {
       const t = await (await env.LOBBY.get(env.LOBBY.idFromName('lobby')).fetch('https://lobby/turnstats')).json().catch(() => ({}));
       const rl = await (await env.LOBBY.get(env.LOBBY.idFromName('lobby')).fetch('https://lobby/relaystats')).json().catch(() => ({}));
-      return json({ enabled: enabled(env), cap: CAP, relayUsedToday: rl.used || 0, relayDailyCap: parseInt(env.RELAY_DAILY_CAP || '30', 10),
+      const cs = await (await env.LOBBY.get(env.LOBBY.idFromName('lobby')).fetch('https://lobby/capstats')).json().catch(() => ({}));
+      return json({ enabled: enabled(env), cap: CAP,
+        roomsOpen: cs.roomsOpen || 0, roomsConcurrentCap: parseInt(env.ROOMS_CONCURRENT_CAP || '25', 10),
+        roomMinutesToday: cs.roomMinutesToday || 0, roomMinutesDailyCap: parseInt(env.ROOM_MINUTES_DAILY_CAP || '6000', 10), relayUsedToday: rl.used || 0, relayDailyCap: parseInt(env.RELAY_DAILY_CAP || '30', 10),
         turn: !!(env.TURN_KEY_ID && env.TURN_KEY_API_TOKEN), turnUsedToday: t.used || 0, turnDailyCap: parseInt(env.TURN_DAILY_CAP || '300', 10) });
     }
     const lobby = () => env.LOBBY.get(env.LOBBY.idFromName('lobby'));
@@ -133,8 +140,19 @@ export class Room {
       } else live++;
     }
     if (changed) await this.report(null);
-    if (live > 0) await this.ctx.storage.setAlarm(now + SWEEP_MS);
+    if (live > 0) {
+      // room-time accounting: each sweep is about a minute of an open room
+      const ticks = ((await this.ctx.storage.get('ticks')) || 0) + 1;
+      await this.ctx.storage.put('ticks', ticks % 10);
+      if (ticks >= 10) {
+        try { await this.lobby().fetch('https://lobby/minutes', { method: 'POST', body: JSON.stringify({ m: 10 }) }); } catch (e) { /* best effort */ }
+        if (!changed) await this.report(null);                         // keeps the lobby entry fresh during long sessions
+      }
+      await this.ctx.storage.setAlarm(now + SWEEP_MS);
+    }
   }
+
+  lobby() { return this.env.LOBBY.get(this.env.LOBBY.idFromName('lobby')); }
 
   async fetch(req) {
     const u = new URL(req.url);
@@ -159,6 +177,17 @@ export class Room {
         server.send(JSON.stringify({ from: 'server', msg: { k: 'full' } }));
         server.close(4003, 'room full');
       } else {
+        // opening a new room: only if there's capacity left today (joining an open room is always fine)
+        if (!live.length) {
+          let gate = { ok: true };
+          try { gate = await (await this.lobby().fetch('https://lobby/open', { method: 'POST', body: JSON.stringify({ code: this.code }) })).json(); } catch (e) { gate = { ok: true }; }
+          if (!gate.ok) {
+            server.serializeAttachment({ id, rejected: true });
+            server.send(JSON.stringify({ from: 'server', msg: { k: 'busy', why: gate.why } }));
+            server.close(4005, 'busy');
+            return new Response(null, { status: 101, webSocket: client });
+          }
+        }
         // the first player in an empty room decides whether it is listed, and its title
         if (!live.length) await this.ctx.storage.put('meta', { pub: u.searchParams.get('pub') === '1', title: cleanTitle(u.searchParams.get('title')) });
         await this.report(null);
@@ -295,6 +324,28 @@ export class Lobby {
       if (used >= (b.cap ?? 300)) return json({ ok: false, used });
       await this.ctx.storage.put(day, used + 1);
       return json({ ok: true, used: used + 1 });
+    }
+    if (path === '/open' && req.method === 'POST') {
+      let b = {}; try { b = await req.json(); } catch (e) { /* none */ }
+      const now = Date.now();
+      if (b.code && this.rooms.has(b.code) && now - this.rooms.get(b.code).at < 15 * 60 * 1000) return json({ ok: true, why: 'existing' });
+      let active = 0; this.rooms.forEach((r) => { if (r.n > 0 && now - r.at < 15 * 60 * 1000) active++; });
+      const conc = parseInt(this.env.ROOMS_CONCURRENT_CAP || '25', 10) || 25;
+      if (active >= conc) return json({ ok: false, why: 'busy' });
+      const day = 'm-' + new Date().toISOString().slice(0, 10);
+      const used = (await this.ctx.storage.get(day)) || 0;
+      if (used >= (parseInt(this.env.ROOM_MINUTES_DAILY_CAP || '6000', 10) || 6000)) return json({ ok: false, why: 'daily' });
+      return json({ ok: true });
+    }
+    if (path === '/minutes' && req.method === 'POST') {
+      let b = {}; try { b = await req.json(); } catch (e) { /* none */ }
+      const day = 'm-' + new Date().toISOString().slice(0, 10);
+      await this.ctx.storage.put(day, ((await this.ctx.storage.get(day)) || 0) + Math.max(0, Math.min(60, b.m || 0)));
+      return json({ ok: true });
+    }
+    if (path === '/capstats') {
+      const now = Date.now(); let active = 0; this.rooms.forEach((r) => { if (r.n > 0 && now - r.at < 15 * 60 * 1000) active++; });
+      return json({ roomsOpen: active, roomMinutesToday: (await this.ctx.storage.get('m-' + new Date().toISOString().slice(0, 10))) || 0 });
     }
     if (path === '/relayslot' && req.method === 'POST') {
       let b = {}; try { b = await req.json(); } catch (e) { /* default cap */ }

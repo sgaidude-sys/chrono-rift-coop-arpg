@@ -9,6 +9,10 @@ MP_ENABLED = "true"
 TURN_DAILY_CAP = "300"
 # relayed sessions (game traffic through this service when direct links are blocked) per UTC day, 1 hour each
 RELAY_DAILY_CAP = "30"
+# new rooms pause (friendly "realms are busy") when this many are open at once ...
+ROOMS_CONCURRENT_CAP = "25"
+# ... or when today's open-room time reaches this many minutes (~100 room-hours, inside the free plan)
+ROOM_MINUTES_DAILY_CAP = "6000"
 
 [[durable_objects.bindings]]
 name = "ROOMS"

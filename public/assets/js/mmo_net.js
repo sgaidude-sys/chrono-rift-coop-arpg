@@ -27,7 +27,7 @@
   const MAX_MSG = 240 * 1024;               // bytes per message (netbatch splits bundles at 200 KB)
   const RATE = 60, BURST = 120;             // incoming messages per second per peer (token bucket)
   const HEARTBEAT_MS = 2000, PEER_TIMEOUT_MS = 9000, CONNECT_TIMEOUT_MS = 6000;   // direct links form in 1-3 s; blocked networks switch to the relay after this
-  const NET_VERSION = 12;                     // shown in the Play Together panel (helps when debugging two devices)
+  const NET_VERSION = 13;                     // shown in the Play Together panel (helps when debugging two devices)
   const ICE = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun.cloudflare.com:3478' }];
 
   const q = new URLSearchParams(location.search);
@@ -55,7 +55,7 @@
   // Cloud signaling: a free Cloudflare Worker (cloud/signal) relays introductions between players
   // in the same room over a WebSocket. It reconnects on drops (players already linked stay linked).
   function WsSignal(base) {
-    let ws = null, self = null, room = null, onMsg = null, queue = [], left = false, tries = 0, timer = 0, ping = 0;
+    let ws = null, self = null, room = null, onMsg = null, queue = [], left = false, tries = 0, timer = 0, ping = 0, everOpen = false;
     // public / title only matter for the first player in an empty room (they decide whether it's listed)
     const url = () => { const m = CR_NET.roomMeta || {}; return base.replace(/^http/, 'ws').replace(/\/$/, '') + '/room/' + encodeURIComponent(room) + '?id=' + encodeURIComponent(self)
       + (m.pub ? '&pub=1' : '') + (m.title ? '&title=' + encodeURIComponent(String(m.title).slice(0, 28)) : ''); };
@@ -63,7 +63,7 @@
       if (left) return;
       ws = new WebSocket(url());
       ws.onopen = () => {
-        tries = 0; CR_NET.signalState = 'open'; ws.send(JSON.stringify({ msg: { k: 'hello' } })); queue.splice(0).forEach((s) => ws.send(s));
+        tries = 0; everOpen = true; CR_NET.signalState = 'open'; ws.send(JSON.stringify({ msg: { k: 'hello' } })); queue.splice(0).forEach((s) => ws.send(s));
         clearInterval(ping); ping = setInterval(() => { try { if (ws && ws.readyState === 1) ws.send('ping'); } catch (e) { /* closing */ } }, 25000);
       };
       ws.onmessage = (e) => {
@@ -73,6 +73,7 @@
         if (d.from === 'server') {
           if (d.msg.k === 'full') { left = true; CR_NET.signalState = 'full'; if (CR_NET.onRoomFull) CR_NET.onRoomFull(); }
           else if (d.msg.k === 'off') { left = true; CR_NET.signalState = 'off'; if (CR_NET.onOff) CR_NET.onOff(); }
+          else if (d.msg.k === 'busy') { left = true; CR_NET.signalState = 'busy'; if (CR_NET.onBusy) CR_NET.onBusy(d.msg.why); }
           else onMsg('server', d.msg);                                       // e.g. 'norelay': today's relay budget is used up
           return;
         }
@@ -81,8 +82,8 @@
       ws.onclose = () => {
         if (left) return;
         CR_NET.signalState = 'retrying';
-        if (tries++ < 6) timer = setTimeout(open, Math.min(15000, 1000 * Math.pow(2, tries)));
-        else { CR_NET.signalState = 'down'; if (CR_NET.onSignalDown) CR_NET.onSignalDown(); }
+        if (tries++ < (everOpen ? 6 : 3)) timer = setTimeout(open, Math.min(15000, 1000 * Math.pow(2, tries)));
+        else { CR_NET.signalState = everOpen ? 'down' : 'busy'; if (everOpen) { if (CR_NET.onSignalDown) CR_NET.onSignalDown(); } else if (CR_NET.onBusy) CR_NET.onBusy('unreachable'); }
       };
     };
     return {

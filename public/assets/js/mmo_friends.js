@@ -138,7 +138,19 @@
       };
       addBtn(); setTimeout(addBtn, 1500); setTimeout(addBtn, 5000);
       // failures from the network layer -> a short note, then solo play continues
-      CR_NET.onPeerFail = (id, why) => { if (this._mp && this._mp.code) { this._mp.fails = (this._mp.fails || 0) + 1; toast(why === 'room full' ? 'That room is full (4 players).' : 'Couldn\'t link up with a player: some networks block direct connections. You can keep playing.', 6); this.mpRender(); } };
+      CR_NET.onPeerFail = (id, why) => {
+        if (!(this._mp && this._mp.code)) return;
+        this._mp.fails = (this._mp.fails || 0) + 1;
+        toast(why === 'room full' ? 'That room is full (4 heroes).'
+          : why === 'blocked' ? 'Your network needs a relay bridge, and today\'s bridges are all in use. Keep exploring solo and try again later.'
+          : 'Couldn\'t link up with that hero: some networks block direct links. Keep exploring and try again in a moment.', 7);
+        this.mpRender();
+      };
+      CR_NET.onBusy = () => {
+        toast('All realms are busy right now. Join an open realm, or keep exploring solo and try again in a few minutes.', 8);
+        this._mpNote = { text: 'All realms are busy right now. Join an open realm below, or try again in a few minutes.', until: Date.now() + 30000 };
+        this.mpLeave(true); this.mpRender(); this.mpRefreshRooms(true);
+      };
       CR_NET.onRoomFull = () => { toast('That room is full (4 players). Playing solo.', 6); this.mpLeave(true); this.mpRender(); };
       CR_NET.onOff = () => { toast('Multiplayer is resting right now. Playing solo.', 6); this.mpLeave(true); this.mpRender(); };
       CR_NET.onSignalDown = () => { toast('Lost the matchmaking link. Players already with you stay connected.', 6); this.mpRender(); };
@@ -185,6 +197,7 @@
 
     mpRender(note) {
       const card = document.querySelector('#cr-fr .card'); if (!card) return;
+      if (!note && this._mpNote && Date.now() < this._mpNote.until && !this._mp) note = this._mpNote.text;   // e.g. "realms are busy" stays visible a while
       const M = this._mp;
       if (!M || !M.code) {
         const list = this._mpRooms;
